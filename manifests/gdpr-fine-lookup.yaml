@@ -19,7 +19,6 @@ input_schema:
 output_schema:
   type: object
   example:
-    page_status: results
     fines:
       - date: null
         company: Meta Platforms Ireland Limited
@@ -31,12 +30,6 @@ output_schema:
     total_fines: 1
     total_amount_eur: 1200000000
   properties:
-    page_status:
-      type: string
-      enum: [results, no_results]
-      description: >-
-        results = the tracker has cases matching the search; no_results = no case in the tracker's
-        whole case list matched (fines is then empty).
     fines:
       type: array
     total_fines:
@@ -63,7 +56,6 @@ test_fixtures:
     company: Google
     country_code: US
 output_field_reliability:
-  page_status: common
   fines: guaranteed
   total_fines: guaranteed
   total_amount_eur: guaranteed
@@ -73,18 +65,6 @@ limitations:
     category: freshness
     severity: info
     workaround: Check the relevant data protection authority’s press releases for recently announced fines.
-  - title: Tracker outages fail without a charge
-    text: >-
-      When enforcementtracker.com serves no case data (an error, maintenance or consent page, or a
-      changed layout), the call fails with an error and is not billed. The search runs over the
-      tracker's whole case list and returns up to 15 of the newest matching cases. A company search
-      matches when every word of it appears in a case's controller, authority, country, sector,
-      articles or violation type, so an empty `fines` list means no case matched. A country search
-      takes a two-letter code for a country the tracker covers (the EEA, the UK and the Isle of Man).
-
-    category: availability
-    severity: info
-    workaround: Retry after a short wait.
   - title: Unpublished fines are not covered
     text: Covers publicly reported fines only — some national DPAs delay publication
     category: coverage

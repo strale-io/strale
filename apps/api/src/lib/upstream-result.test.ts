@@ -14,6 +14,7 @@ import {
   isDnsNegative,
   quotedLegCodes,
   requireAnyLeg,
+  ssrfBlocked,
   targetUnavailable,
   UpstreamUnavailableError,
 } from "./upstream-result.js";
@@ -347,5 +348,52 @@ describe("PR #1018 review S1: a target-site failure is unbilled and does not cou
 
     const [provider] = foldTrafficRows([row(true, null, 3), row(false, providerCounts, 12)], new Map());
     expect(provider).toMatchObject({ eligibleCalls: 15, completedCalls: 3, distinctFailureDays: 1 });
+  });
+});
+
+describe("PR #1018 review round 2 nits", () => {
+  const ssrf = () => Object.assign(new Error("Resolved host targets a restricted address."), { code: "ESSRFBLOCKED" });
+  const wrapped = (cause: unknown) => Object.assign(new TypeError("fetch failed"), { cause });
+
+  it("ssrfBlocked finds the SSRF refusal bare or on undici's cause, and nothing else", () => {
+    const bare = ssrf();
+    const onCause = ssrf();
+    expect(ssrfBlocked(bare)).toBe(bare);
+    expect(ssrfBlocked(wrapped(onCause))).toBe(onCause);
+    expect(ssrfBlocked(wrapped({ code: "ECONNRESET" }))).toBeNull();
+    expect(ssrfBlocked(new Error("plain"))).toBeNull();
+    expect(ssrfBlocked(null)).toBeNull();
+  });
+
+  it("fetchUnavailable returns an SSRF refusal on the cause as itself, never as 'retry shortly'", () => {
+    const cause = ssrf();
+    const err = fetchUnavailable("Example API", wrapped(cause));
+    expect(err).toBe(cause);
+    expect(err.message).not.toMatch(/retry/i);
+  });
+
+  it("targetUnavailable returns an SSRF refusal on the cause as itself", () => {
+    const cause = ssrf();
+    expect(targetUnavailable("website site.test", wrapped(cause))).toBe(cause);
+  });
+
+  it("targetUnavailable files an unresolvable host as not retryable, still the target's fault", () => {
+    const resolver = Object.assign(new Error("getaddrinfo ENOTFOUND gone.test"), { code: "ENOTFOUND", hostname: "gone.test" });
+    for (const failure of [resolver, wrapped(resolver)]) {
+      const err = targetUnavailable("website site.test", failure) as UpstreamUnavailableError;
+      expect(err).toBeInstanceOf(UpstreamUnavailableError);
+      expect(err.message).toBe("Upstream unavailable: website site.test: URL did not answer (ENOTFOUND): its host name does not resolve.");
+      expect(err).toMatchObject({ code: "ENOTFOUND", retryable: false, targetFault: true });
+      expect(isUserInputError(err.message)).toBe(true);
+      expect(outcomeFromError(err)).toMatchObject({ billable: false, fault: "target", counts_against_capability: false });
+    }
+  });
+
+  it("targetUnavailable words HTTP 408 as the site timing out, retryable and breaker-exempt", () => {
+    const err = targetUnavailable("website site.test", 408) as UpstreamUnavailableError;
+    expect(err.message).toBe("Upstream unavailable: website site.test: URL returned HTTP 408, the site timed out the request; retry later.");
+    expect(err).toMatchObject({ code: "HTTP 408", retryable: true, targetFault: true });
+    expect(isUserInputError(err.message)).toBe(true);
+    expect(targetUnavailable("website site.test", 503).message).toContain("a server error on the site itself");
   });
 });

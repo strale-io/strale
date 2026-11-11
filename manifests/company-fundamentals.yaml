@@ -122,7 +122,6 @@ limitations:
       listed in `metrics_unavailable`. A metric is never null because the SEC failed to answer. A
       missing concept (404) leaves the metric null; any other error status, a timeout, a network
       error or an unreadable response fails the whole call, which is not billed.
-
     category: coverage
     severity: info
   - title: SEC request limits add lookup time

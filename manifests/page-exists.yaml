@@ -38,7 +38,8 @@ output_schema:
     exists:
       type: boolean
       description: >-
-        true = page appears to exist; false = page appears gone (hard or soft 404). When the site
+        true = page appears to exist; false = page appears gone (hard or soft 404), or the URL's
+        own host name does not resolve (reason dns_nxdomain). When the site
         blocks the check, errors or does not answer, the call fails and is not billed, so there is no
         "unknown" answer.
     confidence:
@@ -149,13 +150,14 @@ limitations:
     workaround: For non-English sites, verify the returned title and final_url yourself rather than trusting exists alone.
   - title: Blocked or failing sites cannot be checked
     text: >-
-      A host name that does not exist (DNS NXDOMAIN) is answered: exists false, confidence high,
-      reason dns_nxdomain, billed. When the host cannot be reached (another DNS failure, a refused
-      or dropped connection, a timeout, a redirect loop), when the site refuses automated requests
-      (HTTP 401, 403, 407 or 429, or a robots.txt Disallow for the page), or when it answers with a
-      server error or another error status besides 404 and 410, the call fails with an error and is
-      not billed. Sites that block automated requests cannot be checked.
-
+      When the requested URL's own host name does not resolve (no such name, or a name with no
+      address record), the answer is exists false, confidence high, reason dns_nxdomain, billed. A
+      host name that does not resolve on a redirect is not that answer. When the host cannot be
+      reached (another DNS failure, a redirect to a host that does not resolve, a refused or dropped
+      connection, a timeout, a redirect loop), when the site refuses automated requests (HTTP 401,
+      403, 407 or 429, or a robots.txt Disallow for the page), or when it answers with a server
+      error, a request timeout (408) or another error status besides 404 and 410, the call fails
+      with an error and is not billed. Sites that block automated requests cannot be checked.
     category: coverage
     severity: info
     workaround: For these domains, fall back to a manual check or a different data source.

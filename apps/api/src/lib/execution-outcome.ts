@@ -358,7 +358,6 @@ export function outcomeFromError(error: unknown): ExecutionOutcome {
     };
   }
   if (error instanceof UpstreamUnavailableError) {
-
     return {
       ...base,
       failure_class: "provider_unavailable",

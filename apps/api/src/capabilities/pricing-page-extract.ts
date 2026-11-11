@@ -21,15 +21,23 @@ const MIN_PAGE_TEXT = 200;
  * the caller's target, not a source Strale depends on, so the wording ("URL
  * did not answer") is one the breaker's USER_INPUT_ERROR_PATTERNS recognise:
  * one caller's walled site must not suspend the capability for everyone.
- * Not retryable: the same URL serves the same wall. Marked `targetFault`:
- * the wall is the caller's target, so it does not count against this
- * capability's quality floor either (PR #1018 review, S1).
+ * Not retryable: the same URL serves the same wall.
+ *
+ * `targetFault` (out of the quality floor) is set only for the deterministic
+ * empty render. The model's `page_error` is a judgement: a prompt or model
+ * regression would show up only as more of them, so those still count
+ * against the capability (PR #1018 review round 2, S-b).
  */
-function unreadablePage(fullUrl: string, what: string, code: string): UpstreamUnavailableError {
+function unreadablePage(
+  fullUrl: string,
+  what: string,
+  code: string,
+  targetFault: boolean,
+): UpstreamUnavailableError {
   return new UpstreamUnavailableError(
     `website ${new URL(fullUrl).hostname}`,
     `URL did not answer with a readable pricing page: ${what}.`,
-    { code, retryable: false, targetFault: true },
+    { code, retryable: false, targetFault },
   );
 }
 
@@ -41,7 +49,7 @@ registerCapability("pricing-page-extract", async (input: CapabilityInput) => {
   const html = await fetchRenderedHtml(fullUrl);
   const pageText = htmlToText(html).slice(0, 10000);
   if (pageText.trim().length < MIN_PAGE_TEXT) {
-    throw unreadablePage(fullUrl, "it rendered almost no text (an empty app shell or a blank page)", "empty");
+    throw unreadablePage(fullUrl, "it rendered almost no text (an empty app shell or a blank page)", "empty", true);
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -88,16 +96,21 @@ If page_status is "page_error", return "plans": [] and false for every boolean.`
   // The model's page_error is honoured only when it found no plan: a page
   // that shows prices under a cookie banner is a pricing page, and dropping
   // the plans it read would fail a call that has an answer (PR #1018 review, S4).
+  // It is then billed as "pricing", the manifest's enum being [pricing, no_pricing].
   const plans = output.plans;
-  if (output.page_status === "page_error" && (!Array.isArray(plans) || plans.length === 0)) {
-    throw unreadablePage(
-
-      fullUrl,
-      "it showed a cookie, consent or login wall, an error page or an empty app shell instead of the product's pricing",
-      "page_error",
-    );
+  if (output.page_status === "page_error") {
+    if (!Array.isArray(plans) || plans.length === 0) {
+      throw unreadablePage(
+        fullUrl,
+        "it showed a cookie, consent or login wall, an error page or an empty app shell instead of the product's pricing",
+        "page_error",
+        false,
+      );
+    }
+    output.page_status = "pricing";
   }
   output.url = fullUrl;
+
 
   return {
     output,

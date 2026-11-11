@@ -3,7 +3,7 @@
 
 slug: country-trade-data
 name: "Country Trade Data"
-description: "Get a country's top exports and imports, trade balance and main trading partners, from the World Bank."
+description: "Get a country's trade figures: World Bank totals, with embedded 2023 product and partner estimates."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -22,7 +22,7 @@ output_schema:
   type: object
   example:
     note: Product breakdown and partner data are estimates based on 2023 published trade statistics.
-    year: 2025
+    year: 2023
     data_source: embedded-trade-data
     top_exports:
       - product: Refined petroleum
@@ -156,10 +156,11 @@ limitations:
   - title: World Bank outages fail without a charge
     text: >-
       Totals come from the World Bank for the requested year. When the World Bank has no figure for
-      that year, the embedded estimates answer instead and data_source is embedded-trade-data. The
-      embedded estimates are 2023 figures, returned under the requested year. When the World Bank
-      does not answer (an error status, a timeout or an unreadable response), the call fails with an
-      error and is not billed.
+      that year, or a figure for only one of exports and imports, the embedded estimates answer for
+      both totals instead and data_source is embedded-trade-data; the two sources are never mixed.
+      The embedded estimates are 2023 figures, returned under the requested year. When the World
+      Bank does not answer (an error status, a timeout, an unreadable response or a rejected
+      request), the call fails with an error and is not billed.
 
     category: availability
     severity: info

@@ -245,7 +245,6 @@ registerCapability("company-fundamentals", async (input: CapabilityInput) => {
     if (failed) throw failed.reason;
     const settled = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
 
-
     for (const r of settled) {
       if (r.fact && r.body) {
         anyConceptFound = true;

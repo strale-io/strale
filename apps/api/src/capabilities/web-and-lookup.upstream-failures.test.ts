@@ -792,6 +792,20 @@ describe("tail: cookie-scan reads a redirect loop on the caller's site as the ta
   });
 });
 
+describe("PR #1018 review round 2 nit: cookie-scan does not call an unresolvable host retryable", () => {
+  it("the site's ENOTFOUND stays unbilled, the target's fault, and not retryable", async () => {
+    const cause = Object.assign(new Error("getaddrinfo ENOTFOUND shop.test"), { code: "ENOTFOUND", hostname: "shop.test" });
+    site(async () => {
+      throw Object.assign(new TypeError("fetch failed"), { cause });
+    });
+    const err = await expectUnbilledUpstreamFailure(exec("cookie-scan")({ url: "https://shop.test" }));
+    expect(err.message).toContain("URL did not answer (ENOTFOUND)");
+    expect(err.retryable).toBe(false);
+    expect(isUserInputError(err.message)).toBe(true);
+    expect(outcomeFromError(err)).toMatchObject({ fault: "target", counts_against_capability: false });
+  });
+});
+
 describe("tail: github-repo-analyze names a 403 only as what its body says", () => {
   it.each([
     ["the repository record", (u: string) => u.endsWith("/repos/o/r")],

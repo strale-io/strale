@@ -1564,7 +1564,7 @@ export const SOLUTIONS: SolutionDef[] = [
     description:
       "Given a domain, answer 'is this domain trustworthy?' — registration age, DNS, SSL, reputation score, and HTTP security headers.",
     longDescription:
-      "Checks five trust signals for any domain: WHOIS registration age and registrar, DNS configuration health, SSL certificate validity, a DNS-and-HTTPS hygiene score (no blocklist or threat-intelligence lookup), and HTTP security header grade. Use for phishing detection, link safety checks, brand protection, or any time your agent needs to evaluate whether a domain is trustworthy before interacting with it.",
+      "Checks five trust signals for a domain: WHOIS registration age and registrar (for domains under common TLDs), DNS configuration health, SSL certificate validity, a DNS-and-HTTPS hygiene score (no blocklist or threat-intelligence lookup), and HTTP security header grade. Use as one input to link safety checks and brand protection; for phishing screening, pair it with a dedicated blocklist, since a good result does not show a domain is safe.",
     agentDescription:
       "is this domain trustworthy, check domain trust, domain reputation check, is this website safe to visit, phishing check, link safety verification, should I trust this domain",
     category: "security-risk",
@@ -1574,7 +1574,7 @@ export const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "near-zero",
     geography: "global",
     targetAudience:
-      "Anti-fraud teams, brand protection, phishing detection, or cybersecurity agents",
+      "Anti-fraud teams, brand protection, link safety, or cybersecurity agents",
     transparencyTag: "algorithmic",
     extendsWith: ["tech-stack-detect", "backlink-check", "page-speed-test"],
     inputSchema: {

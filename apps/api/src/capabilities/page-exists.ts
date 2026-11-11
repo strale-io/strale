@@ -5,7 +5,7 @@ import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { logWarn } from "../lib/log.js";
 import { readTextTruncated } from "../lib/resource-limits.js";
 import { assertNotBlockStatus } from "../lib/site-access.js";
-import { targetUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
+import { ssrfBlocked, targetUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 /**
  * page-exists — content-aware existence check.
@@ -61,17 +61,29 @@ const TITLE_404_PATTERN =
 const BODY_SCAN_LIMIT = 20_000; // ~20KB — enough to catch phrases near the top of the page without reading megabyte-scale bodies.
 const THIN_CONTENT_BYTES = 512;
 
+const hostKey = (host: string) => host.toLowerCase().replace(/\.$/, "");
+
 /**
- * The resolver said the host name does not exist. safe-fetch's robots.txt
- * pre-check rethrows the resolver's Error itself (code on the error); a
- * direct fetch wraps it in undici's `TypeError: fetch failed` (code on the
- * cause). EAI_AGAIN and other resolver failures are not an answer and stay
- * a target outage.
+ * The resolver said the requested URL's own host name does not resolve.
+ * safe-fetch's robots.txt pre-check rethrows the resolver's Error itself
+ * (code and hostname on the error); a direct fetch wraps it in undici's
+ * `TypeError: fetch failed` (on the cause). Only a failure for the requested
+ * host answers the question: an ENOTFOUND for a redirect hop's host, or for
+ * a host robots.txt redirected to, says nothing about the requested page
+ * and stays a target outage (PR #1018 review round 2). Node reports NODATA (a
+ * name with no address record) as ENOTFOUND too, so this means "does not
+ * resolve", not strictly "does not exist". EAI_AGAIN and other resolver
+ * failures are not an answer either.
  */
-function isNxdomain(err: unknown): boolean {
-  const code = (err as { code?: unknown } | null)?.code;
-  const causeCode = (err as { cause?: { code?: unknown } } | null)?.cause?.code;
-  return code === "ENOTFOUND" || causeCode === "ENOTFOUND";
+function isRequestedHostUnresolvable(err: unknown, requestedHost: string): boolean {
+  for (const e of [err, (err as { cause?: unknown } | null)?.cause]) {
+    if (!e || typeof e !== "object") continue;
+    const { code, hostname } = e as { code?: unknown; hostname?: unknown };
+    if (code === "ENOTFOUND") {
+      return typeof hostname === "string" && hostKey(hostname) === hostKey(requestedHost);
+    }
+  }
+  return false;
 }
 
 // Same entity decoding as meta-extract.ts / url-to-text.ts apply to titles —
@@ -185,15 +197,17 @@ registerCapability("page-exists", async (input: CapabilityInput) => {
       },
     });
   } catch (err: unknown) {
-    // degraded-ok: NXDOMAIN is the resolver's answer that the host name does not exist, so no page under it can; it is returned as exists:false (reason dns_nxdomain), and every other failure throws.
+    // degraded-ok: an ENOTFOUND for the requested URL's own host is the resolver's answer that the name does not resolve, so no page under it can be fetched; it is returned as exists:false (reason dns_nxdomain), and every other failure throws.
     if (isCapabilityRefusal(err)) throw err;
     // SSRF refusals on redirect hops (url-validator's "restricted address"
-    // errors thrown inside safeFetch) are input-safety refusals, not
-    // network weather: they fail the call exactly like the pre-flight
-    // validateUrl.
+    // errors, or safe-fetch's connect-time ESSRFBLOCKED, bare or as the
+    // cause of undici's wrapper) are input-safety refusals, not network
+    // weather: they fail the call exactly like the pre-flight validateUrl.
+    const ssrf = ssrfBlocked(err);
+    if (ssrf) throw ssrf;
     if (err instanceof Error && err.message.includes("restricted")) throw err;
-    // The host name does not exist: no page can, so that is the answer.
-    if (isNxdomain(err)) {
+    // The requested host name does not resolve: no page under it can.
+    if (isRequestedHostUnresolvable(err, new URL(url).hostname)) {
       return result({ exists: false, confidence: "high", reason: "dns_nxdomain" });
     }
     // A timeout, a network error or a redirect loop: the site did not
@@ -227,8 +241,8 @@ registerCapability("page-exists", async (input: CapabilityInput) => {
     await discardBody(response, "page-exists: status without a verdict");
     // A block: the site refuses Strale (bot detection, auth wall, rate limit).
     assertNotBlockStatus(url, statusCode);
-    // A server error on the caller's own site.
-    if (statusCode >= 500) throw targetUnavailable(site, statusCode);
+    // A server error on the caller's own site, or its request timeout (408).
+    if (statusCode >= 500 || statusCode === 408) throw targetUnavailable(site, statusCode);
     // Any other 4xx is the site's own answer about that URL. The wording
     // names no other status: the breaker's fallback categoriser reads a
     // "404" or "410" anywhere in a message as an endpoint gone.
@@ -245,7 +259,6 @@ registerCapability("page-exists", async (input: CapabilityInput) => {
       retryable: false,
       targetFault: true,
     });
-
   }
 
   // ── Non-HTML 2xx (PDF, image, JSON): the resource exists; the HTML

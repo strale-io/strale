@@ -143,7 +143,10 @@ const DELISTED_AFTER_0124 = new Set(["price-compare", "eu-trademark-search"]);
 const NARROWED_AFTER_0124 = new Map([
   // PR #1017: backlink-check dropped its Common Crawl leg; "web archives" went with it.
   ["backlink-check", "Find possible backlinks to a domain from Google search results. Returns linking pages and available link details."],
+  // PR #1018: country-trade-data's product and partner breakdown is embedded 2023 estimates, not the World Bank's.
+  ["country-trade-data", "Get a country's trade figures: World Bank totals, with embedded 2023 product and partner estimates."],
 ]);
+
 const pinnedManifestDescription = (slug: string, description: string) =>
   NARROWED_AFTER_0124.get(slug) ??
   (DELISTED_AFTER_0124.has(slug) ? `Currently unavailable. ${description}` : description);
