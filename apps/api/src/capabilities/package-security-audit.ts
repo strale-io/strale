@@ -239,10 +239,13 @@ function transportFailure(upstream: string, err: unknown): Error {
   return err instanceof Error ? err : new Error(String(err));
 }
 
-/** `fetch` whose transport failures are upstream failures. */
+/**
+ * `fetch` whose transport failures are upstream failures. A call without its
+ * own signal still gets a 10s timeout, so no upstream can hang a billed call.
+ */
 async function upstreamFetch(upstream: string, url: string, init: RequestInit): Promise<Response> {
   try {
-    return await fetch(url, init);
+    return await fetch(url, { ...init, signal: init.signal ?? AbortSignal.timeout(10_000) });
   } catch (err) {
     throw transportFailure(upstream, err);
   }
