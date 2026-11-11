@@ -6,6 +6,7 @@ import { keyCapError } from "../api-keys.js";
 import { getShareableUrl } from "../audit-token.js";
 import { noteUnknownCost, setCostDeadline } from "../call-cost.js";
 import { refusalDetails } from "../capability-refusal.js";
+import { runAsCaller } from "../caller-scope.js";
 import { recordFailure, recordSuccess } from "../circuit-breaker.js";
 import { pgErrorCode } from "../db-error.js";
 import { apiError, type ApiError } from "../errors.js";
@@ -82,8 +83,14 @@ export type InvocationActor =
        * directions.
        */
       servedFree: boolean;
+      callerKey: string;
     }
   | { kind: "account"; userId: string };
+
+/** Build the anonymous rail's opaque identity from already-sanitized request data. */
+export function anonymousCallerKey(ipHash: string | null | undefined, payer?: string | null): string {
+  return payer ? `x402:${payer.toLowerCase()}` : `ip:${ipHash ?? "unknown"}`;
+}
 
 /**
  * Execute with retry for non-deterministic capabilities.
@@ -121,7 +128,8 @@ export async function executeWithRetry(
 ): Promise<any> {
   const startedAt = Date.now();
   try {
-    const result = await executeWithTransientRetry(executor, input, capability);
+    const callerKey = actor.kind === "account" ? `acct:${actor.userId}` : actor.callerKey;
+    const result = await runAsCaller(callerKey, async () => await executeWithTransientRetry(executor, input, capability));
     if (deadline === undefined || Date.now() < deadline) recordFactWithoutHoldingTheLock({
       capabilitySlug: capability.slug,
       rail: "v1_do",
@@ -292,6 +300,8 @@ export async function executeFreeTier({ c, db, capability, executor, executionIn
   const servedFree = computeServedFree(c.get("x402_paid"));
 
   const x402Verified = c.get("x402_verified");
+  const x402Payer = x402Verified ? extractPayerAddress(x402Verified) : null;
+  const callerKey = anonymousCallerKey(c.get("requestContext")?.ipHash, x402Payer);
   const paymentHash = c.get("x402_payment_hash");
   let claimId: string | null = null;
   let releaseClaim = true;
@@ -366,7 +376,7 @@ export async function executeFreeTier({ c, db, capability, executor, executionIn
         if (claimId && paymentHash) await beginX402Execution(claimId, paymentHash);
         executionStarted = true;
         return executor(input);
-      }, executionInput, capability, { kind: "anonymous", servedFree }, undefined, () => executionStarted);
+      }, executionInput, capability, { kind: "anonymous", servedFree, callerKey }, undefined, () => executionStarted);
       assertBillableOutput(capability.slug, capResult.output);
       assertNoFilesOffAsyncPath(capability.slug, capResult.files);
       const latencyMs = Date.now() - startTime;

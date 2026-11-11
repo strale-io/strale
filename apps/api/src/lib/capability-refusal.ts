@@ -204,6 +204,12 @@ export function refusalDetails(error: unknown): Record<string, unknown> | undefi
   if (!isCapabilityRefusal(error)) return undefined;
   if (error instanceof CapabilityRefusalError && error.details) return { retryable: false, ...error.details };
   const message = typeof error === "string" ? error : error instanceof Error ? error.message : "";
+  if (error instanceof Error && error.name === "ConversionBusyError") {
+    return { retryable: true, retry_after_seconds: 5, next_step: "Wait a few seconds, then retry this page." };
+  }
+  if (error instanceof Error && error.name === "ConversionCallerCooldownError") {
+    return { retryable: true, retry_after_seconds: 30, next_step: "Wait 30 seconds, then retry this page." };
+  }
   if (isAccessPolicyRefusal(message) && message.includes("'s robots.txt could not be read (")) return { ...ROBOTS_UNAVAILABLE_DETAILS };
   if (isAccessPolicyRefusal(message)) return { retryable: false, fix: "Choose a different URL or source; this site does not permit automated access." };
   const field = /^'([a-z][a-z0-9_]{0,39})' must be /i.exec(message)?.[1];

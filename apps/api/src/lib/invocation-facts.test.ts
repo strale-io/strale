@@ -441,7 +441,7 @@ describe("no serving path may skip the fact", () => {
     const doRoute = readFileSync(join(SRC, "lib/do/dispatch.ts"), "utf8");
     expect(doRoute).toContain('| { kind: "account"; userId: string };');
     expect((doRoute.match(/\{ kind: "account", userId: user\.id \}/g) ?? []).length).toBe(3);
-    expect((doRoute.match(/\{ kind: "anonymous", servedFree \}/g) ?? []).length).toBe(1);
+    expect((doRoute.match(/\{ kind: "anonymous", servedFree, callerKey \}/g) ?? []).length).toBe(1);
     // ONE value, two writes: the transaction row and the fact get the same
     // variable, computed once.
     expect(

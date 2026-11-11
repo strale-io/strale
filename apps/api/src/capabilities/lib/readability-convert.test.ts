@@ -9,9 +9,10 @@
  */
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { ResourceLimitError } from "../../lib/resource-limits.js";
+import { runAsCaller } from "../../lib/caller-scope.js";
 import { HtmlTooComplexError } from "./html-parse-bound.js";
 import { convertHtmlToMarkdownSync, postProcessMarkdown } from "./readability-convert-sync.js";
-import { __setWorkerFactoryForTests, boundInput, CONVERSION_LIMITS, ConversionBusyError, htmlToCleanMarkdown, stopConversionWorkers } from "./readability-convert.js";
+import { __callerCooldownCountForTests, __coolDownCallerForTests, __setWorkerFactoryForTests, boundInput, CONVERSION_LIMITS, ConversionBusyError, ConversionCallerCooldownError, htmlToCleanMarkdown, stopConversionWorkers } from "./readability-convert.js";
 
 const DEFAULTS = { ...CONVERSION_LIMITS };
 const URL_ = "https://example.test/a";
@@ -53,6 +54,57 @@ afterEach(() => Object.assign(CONVERSION_LIMITS, DEFAULTS));
 afterAll(stopConversionWorkers);
 
 describe("htmlToCleanMarkdown in a worker", () => {
+  it("allows only one page per caller while preserving a place for another caller", async () => {
+    await stopConversionWorkers();
+    const { EventEmitter } = await import("node:events");
+    const workers: Array<EventEmitter & { messages: Array<{ id: number }> }> = [];
+    class HeldWorker extends EventEmitter {
+      messages: Array<{ id: number }> = [];
+      unref() {}
+      postMessage(message: { id: number }) { this.messages.push(message); }
+      terminate() { this.emit("exit", 0); return Promise.resolve(0); }
+    }
+    __setWorkerFactoryForTests((() => { const worker = new HeldWorker(); workers.push(worker); return worker; }) as never);
+    const first = runAsCaller("ip:a", () => htmlToCleanMarkdown("<p>a</p>", URL_));
+    const extraA = Array.from({ length: 4 }, (_, i) => runAsCaller("ip:a", () => htmlToCleanMarkdown(`<p>a${i + 2}</p>`, URL_)));
+    for (const page of extraA) await expect(page).rejects.toBeInstanceOf(ConversionBusyError);
+    const other = runAsCaller("ip:b", () => htmlToCleanMarkdown("<p>b</p>", URL_));
+    const firstMessage = workers[0]!.messages[0]!;
+    workers[0]!.emit("message", { id: firstMessage.id, ok: true, result: { markdown: "a", title: "", usedReadability: false } });
+    await expect(first).resolves.toMatchObject({ markdown: "a" });
+    await new Promise((resolve) => setImmediate(resolve));
+    const secondMessage = workers[0]!.messages[1]!;
+    workers[0]!.emit("message", { id: secondMessage.id, ok: true, result: { markdown: "b", title: "", usedReadability: false } });
+    await expect(other).resolves.toMatchObject({ markdown: "b" });
+    __setWorkerFactoryForTests(null);
+    await stopConversionWorkers();
+  });
+
+  it("cools down only the caller whose conversion hits the time limit", async () => {
+    await stopConversionWorkers();
+    const { EventEmitter } = await import("node:events");
+    class NeverWorker extends EventEmitter {
+      unref() {}
+      postMessage() {}
+      terminate() { this.emit("exit", 1); return Promise.resolve(1); }
+    }
+    __setWorkerFactoryForTests((() => new NeverWorker()) as never);
+    CONVERSION_LIMITS.timeoutMs = 20;
+    CONVERSION_LIMITS.callerCooldownMs = 80;
+    await expect(runAsCaller("ip:cool", () => htmlToCleanMarkdown("<p>a</p>", URL_))).rejects.toBeInstanceOf(HtmlTooComplexError);
+    await expect(runAsCaller("ip:cool", () => htmlToCleanMarkdown("<p>a</p>", URL_))).rejects.toBeInstanceOf(ConversionCallerCooldownError);
+    const other = runAsCaller("ip:not-cool", () => htmlToCleanMarkdown("<p>b</p>", URL_));
+    await expect(other).rejects.toBeInstanceOf(HtmlTooComplexError);
+    await new Promise((resolve) => setTimeout(resolve, 90));
+    await expect(runAsCaller("ip:cool", () => htmlToCleanMarkdown("<p>a</p>", URL_))).rejects.toBeInstanceOf(HtmlTooComplexError);
+    __setWorkerFactoryForTests(null);
+    await stopConversionWorkers();
+  });
+
+  it("bounds caller cooldown bookkeeping at 10,000 entries", () => {
+    for (let i = 0; i < 10_001; i++) __coolDownCallerForTests(`bounded:${i}`);
+    expect(__callerCooldownCountForTests()).toBe(10_000);
+  });
   it("returns exactly what the in-process conversion returns", async () => {
     expect(await htmlToCleanMarkdown(ARTICLE, URL_)).toEqual(convertHtmlToMarkdownSync(ARTICLE, URL_));
   });
