@@ -365,6 +365,10 @@ const DEACTIVATED = new Map<string, string>([
     "eu-trademark-search",
     "deactivated 2026-11-06 (DQ-42, approved by Petter): eu-trademark-search renders euipo.europa.eu/eSearch/, and EUIPO's robots.txt has disallow: /eSearch/ for every agent — since PR #786 (2026-10-28) every call fails the robots.txt check and is not charged, so the source cannot be read under DEC-20261023-A (archive/receipts/2026-10-30-check-source-robots-access.json). Block 0148 records the reason in the database. Relist when the rebuild on EUIPO's official Trademark Search API ships (it needs the free EUIPO developer account Petter approved on 2026-11-06): remove this entry, set is_active, visible and x402_enabled back and clear deactivation_reason in the database (the sync here only ever deactivates)",
   ],
+  [
+    "gdpr-fine-lookup",
+    "withheld 2026-11-11 (Petter, 2026-11-11, option \"a: withhold it now\"): its only source is enforcementtracker.com (CMS Hasche Sigle), whose licence page (https://www.enforcementtracker.com/license) says the database \"is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License\" (credit: \"enforcementtracker.com, provided by CMS\"), and \"In accordance with §§ 44b, 87c German Copyright Law (Urheberrechtsgesetz, UrhG), we reserve the right to reproduce the contents of the database and essential parts thereof for the purposes of text and data mining.\" Strale sold this lookup per call; resale against a source's terms is never lane under DEC-20261023-A. Block 0153 records the reason and withholds every solution with it as a step (ai-act-assess). Reactivate only under a commercial licence from CMS, or rebuild on the regulators' own published decisions: remove this entry, set is_active, visible and x402_enabled back and clear deactivation_reason in the database (the sync here only ever deactivates)",
+  ],
   // ─── UK property vertical, parked 2026-04-28 ─────────────────────────────
   // Built on 2026-04-11 in a fast push to claim ground after a Reddit
   // competitor post (Journal 33f67c87...d9049b). Audit on 2026-04-21

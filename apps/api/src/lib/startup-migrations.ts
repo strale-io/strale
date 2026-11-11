@@ -142,6 +142,7 @@ import { runMigration0149_publishDilisenseSourceText } from "../startup-migratio
 import { runMigration0150_publishPepCheckLimitations } from "../startup-migrations/blocks/0150-publish-pep-check-limitations.js";
 import { runMigration0151_correctSanctionsLimitations } from "../startup-migrations/blocks/0151-correct-sanctions-limitations.js";
 import { runMigration0152_businessSummaryDeliveries } from "../startup-migrations/blocks/0152-business-summary-deliveries.js";
+import { runMigration0153_withholdGdprFineLookup } from "../startup-migrations/blocks/0153-withhold-gdpr-fine-lookup.js";
 import { LEDGER_BY_FUNCTION, planBlock, readApplied, recordApplied, type LedgerRow } from "../startup-migrations/applied.js";
 import { BLOCK_RUN_POLICY } from "../startup-migrations/run-policy.js";
 
@@ -244,6 +245,7 @@ export * from "../startup-migrations/blocks/0149-publish-dilisense-source-text.j
 export * from "../startup-migrations/blocks/0150-publish-pep-check-limitations.js";
 export * from "../startup-migrations/blocks/0151-correct-sanctions-limitations.js";
 export * from "../startup-migrations/blocks/0152-business-summary-deliveries.js";
+export * from "../startup-migrations/blocks/0153-withhold-gdpr-fine-lookup.js";
 
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
   runMigration0029_actualCostCents,
@@ -348,6 +350,7 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0150_publishPepCheckLimitations,
   runMigration0151_correctSanctionsLimitations,
   runMigration0152_businessSummaryDeliveries,
+  runMigration0153_withholdGdprFineLookup,
 ];
 
 /**
