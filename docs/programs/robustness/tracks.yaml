@@ -5,28 +5,30 @@ updated: 2026-11-11
 tracks:
   - id: T1
     title: "R1: Untrusted-input bounds (url-to-markdown parse bound first)"
-    status: active
+    status: done
     gate: none
     depends_on: []
     owner: session
-    next_action: "Owner: orchestrator. Done: #964 (url-to-markdown worker: 8 s
-      limit, 384 MB heap, 2 MiB converter cap) live since 2026-11-07; #980
-      (browserless-extract htmlToText, a linear scanner) live since 2026-11-08;
-      the live url-to-markdown exit check and the jsdom sweep in the receipt
-      dated 2026-11-11; #1003 (nta-corporate.ts: a linear XML shape check
-      before jsdom, refusing depth over 8, over 5,000 elements, over 5,000
-      nodes or over 64 attributes) live since 2026-11-11 (/health 1a5955b7).
-      After timings in docs/lanes/codex/nta-xml-shape-bound-report.md: 1 MiB of
-      unclosed nesting went from 20.4 s to under 5 ms, and a 1 MiB attribute
-      flood that took 49 s is refused in under 200 ms, pinned by tests. Every
-      jsdom call site the sweep named now has a stated bound or a fix.
-      Per-caller fairness in the single converter (caller scope on every rail,
-      IPv6 counted by /64, fair queuing with eviction of an over-represented
-      caller's newest page, round-robin dispatch, a 30 s cool-down after a
-      time or memory limit, refused before any fetch) is in the PR from
-      codex/converter-caller-fairness-3, reviewed GO by an independent Claude
-      agent. Next: after it merges, confirm /health serves its commit, then
-      close T1 against its exit lines."
+    next_action: "Done. #964 (url-to-markdown worker: 8 s limit, 384 MB heap,
+      2 MiB converter cap) live since 2026-11-07; #980 (browserless-extract
+      htmlToText, a linear scanner) live since 2026-11-08; #1003 (nta-corporate.ts:
+      a linear XML shape check before jsdom; timings in
+      docs/lanes/codex/nta-xml-shape-bound-report.md, 1 MiB of unclosed nesting
+      from 20.4 s to under 5 ms, a 1 MiB attribute flood that took 49 s refused in
+      under 200 ms) live since 2026-11-11; #1006 (per-caller fairness in the
+      single converter) live since 2026-11-11 (/health f1282238). Exit 1: two
+      receipts run the brief's inputs against f1282238 and against the unfixed
+      file at f494ad76^ (the first from a scratchpad copy of the harness, the
+      second from scripts/robustness/r1-adversarial-drive.sh). After:
+      nested div 16 to 64 KB and nested b/i/u convert in at most 424 ms, nested
+      b/i/u/a (the brief's formatting input) and the 16 MiB flat page are refused
+      unbilled in 30 ms or less, and the 1 MiB attribute flood converts in 42 ms.
+      Before: every input fails (RangeErrors after 3.7 to 26 s, the attribute
+      flood killed at 60 s, the flat page out of heap after 17.8 s). Exit 2: the
+      url-to-markdown, readability and parse-bound tests pass (first receipt);
+      they arrived with #964, and one pins an ordinary article to the unbounded
+      parse's Markdown. Exit 3: the jsdom sweep receipt names a bound or a fix for
+      every call site, and #1003 fixed the one it left open."
     resume_file: handoff/_general/from-code/2026-11-06-orchestrator-state.md
     exit:
       - "A receipt shows every adversarial input in the brief (nested div 16, 32
@@ -39,6 +41,8 @@ tracks:
         apps/api/src has a stated bound in the sweep receipt, or a fix."
     evidence:
       - archive/receipts/2026-11-11-check-robustness-r1-url-to-markdown-and-jsdom-bounds.json
+      - archive/receipts/2026-11-11-check-robustness-r1-adversarial-inputs-fail-before.json
+      - archive/receipts/2026-11-11-check-robustness-r1-nested-formatting-anchor-fail-before.json
   - id: T2
     title: "R2: Data currency of hard-coded reference lists and vendor terms"
     status: queued
@@ -78,7 +82,7 @@ tracks:
     evidence: []
   - id: T3
     title: "R3: Alert and signal correctness"
-    status: queued
+    status: active
     gate: none
     depends_on: []
     owner: session

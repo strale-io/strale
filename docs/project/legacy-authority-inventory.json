@@ -525,7 +525,6 @@
         "docs/programs/platform-hardening/tracks.yaml",
         "docs/programs/promise-audit/PROGRAM.md",
         "docs/programs/promise-audit/tracks.yaml",
-        "docs/programs/robustness/PROGRAM.md",
         "docs/programs/robustness/tracks.yaml",
         "docs/release/directory-submissions/package-housekeeping.md",
         "docs/remediation/ORCHESTRATOR.md",
