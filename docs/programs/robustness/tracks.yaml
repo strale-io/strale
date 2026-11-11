@@ -92,8 +92,9 @@ tracks:
       scripts/production-watch/known-failures.json acknowledges #856
       (ingest-ee-directors) until 2026-12-11; an acknowledged failure is still
       reported on its issue but no longer turns the run red, and any other
-      failure or an expired acknowledgement does. Remaining for the exit: a
-      green scheduled run, and a forced-mismatch receipt. (4) weekly-drift has failed two
+      failure or an expired acknowledgement does. A manual run after the
+      deploy (run 42937874567) was green, the first in weeks. Remaining for
+      the exit: a green scheduled run, and a forced-mismatch receipt. (4) weekly-drift has failed two
       scheduled runs. Its own logs show different causes from the 2026-11-06
       check-in. Run 40334936804 (2026-10-26) failed on the manifest-drift sweep.
       Run 41485423344 (2026-11-02) failed on the upstream-recordings sweep,
