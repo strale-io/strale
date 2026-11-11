@@ -1,6 +1,7 @@
 import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { getHolidays } from "./holiday-calendar.js";
+import { UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 // Weekend days per country. Every country not listed here is treated as a
 // Saturday-Sunday weekend. Checked on 2026-11-06; update when a country
@@ -46,6 +47,69 @@ function isWeekend(date: Date, countryCode: string): boolean {
   return day === 0 || day === 6; // Standard Sat-Sun
 }
 
+const NAGER = "Nager.Date public-holiday API";
+
+/**
+ * The two answers `getHolidays` gives for a country it has no calendar for:
+ * a 404 (not a code it recognises) and a 204 (recognised, no data). They are
+ * matched by their wording in holiday-calendar.ts, and only those two: a
+ * wording change there makes this false, so the call throws (unbilled) rather
+ * than answering without holidays. The business-day tests pin both wordings.
+ */
+function isUncoveredCountry(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : "";
+  return /^Country '[A-Z0-9]{2}' (not supported by Nager\.Date API|is not covered by the Nager\.Date holiday data source)/.test(message);
+}
+
+/**
+ * Nager.Date holds 50 years either side of the current year and answers HTTP
+ * 400 outside that window (checked live on 2026-11-11: 1976 and 2076 answered,
+ * 1975 and 2077 drew 400). For a year outside the window that 400 is a fact
+ * about the caller's date, not an outage: a refusal, unbilled and not counted
+ * against the capability. A 400 for a year inside the window is not explained
+ * by the caller's input, so it stays a provider failure.
+ */
+const NAGER_YEAR_WINDOW = 50;
+function isYearOutOfRange(err: unknown, year: number): boolean {
+  if (!/^Nager\.Date API error: HTTP 400$/.test(err instanceof Error ? err.message : "")) return false;
+  // UTC year. Within about an hour of New Year, Nager.Date's own clock may sit
+  // in the next year; a 400 at that edge is filed as a provider failure, which
+  // is still unbilled.
+  const current = new Date().getUTCFullYear();
+  return year < current - NAGER_YEAR_WINDOW || year > current + NAGER_YEAR_WINDOW;
+}
+
+/**
+ * Nager.Date gave no answer: 429 or 5xx, a timeout, a network error or a body
+ * that does not parse. An error that is none of these (our own code breaking)
+ * is returned unchanged, so a defect is never relabelled as the provider's.
+ */
+function holidayFailure(err: unknown): Error {
+  const name = err instanceof Error ? err.name : "";
+  const message = err instanceof Error ? err.message : String(err);
+  if (name === "TimeoutError" || name === "AbortError") {
+    return new UpstreamUnavailableError(NAGER, "timeout; retry shortly.", { code: "timeout", cause: err });
+  }
+  if (err instanceof TypeError && (message === "fetch failed" || message === "terminated")) {
+    const cause = (err as { cause?: { code?: unknown } }).cause;
+    const code = typeof cause?.code === "string" ? cause.code : null;
+    return new UpstreamUnavailableError(NAGER, `network error${code ? ` (${code})` : ""}; retry shortly.`, { code, cause: err });
+  }
+  const status = /^Nager\.Date API error: HTTP (\d{3})$/.exec(message)?.[1];
+  if (status) {
+    const code = Number(status);
+    return new UpstreamUnavailableError(NAGER, `HTTP ${status}${code === 429 || code >= 500 ? "; retry shortly." : "."}`, {
+      code: `HTTP ${status}`,
+      retryable: code === 429 || code >= 500,
+      cause: err,
+    });
+  }
+  if (message.startsWith("Nager.Date API returned an unparseable response")) {
+    return new UpstreamUnavailableError(NAGER, "the response did not parse.", { code: "unparseable", cause: err });
+  }
+  return err instanceof Error ? err : new Error(message);
+}
+
 function formatDate(d: Date): string {
   return d.toISOString().split("T")[0];
 }
@@ -78,8 +142,25 @@ registerCapability("business-day-check", async (input: CapabilityInput) => {
   let holidays: any[] = [];
   try {
     holidays = await getHolidays(countryCode, year);
-  } catch {
-    // If holiday API fails, still check weekends
+  } catch (err) {
+    // degraded-ok: only Nager.Date's own no-calendar answers (404 and 204) fall through to a weekends-only result, its long-standing output for those countries; every other failure throws.
+    // A country Nager.Date does not hold is a real answer from it: there is no
+    // holiday calendar to apply, so only weekends are checked, as before. Any
+    // other failure used to land here too and answer `is_business_day: true`
+    // on a public holiday, billed (2026-11-06 swallowed-failures audit, row 17).
+    if (isYearOutOfRange(err, year)) {
+      throw inputRefusal(
+        `'date' must be in a year the Nager.Date holiday calendar covers (about 50 years either side of the current year); ${year} is outside that range.`,
+        "date",
+        "Send 'date' as a YYYY-MM-DD date within about 50 years of the current year.",
+      );
+    }
+    if (!isUncoveredCountry(err)) throw holidayFailure(err);
+  }
+  // A 200 whose body parses but is not a holiday list is no answer either:
+  // without this it surfaced as a TypeError from `.map` below.
+  if (!Array.isArray(holidays)) {
+    throw new UpstreamUnavailableError(NAGER, "the response was not a holiday list.", { code: "unparseable" });
   }
 
   const holidayDates = new Set(holidays.map((h: any) => h.date));

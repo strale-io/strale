@@ -89,8 +89,8 @@ output_field_reliability:
 limitations:
   - title: EU EORI checks can be slow or unavailable
     text: >-
-      Validates against the EU EORI service — the service experiences periodic downtime and may be slow during peak
-      hours
+      Validates against the EU EORI service, which has periodic downtime and may be slow during peak hours. When it
+      does not answer, or answers without a validation status, the call fails and is not charged.
     category: availability
     severity: info
     workaround: >-

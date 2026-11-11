@@ -1,0 +1,609 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "dd75683e6357c480cdf78a5e9f750ad8200e3d73"
+  },
+  "at": "2026-11-11T10:42:26.380Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user-strale/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/wave2a-final.json"
+  },
+  "summary": {
+    "ok": true,
+    "expected": "pass",
+    "total": 45,
+    "passed": 45,
+    "failed": 0,
+    "commit": "dd75683e6357c480cdf78a5e9f750ad8200e3d73"
+  },
+  "topic": "swallowed-failures-wave2a-final-delta",
+  "raw": {
+    "numTotalTestSuites": 6,
+    "numPassedTestSuites": 6,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 45,
+    "numPassedTests": 45,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794393654298,
+    "success": true,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, when Nager.Date fails with HTTP 503",
+            "status": "passed",
+            "title": "throws, unbilled, when Nager.Date fails with HTTP 503",
+            "duration": 535.317036,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, when Nager.Date fails with HTTP 429",
+            "status": "passed",
+            "title": "throws, unbilled, when Nager.Date fails with HTTP 429",
+            "duration": 9.35458600000004,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, when Nager.Date fails with network error",
+            "status": "passed",
+            "title": "throws, unbilled, when Nager.Date fails with network error",
+            "duration": 7.6715529999999035,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, when Nager.Date fails with timeout",
+            "status": "passed",
+            "title": "throws, unbilled, when Nager.Date fails with timeout",
+            "duration": 14.425790000000006,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, when Nager.Date answers 200 with a body that does not parse",
+            "status": "passed",
+            "title": "throws, unbilled, when Nager.Date answers 200 with a body that does not parse",
+            "duration": 8.468226999999956,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, when Nager.Date answers 200 with JSON that is not a holiday list",
+            "status": "passed",
+            "title": "throws, unbilled, when Nager.Date answers 200 with JSON that is not a holiday list",
+            "duration": 7.036541000000057,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) refuses 1975-06-02, a year Nager.Date does not cover (HTTP 400): unbilled, not counted against the capability",
+            "status": "passed",
+            "title": "refuses 1975-06-02, a year Nager.Date does not cover (HTTP 400): unbilled, not counted against the capability",
+            "duration": 10.256302000000005,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) refuses 2077-06-03, a year Nager.Date does not cover (HTTP 400): unbilled, not counted against the capability",
+            "status": "passed",
+            "title": "refuses 2077-06-03, a year Nager.Date does not cover (HTTP 400): unbilled, not counted against the capability",
+            "duration": 15.039142999999967,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, on a 400 for a year inside Nager.Date's window: the caller's date does not explain it",
+            "status": "passed",
+            "title": "throws, unbilled, on a 400 for a year inside Nager.Date's window: the caller's date does not explain it",
+            "duration": 9.813834000000043,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) answers a holiday correctly when Nager.Date answers",
+            "status": "passed",
+            "title": "answers a holiday correctly when Nager.Date answers",
+            "duration": 15.628733000000011,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) keeps the real negative: a country Nager.Date does not recognise (404) is checked for weekends only, as before",
+            "status": "passed",
+            "title": "keeps the real negative: a country Nager.Date does not recognise (404) is checked for weekends only, as before",
+            "duration": 7.950774000000024,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) keeps the real negative: a country Nager.Date holds no data for (204) is checked for weekends only, as before",
+            "status": "passed",
+            "title": "keeps the real negative: a country Nager.Date holds no data for (204) is checked for weekends only, as before",
+            "duration": 10.104464000000007,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) throws, unbilled, when the EORI service fails with HTTP 503",
+            "status": "passed",
+            "title": "throws, unbilled, when the EORI service fails with HTTP 503",
+            "duration": 12.558680999999979,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) throws, unbilled, when the EORI service fails with HTTP 429",
+            "status": "passed",
+            "title": "throws, unbilled, when the EORI service fails with HTTP 429",
+            "duration": 5.561415000000011,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) throws, unbilled, when the EORI service fails with network error",
+            "status": "passed",
+            "title": "throws, unbilled, when the EORI service fails with network error",
+            "duration": 6.019408999999996,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) throws, unbilled, when the EORI service fails with timeout",
+            "status": "passed",
+            "title": "throws, unbilled, when the EORI service fails with timeout",
+            "duration": 10.108866000000035,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) throws, unbilled, when the EORI service fails with HTTP 500 SOAP fault",
+            "status": "passed",
+            "title": "throws, unbilled, when the EORI service fails with HTTP 500 SOAP fault",
+            "duration": 5.480615999999941,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) throws, not retryable, when the endpoint is gone (404)",
+            "status": "passed",
+            "title": "throws, not retryable, when the endpoint is gone (404)",
+            "duration": 8.49996299999998,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) throws, unbilled, when a 200 reply carries no validation status (it used to read valid: false)",
+            "status": "passed",
+            "title": "throws, unbilled, when a 200 reply carries no validation status (it used to read valid: false)",
+            "duration": 5.96993800000007,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) keeps the real negative: a number the service says is not valid",
+            "status": "passed",
+            "title": "keeps the real negative: a number the service says is not valid",
+            "duration": 9.906710999999973,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) keeps the positive answer",
+            "status": "passed",
+            "title": "keeps the positive answer",
+            "duration": 4.1800949999999375,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) still answers a malformed number from the format check without calling the service",
+            "status": "passed",
+            "title": "still answers a malformed number from the format check without calling the service",
+            "duration": 2.6300370000000157,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794393654501,
+        "endTime": 1794393655223.6301,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale-wt-wave2a/apps/api/src/capabilities/business-day-eori.upstream-failures.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the carrier, on a plain-request 400",
+            "status": "passed",
+            "title": "throws, unbilled, naming the carrier, on a plain-request 400",
+            "duration": 3.515713000000005,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the carrier, on a plain-request 404 (the page is gone)",
+            "status": "passed",
+            "title": "throws, unbilled, naming the carrier, on a plain-request 404 (the page is gone)",
+            "duration": 0.7494179999999915,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the carrier, on a 404 relayed through Browserless (the page is gone)",
+            "status": "passed",
+            "title": "throws, unbilled, naming the carrier, on a 404 relayed through Browserless (the page is gone)",
+            "duration": 0.667870999999991,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the carrier, on a 410 relayed through Browserless (the page is gone)",
+            "status": "passed",
+            "title": "throws, unbilled, naming the carrier, on a 410 relayed through Browserless (the page is gone)",
+            "duration": 0.40431200000000445,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the carrier, on a refused connection",
+            "status": "passed",
+            "title": "throws, unbilled, naming the carrier, on a refused connection",
+            "duration": 0.357262999999989,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the carrier, on a page that took too long to load (Browserless 408)",
+            "status": "passed",
+            "title": "throws, unbilled, naming the carrier, on a page that took too long to load (Browserless 408)",
+            "duration": 0.4103770000000395,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the carrier, on a permanent navigation failure",
+            "status": "passed",
+            "title": "throws, unbilled, naming the carrier, on a permanent navigation failure",
+            "duration": 0.3756559999999354,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the rendering service and not the carrier, on a network error reaching Browserless",
+            "status": "passed",
+            "title": "throws, unbilled, naming the rendering service and not the carrier, on a network error reaching Browserless",
+            "duration": 0.3948199999999815,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the rendering service and not the carrier, on a timeout on the Browserless request",
+            "status": "passed",
+            "title": "throws, unbilled, naming the rendering service and not the carrier, on a timeout on the Browserless request",
+            "duration": 0.8408389999999599,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the rendering service and not the carrier, on Browserless's own 5xx",
+            "status": "passed",
+            "title": "throws, unbilled, naming the rendering service and not the carrier, on Browserless's own 5xx",
+            "duration": 0.6495889999999918,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the rendering service and not the carrier, on Browserless's rate limit",
+            "status": "passed",
+            "title": "throws, unbilled, naming the rendering service and not the carrier, on Browserless's rate limit",
+            "duration": 0.4368899999999485,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the rendering service and not the carrier, on an empty render",
+            "status": "passed",
+            "title": "throws, unbilled, naming the rendering service and not the carrier, on an empty render",
+            "duration": 0.32143699999994624,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) returns Strale's own missing Browserless configuration unchanged, never filed as an outage",
+            "status": "passed",
+            "title": "returns Strale's own missing Browserless configuration unchanged, never filed as an outage",
+            "duration": 0.5144000000000233,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) passes Strale's own Browserless account state through unchanged: unbilled, not counted against the capability",
+            "status": "passed",
+            "title": "passes Strale's own Browserless account state through unchanged: unbilled, not counted against the capability",
+            "duration": 1.9813970000000154,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) passes a refusal through unchanged (unbilled, not counted against the capability)",
+            "status": "passed",
+            "title": "passes a refusal through unchanged (unbilled, not counted against the capability)",
+            "duration": 0.4521459999999706,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) returns an unrecognised error unchanged rather than blaming the carrier",
+            "status": "passed",
+            "title": "returns an unrecognised error unchanged rather than blaming the carrier",
+            "duration": 0.3907729999999674,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) throws, unbilled, when the carrier page is an error, maintenance or consent page (page_error)",
+            "status": "passed",
+            "title": "throws, unbilled, when the carrier page is an error, maintenance or consent page (page_error)",
+            "duration": 1.4967080000000124,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) tells the model to separate a page with no tracking result from a carrier with no record",
+            "status": "passed",
+            "title": "tells the model to separate a page with no tracking result from a carrier with no record",
+            "duration": 0.763219999999933,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) throws, unbilled, when the page renders without readable tracking content",
+            "status": "passed",
+            "title": "throws, unbilled, when the page renders without readable tracking content",
+            "duration": 0.3704259999999522,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) passes a carrier's refusal through as the source block it is (unbilled)",
+            "status": "passed",
+            "title": "passes a carrier's refusal through as the source block it is (unbilled)",
+            "duration": 0.7442199999999275,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: a failed tracking leg throws (row 34)"
+            ],
+            "fullName": "container-track: a failed tracking leg throws (row 34) fails the call, unbilled, when the extraction step fails instead of answering without tracking",
+            "status": "passed",
+            "title": "fails the call, unbilled, when the extraction step fails instead of answering without tracking",
+            "duration": 0.6731669999999212,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: answers that are not failures keep their output (row 34)"
+            ],
+            "fullName": "container-track: answers that are not failures keep their output (row 34) keeps the not-found answer read from the carrier page",
+            "status": "passed",
+            "title": "keeps the not-found answer read from the carrier page",
+            "duration": 1.1942289999999502,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "container-track: answers that are not failures keep their output (row 34)"
+            ],
+            "fullName": "container-track: answers that are not failures keep their output (row 34) keeps the check-digit answer for a carrier Strale does not read live, with its note",
+            "status": "passed",
+            "title": "keeps the check-digit answer for a carrier Strale does not read live, with its note",
+            "duration": 0.42946900000004007,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794393655243,
+        "endTime": 1794393655262.4294,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale-wt-wave2a/apps/api/src/capabilities/container-track.upstream-failures.test.ts"
+      }
+    ]
+  }
+}

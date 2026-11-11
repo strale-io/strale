@@ -5,6 +5,105 @@ import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 import { SourceBlockedError } from "../lib/site-access.js";
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
+import { UpstreamUnavailableError } from "../lib/upstream-result.js";
+
+/** The upstream named when the failure is the rendering service, not the carrier. */
+const RENDERING_SERVICE = "rendering service (Browserless)";
+
+/**
+ * The carrier's tracking page could not be read. Upstream failures (2026-11-06
+ * swallowed-failures audit, row 34): a failed read used to fall back to the
+ * check-digit answer, billed as tracking. It now throws, unbilled.
+ *
+ * The error names whichever upstream actually failed, read from the error
+ * shapes `fetchRenderedHtml` (`lib/web-provider.ts`) produces:
+ *   - a carrier that refuses Strale throws its `SourceBlockedError` unchanged
+ *     (DEC-20261023-A), and a refusal or an already-classified error passes
+ *     through;
+ *   - Strale's own missing Browserless configuration, and the control tower's
+ *     exhausted/auth_error/disabled state for Strale's Browserless account, are
+ *     returned unchanged, so a state of ours is never filed as anyone's outage;
+ *   - the carrier's own answers: a plain-request 4xx ("URL returned HTTP n"),
+ *     a page gone (404/410, plain or rendered: not retryable), a host that
+ *     does not resolve or refuses the connection, a page that took too long
+ *     to load (Browserless 408), and Chrome's permanent navigation failures;
+ *   - everything Browserless says about itself (its rate limit, its 5xx, its
+ *     token being refused, an empty render) and a transport failure on
+ *     the request to Browserless (every plain-request transport failure falls
+ *     through to Browserless, so a bare "fetch failed" or timeout here is
+ *     Browserless's) name the rendering service, never the carrier;
+ *   - anything else is returned unchanged rather than guessed at.
+ */
+function trackingPageFailure(scrapeUrl: string, err: unknown): Error {
+  if (err instanceof SourceBlockedError || err instanceof UpstreamUnavailableError || isCapabilityRefusal(err)) {
+    return err as Error;
+  }
+  const error = err instanceof Error ? err : new Error(String(err));
+  const message = error.message;
+  if (message.includes("BROWSERLESS_URL")) return error;
+
+  const host = new URL(scrapeUrl).hostname;
+  const carrier = `carrier tracking page ${host}`;
+  const fail = (upstream: string, detail: string, code: string | null, retryable = true) =>
+    new UpstreamUnavailableError(upstream, detail, { code, retryable, cause: err });
+
+  // ── The carrier's own answers ──
+  const plainStatus = /^URL returned HTTP (\d{3})/.exec(message)?.[1];
+  const renderedGone = /\(HTTP (404|410)\)/.exec(message)?.[1];
+  const goneStatus = plainStatus === "404" || plainStatus === "410" ? plainStatus : renderedGone;
+  if (goneStatus) return fail(carrier, `HTTP ${goneStatus}; the page is gone.`, `HTTP ${goneStatus}`, false);
+  if (plainStatus) return fail(carrier, `the page could not be read (HTTP ${plainStatus}); retry shortly.`, `HTTP ${plainStatus}`);
+  if (message.startsWith("Could not reach ")) {
+    return fail(carrier, "the carrier's site could not be reached; retry shortly.", "unreachable");
+  }
+  if (message.includes("redirected to an address that is not a valid URL")) {
+    return fail(carrier, "the page redirected to an address that is not a URL.", "bad_redirect", false);
+  }
+  if (message.includes("took too long to load")) return fail(carrier, "the page took too long to load; retry shortly.", "HTTP 408");
+  if (message.includes("This is a permanent failure")) {
+    return fail(carrier, "the browser could not open the carrier's site (DNS, connection or certificate).", "navigation", false);
+  }
+
+  // ── The rendering service ──
+  // Strale's own Browserless account being exhausted, disabled or failing auth
+  // is our state, not a carrier or provider outage: pass it through unchanged,
+  // as every other Browserless caller does (unbilled, not counted against the
+  // capability), so a day on an exhausted account cannot push container-track
+  // under the quality floor.
+  if (error.name === "VendorUnavailableError") return error;
+  if (error.name === "TimeoutError" || error.name === "AbortError") {
+    return fail(RENDERING_SERVICE, "timeout; retry shortly.", "timeout");
+  }
+  if (error instanceof TypeError && (message === "fetch failed" || message === "terminated")) {
+    const cause = (err as { cause?: { code?: unknown } }).cause;
+    const code = typeof cause?.code === "string" ? cause.code : null;
+    return fail(RENDERING_SERVICE, `network error${code ? ` (${code})` : ""}; retry shortly.`, code);
+  }
+  if (message.includes("web scraping service is temporarily rate-limited")) {
+    return fail(RENDERING_SERVICE, "HTTP 429; retry shortly.", "HTTP 429");
+  }
+  const renderedStatus = /^Browserless HTTP (\d{3})/.exec(message)?.[1] ?? /\(HTTP (\d{3})(?: Forbidden)?\)/.exec(message)?.[1];
+  if (renderedStatus) {
+    const status = Number(renderedStatus);
+    if (status === 401 || status === 403 || status === 407) {
+      // Browserless answers these for a refused token, and may also relay a
+      // target that refused the browser; neither is a fact about the container.
+      return fail(
+        `${RENDERING_SERVICE} reading ${host}`,
+        `HTTP ${status}: the rendering service or the carrier refused the request.`,
+        `HTTP ${status}`,
+        false,
+      );
+    }
+    const transient = status === 429 || status >= 500;
+    return fail(RENDERING_SERVICE, `HTTP ${status}${transient ? "; retry shortly." : "."}`, `HTTP ${status}`, transient);
+  }
+  if (message.startsWith("Browserless returned empty or too-short HTML") || message.startsWith("fetchPage: all retries exhausted")) {
+    return fail(RENDERING_SERVICE, "the render came back empty; retry shortly.", "empty");
+  }
+  return error;
+}
 
 // ─── Container tracking — ISO 6346 validation + Browserless scraping ────────
 
@@ -280,29 +379,44 @@ registerCapability("container-track", async (input: CapabilityInput) => {
   }
 
   // Read live status from the carrier's own page, where one is permitted.
+  // When that read is attempted and fails, the call throws (unbilled): the
+  // check-digit fields alone are not the tracking answer this tool sells.
   let trackingData: Record<string, unknown> | null = null;
-  let blockedByCarrier = false;
   const scrapeUrl = liveTrackingUrl(carrier, trackingUrls);
 
   if (scrapeUrl) {
+    let text: string;
     try {
       const html = await fetchRenderedHtml(scrapeUrl, { source: "strale" });
-      const text = htmlToText(html);
+      text = htmlToText(html);
+    } catch (err) {
+      throw trackingPageFailure(scrapeUrl, err);
+    }
+    if (text.length < 200) {
+      throw new UpstreamUnavailableError(
+        `carrier tracking page ${new URL(scrapeUrl).hostname}`,
+        "the page rendered without readable tracking content; retry shortly.",
+        { code: "empty" },
+      );
+    }
 
-      if (text.length >= 200) {
-        const apiKey = process.env.ANTHROPIC_API_KEY;
-        if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
-        const client = createAnthropicClient({ apiKey });
-        // Note: a truncation refusal or parse failure from the helper is
-        // caught by this function's own outer catch below, same as before —
-        // this LLM step is best-effort and falls back to "tracking_unavailable"
-        // either way, so the specific error text here never reaches the caller.
-        trackingData = await extractJsonWithLlm({
-          client,
-          model: MODELS.capability_default.id,
-          maxTokens: 2000,
-          prompt: `Extract container tracking information from this shipping carrier page for container "${validation.container_number}".
+    const client = createAnthropicClient({ apiKey });
+    // A truncation refusal or parse failure from the helper propagates:
+    // the call fails unbilled rather than answering without tracking.
+    // A page that says the carrier has no record of the container comes back
+    // as `status: "not_found"`, the real negative, and is returned as is. A
+    // page that shows no tracking result at all (an error, maintenance,
+    // consent or login wall, an empty app shell) comes back as
+    // `status: "page_error"` and fails the call below: it says nothing about
+    // the container.
+    trackingData = await extractJsonWithLlm({
+      client,
+      model: MODELS.capability_default.id,
+      maxTokens: 2000,
+      prompt: `Extract container tracking information from this shipping carrier page for container "${validation.container_number}".
 
   Return ONLY valid JSON:
   {
@@ -322,7 +436,20 @@ registerCapability("container-track", async (input: CapabilityInput) => {
     ]
   }
 
-  If the page shows an error, no results, or tracking data cannot be found, return:
+  If the page is an error page, a maintenance page, a cookie or consent wall, a login wall, or an app shell that shows no tracking result at all, return:
+  {
+    "status": "page_error",
+    "vessel_name": null,
+    "voyage_number": null,
+    "origin_port": null,
+    "destination_port": null,
+    "eta": null,
+    "last_location": null,
+    "events": [],
+    "note": "what the page shows instead of a tracking result"
+  }
+
+  If the carrier's page says it has no record of this container (for example "no results" or "container not found" for this number), return:
   {
     "status": "not_found",
     "vessel_name": null,
@@ -337,15 +464,15 @@ registerCapability("container-track", async (input: CapabilityInput) => {
 
   Page text:
   ${text.slice(0, 12000)}`,
-          truncationGuidance: "The carrier page produced more tracking events than fit in one call.",
-          parseFailureError: () => new Error("Failed to parse container tracking data."),
-        });
-      }
-    } catch (err) {
-      // Tracking scrape failed — return validation results with tracking URLs.
-      // DEC-20261023-A: if the carrier's site refused Strale, say so rather
-      // than implying a transient failure.
-      if (err instanceof SourceBlockedError) blockedByCarrier = true;
+      truncationGuidance: "The carrier page produced more tracking events than fit in one call.",
+      parseFailureError: () => new Error("Failed to parse container tracking data."),
+    });
+    if (trackingData?.status === "page_error") {
+      throw new UpstreamUnavailableError(
+        `carrier tracking page ${new URL(scrapeUrl).hostname}`,
+        "the page showed no tracking result (an error, maintenance, consent or login page); retry shortly.",
+        { code: "page_error" },
+      );
     }
   }
 
@@ -359,13 +486,11 @@ registerCapability("container-track", async (input: CapabilityInput) => {
       serial_number: validation.serial_number,
       carrier: carrier ?? "unknown",
       tracking_urls: trackingUrls,
+      // Reached without tracking data only for a carrier Strale does not read
+      // live: no tracking leg was attempted, and the note says so.
       ...(trackingData ?? {
         status: "tracking_unavailable",
-        note: blockedByCarrier
-          ? "The carrier's website refuses automated access, and Strale does not route around a site's block. Use the tracking URLs above to check manually."
-          : !scrapeUrl
-            ? `Strale reads live tracking only for ${LIVE_TRACKING_CARRIERS}. For this carrier, use the tracking URLs above to check manually.`
-            : "Live tracking data could not be retrieved. Use the tracking URLs above to check manually.",
+        note: `Strale reads live tracking only for ${LIVE_TRACKING_CARRIERS}. For this carrier, use the tracking URLs above to check manually.`,
       }),
     },
     provenance: {

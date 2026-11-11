@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 /**
  * Dependency audit — checks packages for known CVEs (via OSV.dev),
@@ -6,7 +7,47 @@ import { registerCapability, type CapabilityInput } from "./index.js";
  *
  * Uses the OSV querybatch API for efficient batch CVE scanning
  * (up to 1000 packages per request, free, no API key).
+ *
+ * Upstream failures (2026-11-06 swallowed-failures audit, row 8). OSV decides
+ * the vulnerability verdict, the answer's headline, so an OSV failure throws:
+ * it used to read as `vulnerable_count: 0`, a billed clean bill of health for
+ * packages nobody had checked. A registry lookup that fails (429, 5xx,
+ * network, timeout, unparseable) marks that dependency `unavailable: true`,
+ * names the registry in `unavailable_sources`, and still sends the declared
+ * version to OSV when there is one. A dependency that declares none (an
+ * unpinned PyPI requirement) is not checked, and its zero count means
+ * unchecked (recorded in the promise-audit T1 next_action). A registry 404
+ * stays what it was: an `error` on that dependency.
  */
+
+const OSV = "OSV vulnerability database";
+
+/** 429 and 5xx: the upstream is unavailable, worth a retry. */
+function isUnavailableStatus(status: number): boolean {
+  return status === 429 || status >= 500;
+}
+
+/**
+ * A request that produced no usable answer: a timeout, a network error or a
+ * body that does not parse. Anything else (our own code breaking) is returned
+ * unchanged, so a defect is never relabelled as the provider's fault.
+ */
+function transportFailure(upstream: string, err: unknown): Error {
+  if (err instanceof UpstreamUnavailableError) return err;
+  const name = err instanceof Error ? err.name : "";
+  if (name === "TimeoutError" || name === "AbortError") {
+    return new UpstreamUnavailableError(upstream, "timeout; retry shortly.", { code: "timeout", cause: err });
+  }
+  if (err instanceof TypeError && (err.message === "fetch failed" || err.message === "terminated")) {
+    const cause = (err as { cause?: { code?: unknown } }).cause;
+    const code = typeof cause?.code === "string" ? cause.code : null;
+    return new UpstreamUnavailableError(upstream, `network error${code ? ` (${code})` : ""}; retry shortly.`, { code, cause: err });
+  }
+  if (err instanceof SyntaxError) {
+    return new UpstreamUnavailableError(upstream, "the response did not parse.", { code: "unparseable", cause: err });
+  }
+  return err instanceof Error ? err : new Error(String(err));
+}
 
 registerCapability("dependency-audit", async (input: CapabilityInput) => {
   const packageJson = (input.package_json as string)?.trim();
@@ -38,12 +79,14 @@ async function batchCveCheck(
   if (packages.length === 0) return results;
 
   // Filter to packages with parseable versions
-  const queryable = packages.filter((p) => p.version && p.version !== "unknown");
+  const queryable = packages.filter(isQueryable);
 
   if (queryable.length === 0) return results;
 
+  let resp: Response;
+  let data: { results?: unknown };
   try {
-    const resp = await fetch("https://api.osv.dev/v1/querybatch", {
+    resp = await fetch("https://api.osv.dev/v1/querybatch", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -54,22 +97,58 @@ async function batchCveCheck(
       }),
       signal: AbortSignal.timeout(15000),
     });
-
-    if (!resp.ok) return results;
-
-    const data = (await resp.json()) as { results: Array<{ vulns?: OsvVuln[] }> };
-
-    for (let i = 0; i < queryable.length; i++) {
-      const vulns = data.results?.[i]?.vulns ?? [];
-      if (vulns.length > 0) {
-        results.set(queryable[i].name, vulns);
+    if (!resp.ok) {
+      if (isUnavailableStatus(resp.status)) {
+        throw new UpstreamUnavailableError(OSV, `HTTP ${resp.status}; retry shortly.`, { code: `HTTP ${resp.status}` });
       }
+      if (resp.status === 404 || resp.status === 410) {
+        throw new UpstreamUnavailableError(OSV, `HTTP ${resp.status}; the endpoint is gone.`, { code: `HTTP ${resp.status}`, retryable: false });
+      }
+      throw new Error(`${OSV} returned HTTP ${resp.status}`);
     }
-  } catch {
-    // OSV unavailable — continue without CVE data
+    data = (await resp.json()) as { results?: unknown };
+  } catch (err) {
+    throw transportFailure(OSV, err);
+  }
+
+  // querybatch answers one entry per query, `{}` for a package with no known
+  // vulnerability. Anything else is no answer, not "no vulnerabilities".
+  if (data === null || typeof data !== "object" || !Array.isArray(data.results) || data.results.length !== queryable.length) {
+    throw new UpstreamUnavailableError(OSV, "the response did not match the queries sent.", { code: "unparseable" });
+  }
+  const answers = data.results as Array<{ vulns?: OsvVuln[] } | null>;
+
+  for (let i = 0; i < queryable.length; i++) {
+    const vulns = answers[i]?.vulns ?? [];
+    if (vulns.length > 0) {
+      results.set(queryable[i].name, vulns);
+    }
   }
 
   return results;
+}
+
+/** A dependency whose registry lookup produced no answer (not a 404). */
+function isUnavailable(r: object): boolean {
+  return (r as { unavailable?: unknown }).unavailable === true;
+}
+
+/** True when `batchCveCheck` will send this query to OSV. */
+function isQueryable(q: { version: string }): boolean {
+  return Boolean(q.version) && q.version !== "unknown";
+}
+
+/**
+ * Every registry lookup failed and OSV has nothing to check: no leg answered,
+ * so there is no audit to sell.
+ */
+function requireSomeAnswer(registry: string, results: object[], osvQueries: Array<{ version: string }>): void {
+  if (results.length > 0 && results.every(isUnavailable) && !osvQueries.some(isQueryable)) {
+    throw new UpstreamUnavailableError(
+      registry,
+      `all ${results.length} lookups failed and no dependency had a version for OSV to check; retry shortly.`,
+    );
+  }
 }
 
 function getHighestSeverity(vulns: OsvVuln[]): string {
@@ -104,7 +183,11 @@ async function auditNpm(packageJsonStr: string) {
           signal: AbortSignal.timeout(8000),
           headers: { Accept: "application/json" },
         });
-        if (!res.ok) return { name, current_version: currentVersion, error: `HTTP ${res.status}` };
+        if (!res.ok) {
+          return isUnavailableStatus(res.status)
+            ? { name, current_version: currentVersion, error: `HTTP ${res.status}`, unavailable: true }
+            : { name, current_version: currentVersion, error: `HTTP ${res.status}` };
+        }
 
         const data = (await res.json()) as Record<string, unknown>;
         const distTags = data["dist-tags"] as Record<string, string> | undefined;
@@ -120,21 +203,22 @@ async function auditNpm(packageJsonStr: string) {
           is_dev_dependency: !!(pkg.devDependencies ?? {})[name],
         };
       } catch {
-        return { name, current_version: currentVersion, error: "fetch failed" };
+        return { name, current_version: currentVersion, error: "fetch failed", unavailable: true };
       }
     }),
   );
 
-  // Batch CVE check via OSV
-  const cveMap = await batchCveCheck(
-    registryResults
-      .filter((r) => !("error" in r))
-      .map((r) => ({
-        name: r.name,
-        version: r.current_version,
-        ecosystem: "npm",
-      })),
-  );
+  // Batch CVE check via OSV. The declared version is enough to query, so a
+  // dependency whose registry lookup failed is still checked.
+  const osvQueries = registryResults
+    .filter((r) => !("error" in r) || isUnavailable(r))
+    .map((r) => ({
+      name: r.name,
+      version: r.current_version,
+      ecosystem: "npm",
+    }));
+  requireSomeAnswer("npm registry", registryResults, osvQueries);
+  const cveMap = await batchCveCheck(osvQueries);
 
   // Merge CVE results
   const dependencies = registryResults.map((r) => {
@@ -177,6 +261,8 @@ async function auditNpm(packageJsonStr: string) {
         ...deprecated.map((d) => `${d.name} (deprecated)`),
         ...vulnerable.map((v) => `${v.name} (${v.vulnerability_count} vulns)`),
       ],
+      // Present only when a registry lookup failed, so a complete answer is unchanged.
+      ...(registryResults.some(isUnavailable) ? { unavailable_sources: ["npm registry"] } : {}),
     },
     provenance: { source: "npm-registry + osv.dev", fetched_at: new Date().toISOString() },
   };
@@ -201,7 +287,11 @@ async function auditPypi(requirementsStr: string) {
         const res = await fetch(`https://pypi.org/pypi/${dep.name}/json`, {
           signal: AbortSignal.timeout(8000),
         });
-        if (!res.ok) return { name: dep.name, current_version: dep.version, error: `HTTP ${res.status}` };
+        if (!res.ok) {
+          return isUnavailableStatus(res.status)
+            ? { name: dep.name, current_version: dep.version, error: `HTTP ${res.status}`, unavailable: true }
+            : { name: dep.name, current_version: dep.version, error: `HTTP ${res.status}` };
+        }
 
         const data = (await res.json()) as Record<string, unknown>;
         const info = data.info as Record<string, unknown>;
@@ -214,21 +304,22 @@ async function auditPypi(requirementsStr: string) {
           is_outdated: dep.version !== null && dep.version !== latest,
         };
       } catch {
-        return { name: dep.name, current_version: dep.version, error: "fetch failed" };
+        return { name: dep.name, current_version: dep.version, error: "fetch failed", unavailable: true };
       }
     }),
   );
 
-  // Batch CVE check via OSV
-  const cveMap = await batchCveCheck(
-    registryResults
-      .filter((r) => !("error" in r) && r.current_version)
-      .map((r) => ({
-        name: r.name,
-        version: r.current_version!,
-        ecosystem: "PyPI",
-      })),
-  );
+  // Batch CVE check via OSV. The pinned version is enough to query, so a
+  // dependency whose registry lookup failed is still checked.
+  const osvQueries = registryResults
+    .filter((r) => (!("error" in r) || isUnavailable(r)) && r.current_version)
+    .map((r) => ({
+      name: r.name,
+      version: r.current_version!,
+      ecosystem: "PyPI",
+    }));
+  requireSomeAnswer("PyPI", registryResults, osvQueries);
+  const cveMap = await batchCveCheck(osvQueries);
 
   const dependencies = registryResults.map((r) => {
     const vulns = cveMap.get(r.name) ?? [];
@@ -264,6 +355,8 @@ async function auditPypi(requirementsStr: string) {
         errors: dependencies.filter((r) => (r as Record<string, unknown>).error).length,
       },
       critical_updates: vulnerable.map((v) => `${v.name} (${v.vulnerability_count} vulns)`),
+      // Present only when a registry lookup failed, so a complete answer is unchanged.
+      ...(registryResults.some(isUnavailable) ? { unavailable_sources: ["PyPI"] } : {}),
     },
     provenance: { source: "pypi-registry + osv.dev", fetched_at: new Date().toISOString() },
   };

@@ -86,12 +86,6 @@
       "line": 52
     },
     {
-      "file": "apps/api/src/capabilities/business-day-check.ts",
-      "fingerprint": "ed1c346acabd2f58a7ec2931a983f8785bacdc5fe85f7dad2ebf4b832f1efa31",
-      "count": 1,
-      "line": 81
-    },
-    {
       "file": "apps/api/src/capabilities/canadian-company-data.ts",
       "fingerprint": "14f13d46a5de0b55ba1b2ccc6576264b600c4ce75d4f4cb77d16de4faf197f21",
       "count": 1,
@@ -150,12 +144,6 @@
       "fingerprint": "92d285f50753488e732067fa65cb7407d6759b79ee9da2875be2e5c46f10cf69",
       "count": 1,
       "line": 60
-    },
-    {
-      "file": "apps/api/src/capabilities/container-track.ts",
-      "fingerprint": "5e54369342b499f3b778fb9d067331edf5b15df739b924c613b7f59604af8241",
-      "count": 1,
-      "line": 344
     },
     {
       "file": "apps/api/src/capabilities/contract-verify-check.ts",
@@ -218,24 +206,6 @@
       "line": 167
     },
     {
-      "file": "apps/api/src/capabilities/dependency-audit.ts",
-      "fingerprint": "8ce60eaa61cfde2d8553522efdeafaba6d45172f7ef2008132830bfe818af60d",
-      "count": 1,
-      "line": 216
-    },
-    {
-      "file": "apps/api/src/capabilities/dependency-audit.ts",
-      "fingerprint": "e76384ce446dca4ad0b0e17c38bfdbf13c57be83c2bb463a63690714b8c3b440",
-      "count": 1,
-      "line": 68
-    },
-    {
-      "file": "apps/api/src/capabilities/dependency-audit.ts",
-      "fingerprint": "fccc1899a9c6be9acca00d498fff14832c78200bf560e35bd4119a989c48755c",
-      "count": 1,
-      "line": 122
-    },
-    {
       "file": "apps/api/src/capabilities/docker-hub-info.ts",
       "fingerprint": "ccbf9f23dcb872ae7b33a8f355a72d9c6722dd13fa6b545b2ca43435f9e72aee",
       "count": 1,
@@ -252,18 +222,6 @@
       "fingerprint": "9a00c3edc8d0d8d7daf9420e5464659838e4fb19a2a41438e5ccd7741e85adfb",
       "count": 1,
       "line": 30
-    },
-    {
-      "file": "apps/api/src/capabilities/domain-age-check.ts",
-      "fingerprint": "861d5f575e932c64acfd4ecd727c9053ce701829b9eabec9cec7c48e664b0d07",
-      "count": 1,
-      "line": 136
-    },
-    {
-      "file": "apps/api/src/capabilities/domain-age-check.ts",
-      "fingerprint": "b88ddaed7f0c5b4ac5c337247fc4ce8fa7a09e067000f9c83652c978a357c756",
-      "count": 1,
-      "line": 150
     },
     {
       "file": "apps/api/src/capabilities/domain-contact-extract.ts",
@@ -378,12 +336,6 @@
       "fingerprint": "f839cfb6136c362e73b3a8df2259202f544272e5d6e75d693fbc82cd1c821c27",
       "count": 1,
       "line": 67
-    },
-    {
-      "file": "apps/api/src/capabilities/eori-validate.ts",
-      "fingerprint": "fef9b6b9ae9d9d64073ed6bcc43e214d302317afc7003e5341f4e0d0aafbeb52",
-      "count": 1,
-      "line": 65
     },
     {
       "file": "apps/api/src/capabilities/estonian-company-data.ts",
@@ -804,30 +756,6 @@
       "fingerprint": "fe0021c3b0e3710612dd7cf1e1a02da4219f04a3a810bc667ad7fab5301955e8",
       "count": 1,
       "line": 207
-    },
-    {
-      "file": "apps/api/src/capabilities/package-security-audit.ts",
-      "fingerprint": "4206085927e5e2dde509ca9c32b79ffcd409c922b9dcfcb00a988b1d1e06f29b",
-      "count": 1,
-      "line": 277
-    },
-    {
-      "file": "apps/api/src/capabilities/package-security-audit.ts",
-      "fingerprint": "558c20b471c18b16fd4de6f0624ab86c23be2bb87959bed7961fa30310bafa09",
-      "count": 1,
-      "line": 59
-    },
-    {
-      "file": "apps/api/src/capabilities/package-security-audit.ts",
-      "fingerprint": "aa94dcc9e369c70092032f31d2ac06b2a5d8392d78668748195939e729e867e7",
-      "count": 1,
-      "line": 417
-    },
-    {
-      "file": "apps/api/src/capabilities/package-security-audit.ts",
-      "fingerprint": "e232e022004232cf9fc126202ad161dab35c73bbce444e23bbc2fd819860a552",
-      "count": 1,
-      "line": 285
     },
     {
       "file": "apps/api/src/capabilities/page-exists.ts",

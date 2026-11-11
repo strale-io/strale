@@ -1,10 +1,13 @@
 import { EventEmitter } from "node:events";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
+import { outcomeFromError, outcomeFromOutput } from "../lib/execution-outcome.js";
 
 const state = vi.hoisted(() => ({
   fetch: vi.fn(),
-  whoisMode: "success" as "success" | "reset",
+  whoisMode: "success" as "success" | "reset" | "text",
+  whoisText: "",
   whoisConnections: 0,
 }));
 
@@ -25,6 +28,11 @@ vi.mock("node:net", () => ({
       queueMicrotask(() => {
         if (state.whoisMode === "reset") {
           socket.emit("error", Object.assign(new Error("socket hang up"), { code: "ECONNRESET" }));
+          return;
+        }
+        if (state.whoisMode === "text") {
+          if (state.whoisText) socket.emit("data", Buffer.from(state.whoisText));
+          socket.emit("end");
           return;
         }
         socket.emit("data", Buffer.from(
@@ -61,6 +69,7 @@ beforeEach(() => {
   vi.useRealTimers();
   state.fetch.mockReset();
   state.whoisMode = "success";
+  state.whoisText = "";
   state.whoisConnections = 0;
   resetRdapBootstrapCacheForTests();
 });
@@ -126,16 +135,16 @@ describe("domain-age-check RDAP precedence and WHOIS fallback", () => {
     expect(result.provenance).toMatchObject({ source: "whois", upstream: "whois.verisign-grs.com" });
   });
 
-  it("preserves the unsupported-TLD result when neither lookup path exists", async () => {
+  it("refuses, unbilled, a TLD with neither an RDAP service nor a WHOIS server", async () => {
+    // Row 27: this used to be a billed `risk_indicator: "unknown"` for a lookup
+    // that never happened. It is a refusal: unbilled and not held against the
+    // capability's health.
     state.fetch.mockResolvedValueOnce(bootstrap([]));
-    const result = await execute({ domain: "example.xyz" });
-    expect(result.output).toMatchObject({
-      age_days: null,
-      risk_indicator: "unknown",
-      error: "WHOIS server not available for .xyz TLD",
-    });
-    expect(result.provenance).toEqual(expect.objectContaining({ source: "whois" }));
-    expect(result.provenance).not.toHaveProperty("upstream");
+    const error = await execute({ domain: "example.xyz" }).catch((caught) => caught);
+    expect(isCapabilityRefusal(error)).toBe(true);
+    expect((error as Error).message).toMatch(/^'domain' must be under a TLD with an RDAP or WHOIS service/);
+    expect((error as Error).message).toContain(".xyz");
+    expect(outcomeFromError(error)).toMatchObject({ billable: false });
     expect(state.fetch).toHaveBeenCalledOnce();
     expect(String(state.fetch.mock.calls[0]?.[0])).toContain("data.iana.org/rdap/dns.json");
     expect(state.whoisConnections).toBe(0);
@@ -240,5 +249,151 @@ describe("domain-age-check RDAP precedence and WHOIS fallback", () => {
     expect(error.message).toContain("RDAP registry rdap.registry.example failed");
     expect(error.message).toContain("response too large");
     expect(error.message).toContain("WHOIS registry whois.verisign-grs.com failed: connection reset");
+  });
+});
+
+// 2026-11-06 swallowed-failures audit, row 27: a registry that gives no answer
+// must throw (unbilled), never come back as a billed `risk_indicator: "unknown"`.
+describe("domain-age-check upstream failures (row 27)", () => {
+  const expectUnbilledUpstream = (error: unknown, retryable: boolean) => {
+    expect((error as Error).name).toBe("UpstreamUnavailableError");
+    expect((error as { retryable?: boolean }).retryable).toBe(retryable);
+    expect((error as Error).message).not.toMatch(/not found|invalid|missing|required/i);
+    expect(outcomeFromError(error)).toMatchObject({ billable: false, failure_class: "provider_unavailable" });
+  };
+
+  it.each([
+    ["HTTP 503", () => rdap({}, 503)],
+    ["HTTP 429", () => rdap({}, 429)],
+    ["network error", () => Promise.reject(Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNRESET" } }))],
+    ["timeout", () => Promise.reject(new DOMException("request timed out", "TimeoutError"))],
+  ])("throws unbilled when RDAP fails (%s) and the TLD has no WHOIS server", async (_label, answer) => {
+    state.fetch.mockResolvedValueOnce(bootstrap(XYZ_SERVICE)).mockImplementationOnce(answer);
+    const error = await execute({ domain: "example.xyz" }).catch((caught) => caught);
+    expectUnbilledUpstream(error, true);
+    expect((error as Error).message).toContain("RDAP registry rdap.registry.example failed");
+  });
+
+  it("throws unbilled when RDAP fails and the WHOIS connection resets", async () => {
+    state.fetch.mockResolvedValueOnce(bootstrap(COM_SERVICE)).mockResolvedValueOnce(rdap({}, 503));
+    state.whoisMode = "reset";
+    const error = await execute({ domain: "example.com" }).catch((caught) => caught);
+    expectUnbilledUpstream(error, true);
+  });
+
+  it("throws unbilled when the WHOIS reply is empty", async () => {
+    state.fetch.mockResolvedValueOnce(bootstrap([]));
+    state.whoisMode = "text";
+    state.whoisText = "";
+    const error = await execute({ domain: "example.com" }).catch((caught) => caught);
+    expectUnbilledUpstream(error, true);
+    expect((error as Error).message).toContain("empty reply");
+  });
+
+  it("throws unbilled when the WHOIS registry answers with a rate-limit notice", async () => {
+    state.fetch.mockResolvedValueOnce(bootstrap([]));
+    state.whoisMode = "text";
+    state.whoisText = "WHOIS LIMIT EXCEEDED - SEE WWW.REGISTRY.EXAMPLE/WHOIS FOR DETAILS\r\n";
+    const error = await execute({ domain: "example.com" }).catch((caught) => caught);
+    expectUnbilledUpstream(error, true);
+    expect((error as Error).message).toContain("rate limited");
+  });
+
+  it("throws unbilled, not retryable, when the WHOIS reply carries no creation date", async () => {
+    state.fetch.mockResolvedValueOnce(bootstrap([]));
+    state.whoisMode = "text";
+    state.whoisText = "Domain Name: EXAMPLE.COM\r\nRegistrar: WHOIS Registrar\r\nName Server: NS1.EXAMPLE.COM\r\n";
+    const error = await execute({ domain: "example.com" }).catch((caught) => caught);
+    expectUnbilledUpstream(error, false);
+    expect((error as Error).message).toContain("the reply carried no creation date");
+  });
+
+  it("keeps the not-registered WHOIS answer exactly as before (real negative)", async () => {
+    state.fetch.mockResolvedValueOnce(bootstrap([]));
+    state.whoisMode = "text";
+    state.whoisText = 'No match for "AVAILABLE.COM".\r\n>>> Last update of whois database: 2026-11-11T00:00:00Z <<<\r\n';
+    const result = await execute({ domain: "available.com" });
+    expect(result.output).toEqual({
+      domain: "available.com", age_days: null, age_years: null, created_date: null,
+      registrar: null, expiry_date: null, is_new: null, risk_indicator: "unknown",
+      note: "Domain is not registered according to the registry WHOIS service",
+    });
+    expect(result.provenance).toMatchObject({ source: "whois", upstream: "whois.verisign-grs.com" });
+    expect(outcomeFromOutput("domain-age-check", result.output)).toMatchObject({ billable: true });
+  });
+
+  it("reads SWITCH's (.ch/.li) not-registered reply as the real negative", async () => {
+    state.fetch.mockResolvedValueOnce(bootstrap([]));
+    state.whoisMode = "text";
+    state.whoisText = "We do not have an entry in our database matching your query.\r\n";
+    const result = await execute({ domain: "unregistered-example.ch" });
+    expect(result.output).toEqual({
+      domain: "unregistered-example.ch", age_days: null, age_years: null, created_date: null,
+      registrar: null, expiry_date: null, is_new: null, risk_indicator: "unknown",
+      note: "Domain is not registered according to the registry WHOIS service",
+    });
+    expect(result.provenance).toMatchObject({ source: "whois", upstream: "whois.nic.ch" });
+    expect(outcomeFromOutput("domain-age-check", result.output)).toMatchObject({ billable: true });
+  });
+});
+
+// Review fix (PR #1014): a registry that never publishes a creation date has
+// answered as fully as it ever will. That is a coverage limit, a refusal that
+// does not count against the capability's health, not an upstream outage.
+describe("domain-age-check registries that publish no creation date", () => {
+  const expectCoverageRefusal = (error: unknown, registry: string) => {
+    expect((error as Error).name).not.toBe("UpstreamUnavailableError");
+    expect(isCapabilityRefusal(error)).toBe(true);
+    // The message alone (all the async and x402 rails keep) is still a refusal.
+    expect(isCapabilityRefusal((error as Error).message)).toBe(true);
+    expect((error as Error).message).toContain(`${registry} does not publish one`);
+    expect(outcomeFromError(error)).toMatchObject({
+      billable: false,
+      failure_class: "capability_refused",
+      counts_against_capability: false,
+    });
+  };
+
+  it.each([
+    ["DENIC (.de)", "example.de", "Domain: example.de\nNserver: a.iana-servers.net\nStatus: connect\nChanged: 2018-03-12T21:44:25+01:00\n"],
+    ["EURid (.eu)", "example.eu", "Domain: example.eu\nScript: LATIN\n\nRegistrant:\n        NOT DISCLOSED!\n\nTechnical:\n        Organisation: Example\n"],
+    ["nic.at (.at)", "example.at", "domain:         example.at\nregistrant:     ABC123-NICAT\nnserver:        ns1.example.at\nchanged:        20200101 12:00:00\nsource:         AT-DOM\n"],
+  ])("refuses, unbilled and not counted, when %s answers without a creation date", async (registry, domain, reply) => {
+    state.fetch.mockResolvedValueOnce(bootstrap([]));
+    state.whoisMode = "text";
+    state.whoisText = reply;
+    const error = await execute({ domain }).catch((caught) => caught);
+    expectCoverageRefusal(error, registry);
+  });
+
+  it("refuses when the RDAP record has no registration event and the TLD has no WHOIS server", async () => {
+    state.fetch
+      .mockResolvedValueOnce(bootstrap(XYZ_SERVICE))
+      .mockResolvedValueOnce(rdap({ objectClassName: "domain", ldhName: "example.xyz", events: [] }));
+    const error = await execute({ domain: "example.xyz" }).catch((caught) => caught);
+    expectCoverageRefusal(error, "the .xyz RDAP registry rdap.registry.example");
+    expect(state.whoisConnections).toBe(0);
+  });
+
+  it("still throws upstream unavailable when DENIC rate-limits or answers empty", async () => {
+    state.fetch.mockResolvedValueOnce(bootstrap([]));
+    state.whoisMode = "text";
+    state.whoisText = "55000000002 Connection refused; access control limit reached.\n";
+    let error = await execute({ domain: "example.de" }).catch((caught) => caught);
+    expect((error as Error).name).toBe("UpstreamUnavailableError");
+    expect((error as Error).message).toContain("rate limited");
+
+    state.whoisText = "";
+    error = await execute({ domain: "example.de" }).catch((caught) => caught);
+    expect((error as Error).name).toBe("UpstreamUnavailableError");
+    expect((error as Error).message).toContain("empty reply");
+  });
+
+  it("keeps DENIC's not-registered reply as the real negative", async () => {
+    state.fetch.mockResolvedValueOnce(bootstrap([]));
+    state.whoisMode = "text";
+    state.whoisText = "Domain: unregistered-example.de\nStatus: free\n";
+    const result = await execute({ domain: "unregistered-example.de" });
+    expect(result.output).toMatchObject({ risk_indicator: "unknown", note: "Domain is not registered according to the registry WHOIS service" });
   });
 });

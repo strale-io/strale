@@ -11,20 +11,44 @@ tracks:
     owner: session
     next_action: "Owner: orchestrator/Claude for billing-path implementation;
       Codex may build non-sensitive supporting scaffolding under rule 5. Wave 1
-      landed in PRs 938/939. The catch-handler CI guard and shrinking baseline
-      are now implemented; see the resume file and receipt. Its conservative
-      candidates are not a count of confirmed billing defects, and logging is
-      not proof of an unbillable result. Next: reconcile the remaining audit rows
-      against later repairs (including domain-age PR975 and customs PR999), then
-      finish wave 2 and wave 3 (rows 26, 27, 29, 34) on Claude. Do not assume the
-      proposed degraded billing marker shipped. Remove each fixed catch from
-      the baseline. Add perturbation replays (http_503, http_429, network_error,
-      blocked_200, DNS ETIMEOUT) for every network executor with fail-before
-      evidence. Then measure past billed calls from affected paths since their
-      earliest releases, decide refunds per policy with a DEC-20260504-B drain
-      plan, and sweep wallet debits versus listed and dry-run prices (P-011,
-      P-008). Keep receipts per result. No production financial run or refund
-      was performed by the static-guard batch."
+      landed in PRs 938/939 and the catch-handler CI guard with its shrinking
+      baseline in the resume file's batch. Wave 2a, branch
+      fix/swallowed-failures-wave2a: audit rows 7 (package-security-audit), 8
+      (dependency-audit), 17 (business-day-check), 19 (eori-validate), 27
+      (domain-age-check) and 34 (container-track) are done in that PR. Each
+      upstream failure throws UpstreamUnavailableError (unbilled), secondary legs
+      are named in unavailable_sources, real negatives keep their output, and
+      the 12 baseline entries for those files are removed (196 to 184). The
+      fail-before and after test receipts are in evidence. The PR is tier 2
+      under REVIEW.md and needs its independent review before merge. Still open:
+      the remaining wave 2 and wave 3 audit rows (including 26 and 29),
+      reconciled first against later repairs such as customs PR999; the
+      Nager.Date no-calendar path (a weekends-only answer for countries such as
+      TH, still billed) as a follow-up candidate; the perturbation replays
+      (http_503, http_429, network_error, blocked_200, DNS ETIMEOUT) for every
+      network executor with fail-before evidence; then measuring past billed
+      calls from the affected paths since their earliest releases, deciding
+      refunds per policy with a DEC-20260504-B drain plan, and the wallet-debit
+      sweep against listed and dry-run prices (P-011, P-008). Do not assume the
+      proposed degraded billing marker shipped. No production financial run or
+      refund was performed by either batch. Review fixes on that branch (commit
+      8e17f619, review-fixes receipts in evidence): package-security-audit
+      risk_score_complete, container-track page_error and rendering-service
+      attribution, domain-age-check no-creation-date refusal, business-day-check
+      out-of-range refusal. Pre-existing defects found in that review, not fixed
+      there: dependency-audit severity is always low because OSV querybatch
+      returns only id and modified (critical CVEs billed as low; summary and
+      aliases empty); unpinned PyPI requirements and registry-404 dependencies
+      never reach OSV, and malicious-removed npm packages with MAL- advisories
+      are billed as 0 vulnerabilities; dependency-audit with only 404s and
+      unavailable sources and nothing queryable bills an empty audit
+      (requireSomeAnswer edge); business-day-check next and previous business
+      day use only the current year's holidays (wrong on 31 Dec), and a 404 for
+      an unknown country code such as ZZ is billed as weekends-only;
+      eori-validate bills valid false for GB EORI numbers (the EU service says
+      Not valid); package-security-audit with a nonexistent explicit npm version
+      gets an empty OSV answer and is billed low; holiday-calendar getHolidays
+      caches a non-list 200 body for 24h."
     resume_file: handoff/_general/from-code/2026-11-11-upstream-catch-guard.md
     exit:
       - Every network executor under apps/api/src/capabilities either throws or
@@ -37,6 +61,11 @@ tracks:
         the next inventory revision.
     evidence:
       - archive/receipts/2026-11-10-check-upstream-catch-guard.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-fail-before.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-after.json
+      - archive/receipts/2026-11-11-check-upstream-catch-guard-wave2a.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-review-fixes-fail-before.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-review-fixes-after.json
   - id: T2
     title: "T2: Compliance-answer correctness (reference answers)"
     status: queued
