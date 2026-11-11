@@ -19,8 +19,8 @@ import { fetchUnavailable, UpstreamUnavailableError } from "../lib/upstream-resu
 const PAGE_ANALYSIS = "page analysis";
 
 /**
- * The caller's own site failed: its 5xx, a timeout or a network error. Still
- * unbilled and retryable, but worded as the target's failure ("URL returned
+ * The caller's own site failed: its 5xx, a timeout, a network error or a
+ * redirect loop (not retryable). Still unbilled, but worded as the target's failure ("URL returned
  * HTTP 5", "URL did not answer"), which the breaker's USER_INPUT_ERROR_PATTERNS
  * in lib/circuit-breaker.ts recognise, as for url-to-markdown: one caller's
  * broken site retried three times must not suspend cookie-scan for everyone
@@ -31,6 +31,15 @@ function targetUnavailable(site: string, failure: number | unknown): Error {
     return new UpstreamUnavailableError(site, `URL returned HTTP ${failure}, a server error on the site itself; retry later.`, {
       code: `HTTP ${failure}`,
       retryable: true,
+    });
+  }
+  // safe-fetch reports a redirect loop as a plain Error. It is the caller's
+  // site, not ours and not an upstream we depend on (PR #1015 delta review).
+  if (failure instanceof Error && failure.message.startsWith("Too many redirects")) {
+    return new UpstreamUnavailableError(site, "URL did not answer (it kept redirecting).", {
+      code: "redirect loop",
+      retryable: false,
+      cause: failure,
     });
   }
   const err = fetchUnavailable(site, failure);

@@ -166,17 +166,19 @@ function unparseable(upstream: string, what: string): UpstreamUnavailableError {
 }
 
 /**
- * GitHub declined the request without a rate-limit header: a secondary rate
- * limit or abuse detection, both transient. The status stays in `code` and
- * out of the message, because the breaker classifies by message and files any
- * "403" as auth_expired, which opens it at once for 30 minutes for every
- * caller (PR #1015 review).
+ * GitHub declined the request without a rate-limit header. The message says
+ * "secondary rate limit or abuse detection" only when GitHub's body does
+ * (PR #1015 delta review); otherwise it says only that GitHub declined.
+ * Either way it is retryable. The status stays in `code` and out of the
+ * message, because the breaker classifies by message and files any "403" as
+ * auth_expired, which opens it at once for 30 minutes for every caller
+ * (PR #1015 review).
  */
-function ghDeclined(upstream: string, status: number): UpstreamUnavailableError {
-  return new UpstreamUnavailableError(upstream, "declined the request (a secondary rate limit or abuse detection); retry shortly.", {
-    code: `HTTP ${status}`,
-    retryable: true,
-  });
+function ghDeclined(upstream: string, status: number, body: string): UpstreamUnavailableError {
+  const detail = /rate limit|secondary rate|abuse/i.test(body)
+    ? "declined the request (a secondary rate limit or abuse detection); retry shortly."
+    : "declined the request; retry shortly.";
+  return new UpstreamUnavailableError(upstream, detail, { code: `HTTP ${status}`, retryable: true });
 }
 
 /**
@@ -226,7 +228,7 @@ async function ghJson(
   if (res.status === 403) {
     const body = await readErrorTextTruncated(res);
     if (tooLargeOk && /too large/i.test(body)) return UNLISTED;
-    throw ghDeclined(GITHUB_API, 403);
+    throw ghDeclined(GITHUB_API, 403, body);
   }
   if (!res.ok) {
     await res.body?.cancel();
@@ -248,8 +250,7 @@ async function ghFetchText(url: string): Promise<string | null> {
     return null;
   }
   if (res.status === 403) {
-    await res.body?.cancel();
-    throw ghDeclined(GITHUB_RAW, 403);
+    throw ghDeclined(GITHUB_RAW, 403, await readErrorTextTruncated(res));
   }
   if (!res.ok) {
     await res.body?.cancel();

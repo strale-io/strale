@@ -461,8 +461,8 @@ export const LIMITATIONS: LimitationDef[] = [
 
   // ── backlink-check ──
   { capabilitySlug: "backlink-check", category: "coverage", severity: "info",
-    title: "Uses CommonCrawl index data, which covers a subset of the web and may miss recent or niche backlinks",
-    limitationText: "Uses CommonCrawl index data — covers a subset of the web and may miss recently created or niche backlinks",
+    title: "Only pages Google search returns are found",
+    limitationText: "Backlinks come from one Google search (through Serper) for pages that mention the domain, up to 10 results. This is not a link index: pages that link without naming the domain, and recently created or niche backlinks, can be missing, and a listed page may mention the domain without linking to it.",
     workaround: "Combine with google-search using 'link:domain.com' queries for additional backlink discovery" },
 
   // ── barcode-lookup ──

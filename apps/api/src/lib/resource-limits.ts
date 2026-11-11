@@ -190,10 +190,9 @@ export const MAX_FETCHED_SITEMAP_BYTES = 52_428_800;
 /**
  * Largest structured API response the platform will buffer and parse (#432).
  *
- * Covers JSON legs (Serper, Corporations Canada, CommonCrawl's index,
- * YouTube's oembed, an arbitrary endpoint under `api-health-check`) and the
- * small XML documents API endpoints return alongside them (YouTube's
- * timedtext caption track).
+ * Covers JSON legs (Serper, Corporations Canada, YouTube's oembed, an
+ * arbitrary endpoint under `api-health-check`) and the small XML documents
+ * API endpoints return alongside them (YouTube's timedtext caption track).
  *
  * Deliberately SMALLER than the 16 MiB HTML cap, for a parser reason rather
  * than a transport one: HTML is scanned with linear regexes and stays one
@@ -202,10 +201,10 @@ export const MAX_FETCHED_SITEMAP_BYTES = 52_428_800;
  * the same residency class as a 16 MiB page.
  *
  * Measured 2026-08-29: YouTube oembed 0.8 KiB, Corporations Canada 0.07 KiB
- * (not-found shape), api.github.com repo 5.8 KiB, CommonCrawl index at the
- * capability's own `limit=50` 20.0 KiB. 4 MiB is over 200x the largest of
- * those — it exists to make an unbounded read bounded, not to police a size
- * anyone is near.
+ * (not-found shape), api.github.com repo 5.8 KiB, and a Common Crawl index
+ * reply at `limit=50` 20.0 KiB (a leg backlink-check no longer has). 4 MiB
+ * is over 200x the largest of those — it exists to make an unbounded read
+ * bounded, not to police a size anyone is near.
  */
 export const MAX_FETCHED_API_RESPONSE_BYTES = 4 * 1024 * 1024;
 

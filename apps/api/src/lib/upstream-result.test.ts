@@ -184,7 +184,58 @@ describe("the breaker reads a helper error the way its retryable flag says", () 
   it("quotedLegCodes quotes only the retryable legs when any leg is retryable", () => {
     const legs = [httpUnavailable("A", 503), httpUnavailable("B", 403)];
     expect(quotedLegCodes(legs)).toBe("HTTP 503");
+    expect(quotedLegCodes([httpUnavailable("A", 410), httpUnavailable("B", 404)])).toBe("HTTP 410, HTTP 404");
+  });
+});
+
+describe("tail: quotedLegCodes quotes no 401 or 403 when a leg is retryable", () => {
+  // A retryable GitHub rate-limit leg carries code "HTTP 403"; quoted, it
+  // would make the combined message read auth_expired (PR #1015 delta review).
+  const rateLimited403 = () =>
+    new UpstreamUnavailableError("GitHub REST API", "rate limited; retry shortly.", { code: "HTTP 403", retryable: true });
+
+  it("a combined message from a retryable 403 leg and a 503 leg classifies transient", () => {
+    const legs = [rateLimited403(), httpUnavailable("Other API", 503)];
+    const combined = new UpstreamUnavailableError("GitHub REST API and Other API", `neither source answered (${quotedLegCodes(legs)}).`, {
+      retryable: true,
+    });
+    expect(combined.message).not.toMatch(/\b40[13]\b/);
+    expect(categorizeFailureReason(combined.message)).toBe("transient");
+  });
+
+  it("drops 401 and 403 whenever a leg is retryable", () => {
+    expect(quotedLegCodes([rateLimited403()])).not.toMatch(/\b40[13]\b/);
+    expect(quotedLegCodes([rateLimited403(), httpUnavailable("B", 401)])).not.toMatch(/\b40[13]\b/);
+  });
+
+  // tail2 (PR #1017 review): with no retryable leg the 401/403 is the truth,
+  // and quoting it keeps the combined error non-retryable for the breaker.
+  it("tail2: keeps 401 and 403 when no leg is retryable", () => {
+    expect(quotedLegCodes([httpUnavailable("A", 401), httpUnavailable("B", 403)])).toBe("HTTP 401, HTTP 403");
     expect(quotedLegCodes([httpUnavailable("A", 403), httpUnavailable("B", 404)])).toBe("HTTP 403, HTTP 404");
+  });
+});
+
+// Covers 401, 403, 404, 410 and retryable 5xx legs only: legs such as
+// unparseable + unparseable or HTTP 400 + HTTP 400 classify `unknown`, which
+// the breaker treats as retryable whatever the flag says.
+describe("tail2: with 401, 403, 404, 410 or 5xx legs, a combined error from quotedLegCodes reads the way its retryable flag says", () => {
+  const rateLimited403 = () =>
+    new UpstreamUnavailableError("GitHub REST API", "rate limited; retry shortly.", { code: "HTTP 403", retryable: true });
+
+  it.each([
+    ["503 + 403", () => [httpUnavailable("A", 503), httpUnavailable("B", 403)]],
+    ["rate-limited 403 + 404", () => [rateLimited403(), httpUnavailable("B", 404)]],
+    ["rate-limited 403 alone", () => [rateLimited403()]],
+    ["401 + 403", () => [httpUnavailable("A", 401), httpUnavailable("B", 403)]],
+    ["403 alone", () => [httpUnavailable("A", 403)]],
+    ["403 + 404", () => [httpUnavailable("A", 403), httpUnavailable("B", 404)]],
+    ["410 + 404", () => [httpUnavailable("A", 410), httpUnavailable("B", 404)]],
+  ])("%s", (_l, makeLegs) => {
+    const legs = makeLegs();
+    const retryable = legs.some((l) => l.retryable);
+    const combined = new UpstreamUnavailableError("A and B", `neither source answered (${quotedLegCodes(legs)}).`, { retryable });
+    expect(isRetryableFailure(categorizeFailureReason(combined.message))).toBe(retryable);
   });
 });
 

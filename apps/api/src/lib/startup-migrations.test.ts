@@ -137,8 +137,16 @@ const latestDescriptions = new Map([...PUBLIC_DESCRIPTIONS_0124, ...UNLISTED_DES
 // the "Currently unavailable. " prefix that public-descriptions.test.ts
 // requires of every DEACTIVATED slug; the frozen block data does not change.
 const DELISTED_AFTER_0124 = new Set(["price-compare", "eu-trademark-search"]);
+// Descriptions narrowed in a manifest after blocks 0123/0124 froze their copy.
+// The boot text sync publishes the manifest (not a compliance tool), and
+// neither block's guard matches the new text, so nothing writes it back.
+const NARROWED_AFTER_0124 = new Map([
+  // PR #1017: backlink-check dropped its Common Crawl leg; "web archives" went with it.
+  ["backlink-check", "Find possible backlinks to a domain from Google search results. Returns linking pages and available link details."],
+]);
 const pinnedManifestDescription = (slug: string, description: string) =>
-  DELISTED_AFTER_0124.has(slug) ? `Currently unavailable. ${description}` : description;
+  NARROWED_AFTER_0124.get(slug) ??
+  (DELISTED_AFTER_0124.has(slug) ? `Currently unavailable. ${description}` : description);
 const dialect = new PgDialect();
 
 /** Capture SQL chunks issued through the stub. Returns canned values

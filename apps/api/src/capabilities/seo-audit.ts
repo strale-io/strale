@@ -3,10 +3,21 @@ import { safeFetch } from "../lib/safe-fetch.js";
 import { STRALE_USER_AGENT } from "../lib/site-access.js";
 import { readRobotsTxt } from "../lib/resource-limits.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
-import { httpUnavailable } from "../lib/upstream-result.js";
+import { httpUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
 import { isCapabilityRefusal } from "../lib/capability-refusal.js";
+import { logWarn } from "../lib/log.js";
 
 const ROBOTS = "robots.txt";
+
+/**
+ * A JavaScript runtime error of ours, as opposed to fetch's own transport
+ * TypeError. Applied to errors thrown after the fetch, where an
+ * ERR_INVALID_URL can only be ours too (PR #1017 delta review).
+ */
+function isOwnDefect(err: unknown): boolean {
+  if (!(err instanceof TypeError || err instanceof ReferenceError || err instanceof SyntaxError)) return false;
+  return !(err instanceof TypeError && (err.message === "fetch failed" || err.message === "terminated"));
+}
 
 registerCapability("seo-audit", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.task as string) ?? "").trim();
@@ -98,28 +109,60 @@ registerCapability("seo-audit", async (input: CapabilityInput) => {
   // row 23).
   const baseUrl = `${new URL(fullUrl).protocol}//${domain}`;
   let robotsTxt: string | null = null;
-  let sitemapFound = false;
   let robotsUnavailable = false;
+  let robotsError: unknown;
+  let robotsRes: Response | null = null;
   try {
-    const robotsRes = await safeFetch(`${baseUrl}/robots.txt`, {
+    robotsRes = await safeFetch(`${baseUrl}/robots.txt`, {
       headers: { "User-Agent": STRALE_USER_AGENT },
       signal: AbortSignal.timeout(5000),
     });
-    if (robotsRes.ok) {
-      robotsTxt = await readRobotsTxt(robotsRes);
-      sitemapFound = robotsTxt.toLowerCase().includes("sitemap:");
-    } else {
-      await robotsRes.body?.cancel();
-      if (robotsRes.status === 429 || robotsRes.status >= 500) throw httpUnavailable(ROBOTS, robotsRes.status);
-    }
   } catch (err) {
     // degraded-ok: an unreadable robots.txt nulls the robots and sitemap checks, is named in unavailable_sources and is left out of the score; it is never reported as "No robots.txt".
-    // Any fetch error that is not a refusal counts, not only an upstream
-    // outage: safe-fetch's "Too many redirects" or a redirect to a restricted
-    // address says nothing about the page being audited (PR #1015 review).
+    // The fetch's errors are the site's: "Too many redirects", a redirect to
+    // a restricted address (PR #1015 review), and the TypeErrors a site can
+    // drive: a redirect whose Location does not parse (ERR_INVALID_URL, PR
+    // #1017 review), undici's refusal of a credentialed redirect, "fetch
+    // failed" and "terminated". None of them says anything about the page
+    // being audited, and none counts against this capability's breaker. A
+    // ReferenceError or SyntaxError cannot come from the site: it is a
+    // defect in our own fetch code and must surface (PR #1017 delta review).
     if (isCapabilityRefusal(err)) throw err;
+    if (err instanceof ReferenceError || err instanceof SyntaxError) throw err;
     robotsUnavailable = true;
+    robotsError = err;
   }
+  if (robotsRes) {
+    try {
+      if (robotsRes.ok) {
+        robotsTxt = await readRobotsTxt(robotsRes);
+      } else {
+        await robotsRes.body?.cancel();
+        if (robotsRes.status === 429 || robotsRes.status >= 500) throw httpUnavailable(ROBOTS, robotsRes.status);
+      }
+    } catch (err) {
+      // degraded-ok: a robots.txt body that could not be read, a 429 or a 5xx is named in unavailable_sources and left out of the score, as above.
+      if (isCapabilityRefusal(err)) throw err;
+      // Our own defect is not the site's robots.txt being unreadable. Node's
+      // fetch reports transport failures as TypeError("fetch failed") or
+      // TypeError("terminated"); any other TypeError, ReferenceError or
+      // SyntaxError here is a bug and must surface (PR #1015 delta review).
+      if (isOwnDefect(err)) throw err;
+      robotsUnavailable = true;
+      robotsTxt = null;
+      robotsError = err;
+    }
+  }
+  if (robotsUnavailable) {
+    // Name and class only: the message can carry the caller's URL and its
+    // query string, which do not belong in the log.
+    logWarn("seo-audit-robots-unavailable", "robots.txt could not be read; scored without it", {
+      error_name: robotsError instanceof Error ? robotsError.name : typeof robotsError,
+      error_class: robotsError instanceof Error ? robotsError.constructor.name : typeof robotsError,
+      ...(robotsError instanceof UpstreamUnavailableError && robotsError.code ? { upstream_code: robotsError.code } : {}),
+    });
+  }
+  const sitemapFound = robotsTxt !== null && robotsTxt.toLowerCase().includes("sitemap:");
   checks.robots_txt = { present: robotsUnavailable ? null : !!robotsTxt };
   checks.sitemap = { referenced_in_robots: robotsUnavailable ? null : sitemapFound };
 
