@@ -205,7 +205,7 @@ export function refusalDetails(error: unknown): Record<string, unknown> | undefi
   if (error instanceof CapabilityRefusalError && error.details) return { retryable: false, ...error.details };
   const message = typeof error === "string" ? error : error instanceof Error ? error.message : "";
   if (error instanceof Error && error.name === "ConversionBusyError") {
-    return { retryable: true, retry_after_seconds: 5, next_step: "Wait a few seconds, then retry this page." };
+    return { retryable: true, retry_after_seconds: "retryAfterSeconds" in error && typeof error.retryAfterSeconds === "number" ? error.retryAfterSeconds : undefined, next_step: "Wait a few seconds, then retry this page." };
   }
   if (error instanceof Error && error.name === "ConversionCallerCooldownError") {
     const seconds = "retryAfterSeconds" in error && typeof error.retryAfterSeconds === "number" ? error.retryAfterSeconds : undefined;

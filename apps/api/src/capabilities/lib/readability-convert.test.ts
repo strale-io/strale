@@ -18,6 +18,7 @@ import {
 } from "vitest";
 import { ResourceLimitError } from "../../lib/resource-limits.js";
 import { runAsCaller } from "../../lib/caller-scope.js";
+import { refusalDetails } from "../../lib/capability-refusal.js";
 import { HtmlTooComplexError } from "./html-parse-bound.js";
 import {
   convertHtmlToMarkdownSync,
@@ -178,9 +179,9 @@ describe("htmlToCleanMarkdown in a worker", () => {
     await stopConversionWorkers();
     const { EventEmitter } = await import("node:events");
     class HeldWorker extends EventEmitter {
-      messages: Array<{ id: number }> = [];
+      messages: Array<{ id: number; html: string }> = [];
       unref() {}
-      postMessage(message: { id: number }) {
+      postMessage(message: { id: number; html: string }) {
         this.messages.push(message);
       }
       terminate() {
@@ -191,7 +192,7 @@ describe("htmlToCleanMarkdown in a worker", () => {
     const worker = new HeldWorker();
     __setWorkerFactoryForTests((() => worker) as never);
     const prime = htmlToCleanMarkdown("<p>prime</p>", URL_);
-    const jobs = ["a", "b", "c", "a"].map((key, i) =>
+    const jobs = ["a", "a", "b", "c"].map((key, i) =>
       runAsCaller(`ip:rr-${key}`, () =>
         htmlToCleanMarkdown(`<p>${key}${i}</p>`, URL_)
       )
@@ -203,15 +204,18 @@ describe("htmlToCleanMarkdown in a worker", () => {
         result: { markdown: "prime", title: "", usedReadability: false },
       });
       await prime;
+      const reachedWorker: string[] = [];
       for (const expected of ["a", "b", "c", "a"]) {
         await new Promise((resolve) => setImmediate(resolve));
         const message = worker.messages.at(-1)!;
+        reachedWorker.push(/<p>([a-z])/.exec(message.html)![1]!);
         worker.emit("message", {
           id: message.id,
           ok: true,
           result: { markdown: expected, title: "", usedReadability: false },
         });
       }
+      expect(reachedWorker).toEqual(["a", "b", "c", "a"]);
       await expect(Promise.all(jobs)).resolves.toEqual(
         expect.arrayContaining([
           expect.objectContaining({ markdown: "a" }),
@@ -219,9 +223,6 @@ describe("htmlToCleanMarkdown in a worker", () => {
           expect.objectContaining({ markdown: "c" }),
         ])
       );
-      expect(
-        (await Promise.all(jobs)).map((result) => result.markdown)
-      ).toEqual(["a", "b", "c", "a"]);
     } finally {
       await stopConversionWorkers();
       __setWorkerFactoryForTests(null);
@@ -350,11 +351,9 @@ describe("htmlToCleanMarkdown in a worker", () => {
       await vi.advanceTimersByTimeAsync(
         CONVERSION_LIMITS.callerCooldownMs - CONVERSION_LIMITS.timeoutMs
       );
-      expect(() =>
-        runAsCaller("ip:cool", async () => {
-          assertConverterAvailableForCaller();
-        })
-      ).not.toThrow();
+      await expect(
+        runAsCaller("ip:cool", async () => assertConverterAvailableForCaller())
+      ).resolves.toBeUndefined();
     } finally {
       await stopConversionWorkers();
       __setWorkerFactoryForTests(null);
@@ -394,6 +393,108 @@ describe("htmlToCleanMarkdown in a worker", () => {
       __setWorkerFactoryForTests(null);
       await stopConversionWorkers();
     }
+  });
+
+  it("releases a keyed caller after every completion path except worker out-of-memory", async () => {
+    await stopConversionWorkers();
+    const { EventEmitter } = await import("node:events");
+    type Mode = "success" | "too-complex" | "crash" | "held" | "oom";
+    class PathWorker extends EventEmitter {
+      constructor(private readonly mode: Mode) {
+        super();
+      }
+      unref() {}
+      postMessage(message: { id: number }) {
+        if (this.mode === "held") return;
+        queueMicrotask(() => {
+          if (this.mode === "success") {
+            this.emit("message", {
+              id: message.id,
+              ok: true,
+              result: { markdown: "ok", title: "", usedReadability: false },
+            });
+          } else if (this.mode === "too-complex") {
+            this.emit("message", {
+              id: message.id,
+              ok: false,
+              tooComplex: true,
+              message: "too many tags",
+            });
+          } else {
+            const error = new Error(
+              this.mode === "oom"
+                ? "Worker terminated due to reaching memory limit"
+                : "worker crashed"
+            ) as Error & { code?: string };
+            if (this.mode === "oom") error.code = "ERR_WORKER_OUT_OF_MEMORY";
+            this.emit("error", error);
+            this.emit("exit", 1);
+          }
+        });
+      }
+      terminate() {
+        this.emit("exit", 0);
+        return Promise.resolve(0);
+      }
+    }
+    const available = (caller: string) =>
+      runAsCaller(caller, async () => assertConverterAvailableForCaller());
+    const run = async (caller: string, mode: Mode) => {
+      await stopConversionWorkers();
+      __setWorkerFactoryForTests((() => new PathWorker(mode)) as never);
+      return runAsCaller(caller, () => htmlToCleanMarkdown("<p>a</p>", URL_));
+    };
+    try {
+      await expect(run("ip:path-success", "success")).resolves.toMatchObject({
+        markdown: "ok",
+      });
+      await expect(available("ip:path-success")).resolves.toBeUndefined();
+
+      await expect(
+        run("ip:path-too-complex", "too-complex")
+      ).rejects.toBeInstanceOf(HtmlTooComplexError);
+      await expect(available("ip:path-too-complex")).resolves.toBeUndefined();
+
+      await expect(run("ip:path-crash", "crash")).rejects.toThrow("failed");
+      await expect(available("ip:path-crash")).resolves.toBeUndefined();
+
+      await stopConversionWorkers();
+      __setWorkerFactoryForTests((() => new PathWorker("held")) as never);
+      const stopped = runAsCaller("ip:path-stop", () =>
+        htmlToCleanMarkdown("<p>a</p>", URL_)
+      );
+      await stopConversionWorkers();
+      await expect(stopped).rejects.toBeInstanceOf(ConversionBusyError);
+      await expect(available("ip:path-stop")).resolves.toBeUndefined();
+
+      await stopConversionWorkers();
+      __setWorkerFactoryForTests(() => {
+        throw new Error("spawn failed");
+      });
+      await expect(
+        runAsCaller("ip:path-spawn", () =>
+          htmlToCleanMarkdown("<p>a</p>", URL_)
+        )
+      ).rejects.toThrow("could not start");
+      await expect(available("ip:path-spawn")).resolves.toBeUndefined();
+
+      await expect(run("ip:path-oom", "oom")).rejects.toBeInstanceOf(
+        HtmlTooComplexError
+      );
+      await expect(available("ip:path-oom")).rejects.toBeInstanceOf(
+        ConversionCallerCooldownError
+      );
+    } finally {
+      __setWorkerFactoryForTests(null);
+      await stopConversionWorkers();
+    }
+  });
+
+  it("derives busy refusal retry seconds from the converter limit", () => {
+    CONVERSION_LIMITS.busyRetryAfterMs = 7_000;
+    expect(refusalDetails(new ConversionBusyError())).toMatchObject({
+      retry_after_seconds: 7,
+    });
   });
 
   it("bounds caller cooldown bookkeeping at 10,000 entries", () => {

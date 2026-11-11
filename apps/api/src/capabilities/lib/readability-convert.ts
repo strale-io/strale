@@ -73,10 +73,14 @@ export const CONVERSION_LIMITS = {
   exitWatchdogMs: 5_000,
   /** Refusal period after this caller makes the converter hit a resource limit. */
   callerCooldownMs: 30_000,
+  /** Suggested delay before retrying a converter-busy refusal. */
+  busyRetryAfterMs: 5_000,
 };
 
 /** Refused because every converter is busy; non-billable, worth retrying. */
 export class ConversionBusyError extends ResourceLimitError {
+  readonly retryAfterSeconds = CONVERSION_LIMITS.busyRetryAfterMs / 1000;
+
   constructor() {
     super(
       "The page converter is busy with other pages. Please retry in a few seconds."
