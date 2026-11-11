@@ -76,6 +76,8 @@ tracks:
       - archive/receipts/2026-11-11-check-upstream-catch-guard-wave2b.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-review-fail-before.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-review-after.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-tail-fail-before.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-tail-after.json
   - id: T2
     title: "T2: Compliance-answer correctness (reference answers)"
     status: queued
