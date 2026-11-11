@@ -7,8 +7,22 @@ import {
 } from "./lib/browserless-extract.js";
 import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
+import { UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 // GDPR fine lookup via enforcementtracker.com (Browserless + Claude)
+
+/**
+ * enforcementtracker.com is the source Strale chose, so a page that renders
+ * without its fine table is that source failing, and counts against this
+ * capability's health (2026-11-06 swallowed-failures audit, row 6). Before,
+ * a shell of 200 characters or more came back as a billed `fines: []` with
+ * totals of 0, which reads as "no fines on record". Now it throws, unbilled.
+ */
+const TRACKER = "enforcementtracker.com";
+
+function trackerUnavailable(detail: string, code: string): UpstreamUnavailableError {
+  return new UpstreamUnavailableError(TRACKER, `${detail}; retry shortly.`, { code });
+}
 
 registerCapability("gdpr-fine-lookup", async (input: CapabilityInput) => {
   const company = ((input.company as string) ?? "").trim();
@@ -33,7 +47,7 @@ registerCapability("gdpr-fine-lookup", async (input: CapabilityInput) => {
   const text = htmlToText(html);
 
   if (text.length < 200) {
-    throw new Error(`Could not load GDPR fine data from enforcementtracker.com.`);
+    throw trackerUnavailable("the page rendered without readable content", "empty");
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -58,6 +72,7 @@ ${text.slice(0, 12000)}
 
 Return ONLY valid JSON:
 {
+  "page_status": "results" if the page lists fines, "no_results" if the page shows the tracker's fine table or search with no fine matching the search, or "page_error" if it is an error or maintenance page, a cookie or consent wall, or an app shell that never shows the fine table,
   "fines": [
     {
       "company": "Company or organization fined",
@@ -73,10 +88,13 @@ Return ONLY valid JSON:
   "total_amount_eur": "sum of all fine amounts"
 }
 
-Return up to 15 fines. Use null for missing fields. Amounts should be numbers, not strings.`,
+Return up to 15 fines. Use null for missing fields. Amounts should be numbers, not strings. If page_status is "page_error", return "fines": [] and 0 for both totals.`,
     truncationGuidance: "Narrow the search (specific company or country) so fewer fines are returned per call.",
     parseFailureError: () => new Error("Failed to extract GDPR fine data."),
   });
+  if (output.page_status === "page_error") {
+    throw trackerUnavailable("the page showed no fine table (an error, maintenance or consent page, or an empty app shell)", "page_error");
+  }
 
   return {
     output,

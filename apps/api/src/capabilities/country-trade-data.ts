@@ -1,4 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { discardBody } from "../lib/safe-fetch.js";
+import { fetchUnavailable, httpUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 // ─── Country Trade Data — World Bank API + embedded fallback ────────────────
 
@@ -910,39 +912,73 @@ function resolveCountryCode(input: string): string | null {
 const WB_EXPORTS_INDICATOR = "NE.EXP.GNFS.CD"; // Exports of goods and services (current USD)
 const WB_IMPORTS_INDICATOR = "NE.IMP.GNFS.CD"; // Imports of goods and services (current USD)
 
+const WORLD_BANK = "World Bank API";
+
+/**
+ * One indicator's value for the year, or null when the World Bank answered
+ * and has no figure (no data for that year, or a request it rejects, such as
+ * a code it does not know). Every other failure throws.
+ */
+async function fetchWorldBankIndicator(countryCode: string, indicator: string, year: number): Promise<number | null> {
+  let res: Response;
+  try {
+    res = await fetch(
+      `https://api.worldbank.org/v2/country/${countryCode}/indicator/${indicator}?date=${year}&format=json`,
+      { signal: AbortSignal.timeout(8000) },
+    );
+  } catch (err) {
+    throw fetchUnavailable(WORLD_BANK, err);
+  }
+  if (!res.ok) {
+    await discardBody(res, "country-trade-data: World Bank request failed");
+    throw httpUnavailable(WORLD_BANK, res.status);
+  }
+  let data: unknown;
+  try {
+    data = await res.json();
+  } catch (err) {
+    throw fetchUnavailable(WORLD_BANK, err);
+  }
+  // A data answer is [page metadata, rows or null]; a rejected request is
+  // [{ message: [...] }]. Anything else is not the API's shape.
+  if (!Array.isArray(data)) {
+    throw new UpstreamUnavailableError(WORLD_BANK, "the response was not in the API's shape.", {
+      code: "unparseable",
+      retryable: false,
+    });
+  }
+  const rows = data[1];
+  const value = Array.isArray(rows) ? (rows[0] as { value?: unknown } | undefined)?.value : null;
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/**
+ * Live aggregate totals from the World Bank, or null when it has no figure
+ * for the year. A World Bank failure (transport, non-OK status, unparseable
+ * body) throws, unbilled (2026-11-06 swallowed-failures audit, row 26).
+ * Before, it was swallowed and the call answered from the embedded estimates
+ * alone, billed as if the World Bank had no figure. Disclosed fallbacks
+ * like this one were made to throw for container-track (row 34) and
+ * domain-age-check (row 27) too.
+ */
 async function fetchWorldBankData(countryCode: string, year: number): Promise<{
   total_exports_usd: number | null;
   total_imports_usd: number | null;
 } | null> {
-  try {
-    const [exRes, imRes] = await Promise.all([
-      fetch(
-        `https://api.worldbank.org/v2/country/${countryCode}/indicator/${WB_EXPORTS_INDICATOR}?date=${year}&format=json`,
-        { signal: AbortSignal.timeout(8000) },
-      ),
-      fetch(
-        `https://api.worldbank.org/v2/country/${countryCode}/indicator/${WB_IMPORTS_INDICATOR}?date=${year}&format=json`,
-        { signal: AbortSignal.timeout(8000) },
-      ),
-    ]);
+  const settled = await Promise.allSettled([
+    fetchWorldBankIndicator(countryCode, WB_EXPORTS_INDICATOR, year),
+    fetchWorldBankIndicator(countryCode, WB_IMPORTS_INDICATOR, year),
+  ]);
+  const failed = settled.find((r): r is PromiseRejectedResult => r.status === "rejected");
+  if (failed) throw failed.reason;
+  const [exValue, imValue] = settled.map((r) => (r as PromiseFulfilledResult<number | null>).value);
 
-    if (!exRes.ok || !imRes.ok) return null;
+  if (exValue === null && imValue === null) return null;
 
-    const exData = (await exRes.json()) as any[];
-    const imData = (await imRes.json()) as any[];
-
-    const exValue = exData?.[1]?.[0]?.value ?? null;
-    const imValue = imData?.[1]?.[0]?.value ?? null;
-
-    if (exValue === null && imValue === null) return null;
-
-    return {
-      total_exports_usd: exValue ? Math.round(exValue) : null,
-      total_imports_usd: imValue ? Math.round(imValue) : null,
-    };
-  } catch {
-    return null;
-  }
+  return {
+    total_exports_usd: exValue ? Math.round(exValue) : null,
+    total_imports_usd: imValue ? Math.round(imValue) : null,
+  };
 }
 
 registerCapability("country-trade-data", async (input: CapabilityInput) => {
@@ -967,13 +1003,10 @@ registerCapability("country-trade-data", async (input: CapabilityInput) => {
 
   const year = (input.year as number) ?? 2023;
 
-  // Try World Bank API for live aggregate data
-  let liveData: { total_exports_usd: number | null; total_imports_usd: number | null } | null = null;
-  try {
-    liveData = await fetchWorldBankData(countryCode, year);
-  } catch {
-    // Fall through to embedded data
-  }
+  // Live aggregate totals from the World Bank. Null when it has no figure
+  // for the year, and then the embedded estimates answer; a World Bank
+  // failure throws.
+  const liveData = await fetchWorldBankData(countryCode, year);
 
   // Use embedded data for detailed product/partner breakdown
   const embedded = EMBEDDED_DATA[countryCode];
