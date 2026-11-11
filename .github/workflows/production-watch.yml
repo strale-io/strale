@@ -20,4 +20,4 @@ jobs:
         with:
           script: |
             const { production } = await import(`${process.cwd()}/scripts/production-watch/watch.mjs`);
-            await production(github, context);
+            await production(github, context, undefined, { core });

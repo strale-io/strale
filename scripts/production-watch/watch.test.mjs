@@ -3,7 +3,7 @@ const contract = JSON.parse(readFileSync(new URL("../../apps/api/src/lib/job-wat
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { docsOnly, briefsChanged } from './classify.mjs';
-import { waitForDeploy, failingJobs, report, json, production, deploy } from './watch.mjs';
+import { waitForDeploy, failingJobs, report, json, production, deploy, validateKnownFailures } from './watch.mjs';
 import { mayRetry, retry } from './retry.mjs';
 import { checkStartup } from './package-probe.mjs';
 
@@ -133,6 +133,113 @@ test('external watch fails only on the second failing run and closes on recovery
   await production(github, { repo: {}, runId: 3 }, read);
   assert.equal(issues[1].state, 'closed');
 });
+
+const acknowledgementNow = new Date('2026-11-11T12:00:00Z');
+const eeAcknowledgement = { id: 'ingest-ee-directors', issue: 856, reason: 'Waits for RIK to answer; see #856.', expires: '2026-12-11' };
+function productionRead(failing = []) {
+  const jobs = Object.entries(contract).map(([id, expected_interval_seconds]) => ({
+    ...good, id, expected_interval_seconds, ok: !failing.includes(id),
+  }));
+  return async (url) => url.endsWith('/jobs') ? { jobs } : { status: 'ok' };
+}
+const knownFailureOptions = (knownFailures, extra = {}) => ({ now: acknowledgementNow, knownFailures, ...extra });
+
+test('an acknowledged failure stays reported without making production red', async () => {
+  const { github, issues } = fakeGithub();
+  const read = productionRead(['ingest-ee-directors']);
+  await production(github, { repo: {}, runId: 1 }, read, knownFailureOptions([eeAcknowledgement]));
+  await production(github, { repo: {}, runId: 2 }, read, knownFailureOptions([eeAcknowledgement]));
+  assert.ok(issues.some((issue) => issue.title === '[production-watch] ingest-ee-directors'));
+});
+
+test('an acknowledged failure never masks a new failing job', async () => {
+  const { github } = fakeGithub();
+  const read = productionRead(['ingest-ee-directors', 'retention']);
+  await production(github, { repo: {}, runId: 1 }, read, knownFailureOptions([eeAcknowledgement]));
+  await assert.rejects(
+    production(github, { repo: {}, runId: 2 }, read, knownFailureOptions([eeAcknowledgement])),
+    /retention/,
+  );
+});
+
+test('an expired acknowledgement makes production red and is named', async () => {
+  const { github } = fakeGithub();
+  const acknowledgement = { ...eeAcknowledgement, expires: '2026-11-10' };
+  const read = productionRead(['ingest-ee-directors']);
+  await production(github, { repo: {}, runId: 1 }, read, knownFailureOptions([acknowledgement]));
+  await assert.rejects(
+    production(github, { repo: {}, runId: 2 }, read, knownFailureOptions([acknowledgement])),
+    /Expired acknowledgement: ingest-ee-directors/,
+  );
+});
+
+test('health and inventory signals cannot be acknowledged', () => {
+  for (const id of ['http-health', 'job-inventory']) {
+    assert.throws(() => validateKnownFailures([{ ...eeAcknowledgement, id }], acknowledgementNow), /cannot be acknowledged/);
+  }
+});
+
+test('known failure validation rejects unsafe or malformed entries', () => {
+  const cases = [
+    [{ ...eeAcknowledgement, expires: '2026-12-27' }, /45 days/],
+    [{ ...eeAcknowledgement, expires: '2026-02-30' }, /invalid expires date/],
+    [[eeAcknowledgement, eeAcknowledgement], /duplicate id/],
+    [{ ...eeAcknowledgement, issue: undefined }, /positive integer/],
+    [{ ...eeAcknowledgement, reason: 'x'.repeat(201) }, /1-200/],
+  ];
+  for (const [value, message] of cases) {
+    const entries = Array.isArray(value) ? value : [value];
+    assert.throws(() => validateKnownFailures(entries, acknowledgementNow), message);
+  }
+});
+
+test('a healthy acknowledged job warns without making production red', async () => {
+  const { github } = fakeGithub();
+  const warnings = [];
+  await production(github, { repo: {}, runId: 1 }, productionRead(), knownFailureOptions([eeAcknowledgement], {
+    core: { warning: (message) => warnings.push(message) },
+  }));
+  assert.deepEqual(warnings.length, 1);
+  assert.match(warnings[0], /ingest-ee-directors.*can be removed/);
+});
+
+test('the committed known failures file is valid today', () => {
+  // Today's date, so a legitimate renewal is never rejected by a pinned clock.
+  const entries = JSON.parse(readFileSync(new URL('./known-failures.json', import.meta.url), 'utf8'));
+  assert.deepEqual(validateKnownFailures(entries, new Date()), entries);
+});
+
+test('an acknowledgement still covers its expiry day', async () => {
+  const { github } = fakeGithub();
+  const acknowledgement = { ...eeAcknowledgement, expires: acknowledgementNow.toISOString().slice(0, 10) };
+  const read = productionRead(['ingest-ee-directors']);
+  await production(github, { repo: {}, runId: 1 }, read, knownFailureOptions([acknowledgement]));
+  await production(github, { repo: {}, runId: 2 }, read, knownFailureOptions([acknowledgement]));
+});
+
+test('an acknowledgement covers only its exact job id', async () => {
+  const { github } = fakeGithub();
+  const near = { ...eeAcknowledgement, id: 'ingest-ee-director' };
+  const read = productionRead(['ingest-ee-directors']);
+  await production(github, { repo: {}, runId: 1 }, read, knownFailureOptions([near]));
+  await assert.rejects(
+    production(github, { repo: {}, runId: 2 }, read, knownFailureOptions([near])),
+    /ingest-ee-directors/,
+  );
+});
+
+test('a failing issue listing alarms once as job-inventory instead of resetting itself', async () => {
+  const { github, issues } = fakeGithub();
+  const listing = github.paginate;
+  github.paginate = async (method, args) => {
+    if (args?.state === 'open') throw new Error('GitHub listing failed');
+    return listing(method, args);
+  };
+  const read = productionRead();
+  await production(github, { repo: {}, runId: 1 }, read, knownFailureOptions([]));
+  await assert.rejects(production(github, { repo: {}, runId: 2 }, read, knownFailureOptions([])), /job-inventory/);
+  assert.ok(issues.some((issue) => issue.title === '[production-watch] job-inventory' && issue.state === 'open'));
+});
 test('health request has the ten-second AbortSignal and handles no JSON', async () => {
   await assert.rejects(json('https://example.invalid', async (_url, options) => {
     assert.ok(options.signal instanceof AbortSignal);
@@ -197,7 +304,7 @@ test('new monitoring workflows are reachable and use only the default token perm
   const { default: yaml } = await import('js-yaml');
   const specs = [
     ['deploy-verify', 'watch.mjs', 'deploy(github, context)', false],
-    ['production-watch', 'watch.mjs', 'production(github, context)', true],
+    ['production-watch', 'watch.mjs', 'production(github, context, undefined, { core })', true],
     ['package-contract', 'package-probe.mjs', 'packageContract(github, context)', true],
   ];
   for (const [file, script, invoke, scheduled] of specs) {
