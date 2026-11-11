@@ -1,7 +1,7 @@
 schema_version: 1
 program: robustness
 program_status: active
-updated: 2026-11-06
+updated: 2026-11-11
 tracks:
   - id: T1
     title: "R1: Untrusted-input bounds (url-to-markdown parse bound first)"
@@ -13,14 +13,15 @@ tracks:
       limit, 384 MB heap, 2 MiB converter cap) live since 2026-11-07; #980
       (browserless-extract htmlToText, a linear scanner) live since 2026-11-08;
       the live url-to-markdown exit check and the jsdom sweep in the receipt
-      dated 2026-11-11. The sweep found that the site-metadata path stays under
-      0.2 s on every hostile shape, and that nta-corporate.ts has no nesting
-      bound: jsdom took 20.4 s on 1 MiB, and 2.7 s on 16 KiB, of unclosed
-      nesting, from the official NTA API rather than the caller. Next, in
-      order: (1) review and ship codex/nta-xml-shape-bound (a linear depth
-      and element-count check before jsdom), then record the after timings.
-      (2) Per-caller fairness in the single converter (one free account can
-      keep it busy; needs caller identity in executors)."
+      dated 2026-11-11; #1003 (nta-corporate.ts: a linear XML shape check
+      before jsdom, refusing depth over 8, over 5,000 elements, over 5,000
+      nodes or over 64 attributes) live since 2026-11-11 (/health 1a5955b7).
+      After timings in docs/lanes/codex/nta-xml-shape-bound-report.md: 1 MiB of
+      unclosed nesting went from 20.4 s to under 5 ms, and a 1 MiB attribute
+      flood that took 49 s is refused in under 200 ms, pinned by tests. Every
+      jsdom call site the sweep named now has a stated bound or a fix. Next:
+      per-caller fairness in the single converter (one free account can keep
+      it busy; needs caller identity in executors)."
     resume_file: handoff/_general/from-code/2026-11-06-orchestrator-state.md
     exit:
       - "A receipt shows every adversarial input in the brief (nested div 16, 32
@@ -87,10 +88,13 @@ tracks:
       body says. Give it tests for the shapes reviewed in rounds 1 to 3: ramp,
       deep outage, slow degradation, quiet weekend, every-other-day buyer,
       two-day buyer, a job across three buckets, steady payers, and a missing
-      bucket column. (3) production-watch has failed about 20 consecutive runs on
-      a known, deliberate issue (#856, ingest-ee-directors, until RIK answers),
-      so a new failure there would not show. Make an acknowledged known failure
-      expire and stop masking other findings. (4) weekly-drift has failed two
+      bucket column. (3) production-watch: done by #1002 (merged 2026-11-11).
+      scripts/production-watch/known-failures.json acknowledges #856
+      (ingest-ee-directors) until 2026-12-11; an acknowledged failure is still
+      reported on its issue but no longer turns the run red, and any other
+      failure or an expired acknowledgement does. A manual run after the
+      deploy (run 42937874567) was green, the first in weeks. Remaining for
+      the exit: a green scheduled run, and a forced-mismatch receipt. (4) weekly-drift has failed two
       scheduled runs. Its own logs show different causes from the 2026-11-06
       check-in. Run 40334936804 (2026-10-26) failed on the manifest-drift sweep.
       Run 41485423344 (2026-11-02) failed on the upstream-recordings sweep,
