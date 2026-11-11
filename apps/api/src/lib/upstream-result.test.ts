@@ -9,13 +9,17 @@ import {
   dnsOrEmpty,
   dnsOrNull,
   dnsUnavailable,
+  fetchUnavailable,
+  httpUnavailable,
   isDnsNegative,
+  quotedLegCodes,
   requireAnyLeg,
   UpstreamUnavailableError,
 } from "./upstream-result.js";
 import { outcomeFromError } from "./execution-outcome.js";
 import { classifyTransactionFailure, countsAgainstCapability } from "./transaction-failure-taxonomy.js";
 import { isUserInputError } from "./circuit-breaker.js";
+import { categorizeFailureReason, isRetryableFailure } from "./trust-helpers.js";
 import { withRetry } from "./retry.js";
 
 /** A rejection shaped like node:dns/promises raises it. */
@@ -122,6 +126,65 @@ describe("UpstreamUnavailableError is filed as an unbilled, retryable provider f
   it("carries a non-retryable verdict through to the outcome", () => {
     const err = new UpstreamUnavailableError("ESMA register", "every path answered HTTP 404.", { retryable: false });
     expect(outcomeFromError(err)).toMatchObject({ failure_class: "provider_unavailable", retryable: false, billable: false });
+  });
+});
+
+describe("httpUnavailable / fetchUnavailable", () => {
+  it.each([[429, true], [500, true], [503, true], [400, false], [403, false], [410, false]])(
+    "HTTP %i is an upstream failure, retryable %s",
+    (status, retryable) => {
+      const err = httpUnavailable("Example API", status);
+      expect(err).toBeInstanceOf(UpstreamUnavailableError);
+      expect(err).toMatchObject({ code: `HTTP ${status}`, retryable });
+      expect(outcomeFromError(err)).toMatchObject({ billable: false, failure_class: "provider_unavailable" });
+    },
+  );
+
+  it.each([
+    ["a timeout", new DOMException("The operation was aborted due to timeout", "TimeoutError"), "timeout", true],
+    ["a network error", Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNRESET" } }), "ECONNRESET", true],
+    // A reply that arrived but carries no answer: retrying asks the same question again.
+    ["a body that did not parse", new SyntaxError("Unexpected token <"), "unparseable", false],
+  ])("%s is an upstream failure", (_label, thrown, code, retryable) => {
+    const err = fetchUnavailable("Example API", thrown);
+    expect(err).toBeInstanceOf(UpstreamUnavailableError);
+    expect(err).toMatchObject({ code, retryable });
+    expect(outcomeFromError(err)).toMatchObject({ billable: false, failure_class: "provider_unavailable" });
+    expect(err.message).not.toMatch(/not found|invalid|missing|required/i);
+  });
+
+  it("returns Strale's own vendor-account state, refusals and our own defects unchanged", () => {
+    const vendor = Object.assign(new Error("Vendor 'serper' is exhausted; the request was refused before spending or charging."), {
+      name: "VendorUnavailableError",
+    });
+    const defect = new RangeError("boom");
+    expect(fetchUnavailable("Example API", vendor)).toBe(vendor);
+    expect(fetchUnavailable("Example API", defect)).toBe(defect);
+    const already = httpUnavailable("Example API", 503);
+    expect(fetchUnavailable("Other API", already)).toBe(already);
+  });
+});
+
+describe("the breaker reads a helper error the way its retryable flag says", () => {
+  // recordFailure classifies by message; a retryable error whose text reads as
+  // auth_expired or endpoint_gone opens the breaker at once for 30 minutes.
+  it.each([429, 500, 502, 503, 504, 520])("httpUnavailable %i is retryable for the breaker too", (code) => {
+    const err = httpUnavailable("Example API", code);
+    expect(err.retryable).toBe(true);
+    expect(isRetryableFailure(categorizeFailureReason(err.message))).toBe(true);
+  });
+
+  it.each([
+    ["a timeout", new DOMException("aborted", "TimeoutError")],
+    ["a network error", Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNRESET" } })],
+  ])("fetchUnavailable on %s is transient for the breaker", (_l, cause) => {
+    expect(categorizeFailureReason(fetchUnavailable("Example API", cause).message)).toBe("transient");
+  });
+
+  it("quotedLegCodes quotes only the retryable legs when any leg is retryable", () => {
+    const legs = [httpUnavailable("A", 503), httpUnavailable("B", 403)];
+    expect(quotedLegCodes(legs)).toBe("HTTP 503");
+    expect(quotedLegCodes([httpUnavailable("A", 403), httpUnavailable("B", 404)])).toBe("HTTP 403, HTTP 404");
   });
 });
 

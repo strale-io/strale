@@ -20,42 +20,6 @@
       "line": 85
     },
     {
-      "file": "apps/api/src/capabilities/backlink-check.ts",
-      "fingerprint": "19d2e86a1bfa53a6693a4cad058f9da94e9268bf39750d949842dfbc354169dd",
-      "count": 1,
-      "line": 92
-    },
-    {
-      "file": "apps/api/src/capabilities/backlink-check.ts",
-      "fingerprint": "4e1726ac392609abafecf7ce18a7f64878f4820bd5088144a4ab35dcbcba1067",
-      "count": 1,
-      "line": 87
-    },
-    {
-      "file": "apps/api/src/capabilities/backlink-check.ts",
-      "fingerprint": "67924d1b4de93d57dd5f79cd0ee83cb17e665c696d96f70a59c11477ad579d87",
-      "count": 1,
-      "line": 207
-    },
-    {
-      "file": "apps/api/src/capabilities/backlink-check.ts",
-      "fingerprint": "7f1077258acd8c75e2db595c7719048a405d27b334bf72a1eec73d3314f1ce23",
-      "count": 1,
-      "line": 160
-    },
-    {
-      "file": "apps/api/src/capabilities/barcode-lookup.ts",
-      "fingerprint": "5908473ec9d1fc1e94b8ddc89f7f50723bb10246976a18b1cd837391076a9405",
-      "count": 1,
-      "line": 53
-    },
-    {
-      "file": "apps/api/src/capabilities/barcode-lookup.ts",
-      "fingerprint": "dc821eb398bc7dc269718108d0264cf88d514802e58d441e3b7dd13f61460e0c",
-      "count": 1,
-      "line": 90
-    },
-    {
       "file": "apps/api/src/capabilities/bitcoin-address-validate.ts",
       "fingerprint": "1f619dbe752f9a435151cf5e044b95f9f9e4891b0c3aaee0a7239d1108a698d1",
       "count": 1,
@@ -150,24 +114,6 @@
       "fingerprint": "0694993dde398d6f788822c7d54f01e647a34d34ac057febedcee44d13ab5508",
       "count": 1,
       "line": 28
-    },
-    {
-      "file": "apps/api/src/capabilities/cookie-scan.ts",
-      "fingerprint": "17a6819bf1c3a5cba1b91c9fa04230e4433cc4aacb254b20b5a3d6b44a857250",
-      "count": 1,
-      "line": 178
-    },
-    {
-      "file": "apps/api/src/capabilities/cookie-scan.ts",
-      "fingerprint": "e632ec8deeb2b5c8dc310199f2ace1076fb416b66c5ab67a8b8fdf44a662fa53",
-      "count": 1,
-      "line": 241
-    },
-    {
-      "file": "apps/api/src/capabilities/cookie-scan.ts",
-      "fingerprint": "eefc6e18e48a0acef65ae37f4dba9eb3b9c7527041744a6fd937c8e538340775",
-      "count": 1,
-      "line": 265
     },
     {
       "file": "apps/api/src/capabilities/country-trade-data.ts",
@@ -390,18 +336,6 @@
       "fingerprint": "0754652176d685a019b6ab2d9fe421d169478d1379463b04d1db894e69bffc9f",
       "count": 2,
       "line": 155
-    },
-    {
-      "file": "apps/api/src/capabilities/github-repo-analyze.ts",
-      "fingerprint": "876fdb8040d0c9db0ac09c56e66c618627479e4e2ef9294976dcdb2b785f144b",
-      "count": 1,
-      "line": 131
-    },
-    {
-      "file": "apps/api/src/capabilities/github-repo-analyze.ts",
-      "fingerprint": "b752cd1e405052d3dc9a662ec8a4295c5f3f3a75e957ade1b6a4f06d457708e7",
-      "count": 1,
-      "line": 144
     },
     {
       "file": "apps/api/src/capabilities/github-user-profile.ts",
@@ -866,18 +800,6 @@
       "line": 40
     },
     {
-      "file": "apps/api/src/capabilities/seo-audit.ts",
-      "fingerprint": "6e2de8144f2f838d56ac4c05ebb4ee28cb9f933eb0f7d7abb10cec8598b0adc8",
-      "count": 1,
-      "line": 101
-    },
-    {
-      "file": "apps/api/src/capabilities/seo-audit.ts",
-      "fingerprint": "d19501fdb47ab74f0c21abc0b0ab2c0d80372c54ff65959d970b1e90bfb475a3",
-      "count": 1,
-      "line": 84
-    },
-    {
       "file": "apps/api/src/capabilities/serp-analyze.ts",
       "fingerprint": "71e3e20b2bc270d1a0fb936a7c05fe3aead892f125b7c2a0cb17f592e260864e",
       "count": 1,
@@ -912,24 +834,6 @@
       "fingerprint": "fb9b685accfaa46c9412b04d3d88c07481e2eda53c048f38bfa3ecc1924a0953",
       "count": 1,
       "line": 21
-    },
-    {
-      "file": "apps/api/src/capabilities/startup-domain-check.ts",
-      "fingerprint": "090404590c1759348ba9237b2174fd11c8248326c0334dd1e98c237fb4069964",
-      "count": 1,
-      "line": 25
-    },
-    {
-      "file": "apps/api/src/capabilities/startup-domain-check.ts",
-      "fingerprint": "107165d8797aaa249d39dfbae470be6230a5af79913089839d188fbdc2a29097",
-      "count": 1,
-      "line": 85
-    },
-    {
-      "file": "apps/api/src/capabilities/startup-domain-check.ts",
-      "fingerprint": "5f45c604bb2e1e093d26bdc7d27bc4d03d2e1e57b3e13571067f652ac0dd4d97",
-      "count": 1,
-      "line": 100
     },
     {
       "file": "apps/api/src/capabilities/swedish-company-data.ts",

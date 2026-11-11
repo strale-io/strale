@@ -31,6 +31,12 @@ output_schema:
     nofollow_estimate: null
     referring_domains_count: 1
   properties:
+    unavailable_sources:
+      type: array
+      items:
+        type: string
+      description: >-
+        Present only when Common Crawl or Serper failed while the other answered; the list comes from the source that answered.
     backlinks:
       type: array
     top_anchors:
@@ -102,6 +108,7 @@ output_field_reliability:
   # `/resolve`. These say what resolution could not open, so a caller
   # never has to read an absent link as an absent result.
   unresolved_link_count: guaranteed
+  unavailable_sources: rare
 
 limitations:
   - title: Recent or niche backlinks can be missing
@@ -113,6 +120,11 @@ limitations:
     text: >-
       API response bodies above 4 MiB are refused during download rather than parsed.
     category: coverage
+    severity: info
+  - title: A failed source is named, never read as no backlinks
+    text: >-
+      If Common Crawl and Serper both fail (or Common Crawl fails and Serper is not used), the call fails unbilled rather than returning an empty list. Common Crawl mostly returns the domain's own pages, so when Serper is needed and fails and no backlink was found, the call also fails unbilled. If one fails and the other answers with backlinks, the list comes from the one that answered and the failed source is named in unavailable_sources.
+    category: availability
     severity: info
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).

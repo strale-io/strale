@@ -117,6 +117,11 @@ limitations:
     category: coverage
     severity: info
     workaround: Check the barcode with the manufacturer or retailer if no product is found.
+  - title: found is false only when both databases answer
+    text: >-
+      found: false means Open Food Facts and UPCitemdb both said they hold no such product. If either does not answer (timeout, rate limit or server error) and the other has not found the product, the call fails unbilled instead.
+    category: availability
+    severity: info
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

@@ -3,6 +3,10 @@ import { safeFetch } from "../lib/safe-fetch.js";
 import { STRALE_USER_AGENT } from "../lib/site-access.js";
 import { readRobotsTxt } from "../lib/resource-limits.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
+import { httpUnavailable } from "../lib/upstream-result.js";
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
+
+const ROBOTS = "robots.txt";
 
 registerCapability("seo-audit", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.task as string) ?? "").trim();
@@ -77,18 +81,25 @@ registerCapability("seo-audit", async (input: CapabilityInput) => {
   let internal = 0, external = 0;
   let linkMatch: RegExpExecArray | null;
   while ((linkMatch = linkRegex.exec(html)) !== null) {
-    try {
-      const linkUrl = new URL(linkMatch[1], fullUrl);
-      if (linkUrl.hostname === domain) internal++;
-      else external++;
-    } catch { /* skip invalid URLs */ }
+    // An href that does not parse as a URL is skipped.
+    if (!URL.canParse(linkMatch[1], fullUrl)) continue;
+    const linkUrl = new URL(linkMatch[1], fullUrl);
+    if (linkUrl.hostname === domain) internal++;
+    else external++;
   }
   checks.links = { internal, external, ratio: internal > 0 ? +(external / internal).toFixed(2) : 0 };
 
-  // Check robots.txt and sitemap
+  // Check robots.txt and sitemap. A 4xx means the site serves no robots.txt
+  // (RFC 9309 §2.3.1.3), the real negative. A timeout, network error, 429 or
+  // 5xx means it could not be read, which says nothing about whether it exists:
+  // those two checks then read null, robots.txt is named in
+  // unavailable_sources, and the score leaves their 10 points out rather than
+  // counting them as missing (2026-11-06 swallowed-upstream-failures audit,
+  // row 23).
   const baseUrl = `${new URL(fullUrl).protocol}//${domain}`;
   let robotsTxt: string | null = null;
   let sitemapFound = false;
+  let robotsUnavailable = false;
   try {
     const robotsRes = await safeFetch(`${baseUrl}/robots.txt`, {
       headers: { "User-Agent": STRALE_USER_AGENT },
@@ -97,10 +108,20 @@ registerCapability("seo-audit", async (input: CapabilityInput) => {
     if (robotsRes.ok) {
       robotsTxt = await readRobotsTxt(robotsRes);
       sitemapFound = robotsTxt.toLowerCase().includes("sitemap:");
+    } else {
+      await robotsRes.body?.cancel();
+      if (robotsRes.status === 429 || robotsRes.status >= 500) throw httpUnavailable(ROBOTS, robotsRes.status);
     }
-  } catch { /* robots.txt not available */ }
-  checks.robots_txt = { present: !!robotsTxt };
-  checks.sitemap = { referenced_in_robots: sitemapFound };
+  } catch (err) {
+    // degraded-ok: an unreadable robots.txt nulls the robots and sitemap checks, is named in unavailable_sources and is left out of the score; it is never reported as "No robots.txt".
+    // Any fetch error that is not a refusal counts, not only an upstream
+    // outage: safe-fetch's "Too many redirects" or a redirect to a restricted
+    // address says nothing about the page being audited (PR #1015 review).
+    if (isCapabilityRefusal(err)) throw err;
+    robotsUnavailable = true;
+  }
+  checks.robots_txt = { present: robotsUnavailable ? null : !!robotsTxt };
+  checks.sitemap = { referenced_in_robots: robotsUnavailable ? null : sitemapFound };
 
   // Calculate scores
   let score = 0;
@@ -134,21 +155,30 @@ registerCapability("seo-audit", async (input: CapabilityInput) => {
   if ((checks.schema_org as Record<string, unknown>).present) score += 10;
   else fixes.push({ priority: "low", issue: "No structured data", fix: "Add JSON-LD schema.org markup" });
 
-  if ((checks.robots_txt as Record<string, unknown>).present) score += 5;
-  else fixes.push({ priority: "medium", issue: "No robots.txt", fix: "Create a robots.txt file" });
+  // The robots.txt and sitemap checks are worth 10 points together.
+  const robotsPoints = 10;
+  if (!robotsUnavailable) {
+    if ((checks.robots_txt as Record<string, unknown>).present) score += 5;
+    else fixes.push({ priority: "medium", issue: "No robots.txt", fix: "Create a robots.txt file" });
 
-  if (sitemapFound) score += 5;
-  else fixes.push({ priority: "medium", issue: "No sitemap referenced", fix: "Create and reference an XML sitemap in robots.txt" });
+    if (sitemapFound) score += 5;
+    else fixes.push({ priority: "medium", issue: "No sitemap referenced", fix: "Create and reference an XML sitemap in robots.txt" });
+  }
 
   score += 10; // base score
+
+  // Unread checks are neither earned nor lost: the score is taken over the
+  // points that were actually checked.
+  const overallScore = robotsUnavailable ? Math.round((score * maxScore) / (maxScore - robotsPoints)) : score;
 
   return {
     output: {
       url: fullUrl,
-      overall_score: Math.min(score, maxScore),
+      overall_score: Math.min(overallScore, maxScore),
       checks,
       issues,
       prioritized_fixes: fixes,
+      ...(robotsUnavailable ? { unavailable_sources: [ROBOTS] } : {}),
     },
     provenance: { source: "html-analysis", fetched_at: new Date().toISOString() },
   };
