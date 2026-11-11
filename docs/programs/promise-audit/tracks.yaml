@@ -13,17 +13,20 @@ tracks:
       Codex may build non-sensitive supporting scaffolding under rule 5. Wave 1
       landed in PRs 938/939 and the catch-handler CI guard with its shrinking
       baseline in the resume file's batch; wave 2a (rows 7, 8, 17, 19, 27, 34)
-      merged in PR 1014. Wave 2b, branch fix/swallowed-failures-wave2b: audit
-      rows 9 (cookie-scan), 15 (barcode-lookup), 16 (backlink-check), 21
-      (github-repo-analyze), 23 (seo-audit) and 24 (startup-domain-check) are
-      done in that PR once merged. Each upstream failure throws
-      UpstreamUnavailableError (unbilled; retryable for 429, 5xx, timeouts and
-      network errors, not for replies that carry no answer), secondary legs are
-      nulled and named in unavailable_sources, real negatives keep their output,
-      startup-domain-check reads available only on NXDOMAIN, and the 16 baseline
-      entries for those files are removed (184 to 168). Fail-before and after
-      receipts are in evidence. The PR is tier 2 under REVIEW.md and needs its
-      independent review before merge. Next: wave 2c, rows 5, 6, 20, 26, 28 and
+      merged in PR 1014. Wave 2b (rows 9 cookie-scan, 15 barcode-lookup, 16
+      backlink-check, 21 github-repo-analyze, 23 seo-audit, 24
+      startup-domain-check) merged in PR 1015. Its delta-review tail, branch
+      fix/swallowed-failures-wave2b-tail, is done once merged: combined
+      messages never quote a 401/403 code; seo-audit logs robots.txt failures
+      by error name and rethrows its own TypeError, ReferenceError or
+      SyntaxError; cookie-scan reads a redirect loop as the caller's site not
+      answering; startup-domain-check keeps the caller's name out of error
+      messages; backlink-check drops the domain's own subdomains and treats an
+      unset SERPER_API_KEY as an unavailable Serper; github-repo-analyze names
+      a 403 as a rate limit only when GitHub's body says so, and its
+      known_answer no longer asserts top_contributors. Its fail-before and
+      after receipts are in evidence; it is tier 2 and needs its independent
+      review before merge. Next: wave 2c, rows 5, 6, 20, 26, 28 and
       29; then wave 2d, rows 30, 31, 32, 33 and 35; each reconciled first
       against later repairs such as customs PR999. Then wave 3; the Nager.Date
       no-calendar path (a weekends-only answer for countries such as TH, still

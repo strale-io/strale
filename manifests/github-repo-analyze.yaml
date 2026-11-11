@@ -186,13 +186,6 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: string
-      - field: top_contributors
-        operator: not_null
-        reliability: guaranteed
-      - field: top_contributors
-        operator: type
-        reliability: guaranteed
-        value: array
   health_check_input:
     url: https://github.com/microsoft/vscode
 output_field_reliability:

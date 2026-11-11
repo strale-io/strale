@@ -30,7 +30,7 @@ registerCapability("startup-domain-check", async (input: CapabilityInput) => {
   // the call fails only when no extension could be checked (PR #1015 review).
   const extensions = [".com", ".io", ".ai", ".co", ".dev"];
   const unavailableSources: string[] = [];
-  const lookups = await Promise.allSettled(extensions.map((ext) => isDomainAvailable(`${slug}${ext}`)));
+  const lookups = await Promise.allSettled(extensions.map((ext) => isDomainAvailable(`${slug}${ext}`, ext)));
   const failedLookups = lookups.filter((l): l is PromiseRejectedResult => l.status === "rejected");
   if (failedLookups.length === lookups.length) throw failedLookups[0].reason;
   const domainChecks = await Promise.all(
@@ -129,14 +129,20 @@ const PYPI = "PyPI";
  * True only on NXDOMAIN (ENOTFOUND): no such name exists. A name that exists
  * without an A record (ENODATA) is registered, so it is taken. Any other
  * resolver failure is not an answer and throws UpstreamUnavailableError.
+ *
+ * The error names the extension, never the caller's name: the breaker reads
+ * the message, so a name like "studio403" would file a resolver outage as
+ * auth_expired (PR #1015 delta review). Which domain failed is reported in
+ * unavailable_sources when other lookups answered, and the caller knows its
+ * own name when none did.
  */
-async function isDomainAvailable(domain: string): Promise<boolean> {
+async function isDomainAvailable(domain: string, ext: string): Promise<boolean> {
   const [lookup] = await Promise.allSettled([dns.resolve4(domain)]);
   if (lookup.status === "fulfilled") return false; // Has DNS records = taken
   const code = (lookup.reason as NodeJS.ErrnoException | null)?.code;
   if (code === "ENOTFOUND") return true;
   if (code === "ENODATA") return false;
-  throw dnsUnavailable(lookup.reason, `DNS A-record query for ${domain}`);
+  throw dnsUnavailable(lookup.reason, `DNS A-record query for the ${ext} name`);
 }
 
 /**

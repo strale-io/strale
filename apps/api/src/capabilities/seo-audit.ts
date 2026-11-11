@@ -3,10 +3,17 @@ import { safeFetch } from "../lib/safe-fetch.js";
 import { STRALE_USER_AGENT } from "../lib/site-access.js";
 import { readRobotsTxt } from "../lib/resource-limits.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
-import { httpUnavailable } from "../lib/upstream-result.js";
+import { httpUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
 import { isCapabilityRefusal } from "../lib/capability-refusal.js";
+import { logWarn } from "../lib/log.js";
 
 const ROBOTS = "robots.txt";
+
+/** A JavaScript runtime error of ours, as opposed to fetch's own transport TypeError. */
+function isOwnDefect(err: unknown): boolean {
+  if (!(err instanceof TypeError || err instanceof ReferenceError || err instanceof SyntaxError)) return false;
+  return !(err instanceof TypeError && (err.message === "fetch failed" || err.message === "terminated"));
+}
 
 registerCapability("seo-audit", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.task as string) ?? "").trim();
@@ -118,7 +125,19 @@ registerCapability("seo-audit", async (input: CapabilityInput) => {
     // outage: safe-fetch's "Too many redirects" or a redirect to a restricted
     // address says nothing about the page being audited (PR #1015 review).
     if (isCapabilityRefusal(err)) throw err;
+    // Our own defect is not the site's robots.txt being unreadable. Node's
+    // fetch reports transport failures as TypeError("fetch failed") or
+    // TypeError("terminated"); any other TypeError, ReferenceError or
+    // SyntaxError is a bug and must surface (PR #1015 delta review).
+    if (isOwnDefect(err)) throw err;
     robotsUnavailable = true;
+    // Name and class only: the message can carry the caller's URL and its
+    // query string, which do not belong in the log.
+    logWarn("seo-audit-robots-unavailable", "robots.txt could not be read; scored without it", {
+      error_name: err instanceof Error ? err.name : typeof err,
+      error_class: err instanceof Error ? err.constructor.name : typeof err,
+      ...(err instanceof UpstreamUnavailableError && err.code ? { upstream_code: err.code } : {}),
+    });
   }
   checks.robots_txt = { present: robotsUnavailable ? null : !!robotsTxt };
   checks.sitemap = { referenced_in_robots: robotsUnavailable ? null : sitemapFound };

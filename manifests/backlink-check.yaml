@@ -21,11 +21,13 @@ output_schema:
   example:
     domain: google.com
     backlinks:
-      - first_seen: "20240223074906"
-        source_url: http://www.google.com.
-        anchor_text: null
-        source_domain: google.com.
-    top_anchors: []
+      - first_seen: null
+        source_url: https://en.wikipedia.org/wiki/Google
+        anchor_text: Google - Wikipedia
+        source_domain: en.wikipedia.org
+    top_anchors:
+      - text: google - wikipedia
+        count: 1
     total_backlinks: 1
     dofollow_estimate: null
     nofollow_estimate: null
@@ -123,7 +125,7 @@ limitations:
     severity: info
   - title: A failed source is named, never read as no backlinks
     text: >-
-      If Common Crawl and Serper both fail (or Common Crawl fails and Serper is not used), the call fails unbilled rather than returning an empty list. Common Crawl mostly returns the domain's own pages, so when Serper is needed and fails and no backlink was found, the call also fails unbilled. If one fails and the other answers with backlinks, the list comes from the one that answered and the failed source is named in unavailable_sources.
+      If Common Crawl and Serper both fail, the call fails unbilled rather than returning an empty list. Common Crawl mostly returns the domain's own pages, which (with its subdomains) are never counted as backlinks, so when Serper is needed (fewer than 5 backlinks found) and fails or is not configured, and no backlink was found, the call also fails unbilled. If one fails and the other answers with backlinks, the list comes from the one that answered and the failed source is named in unavailable_sources.
     category: availability
     severity: info
 

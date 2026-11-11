@@ -80,7 +80,16 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
   // Attempt 2: If CommonCrawl yielded few results, try Serper.dev Google search
   if (backlinks.length < 5) {
     const serperKey = process.env.SERPER_API_KEY;
-    if (serperKey) {
+    if (!serperKey) {
+      // Required in production (config/env-manifest.yaml). Unset, Serper was
+      // needed and could not be asked: the same path as a failed Serper leg,
+      // never a billed "0 backlinks" (PR #1015 delta review).
+      failures.push(
+        new UpstreamUnavailableError(SERPER, "not configured on this deployment.", { code: "not_configured", retryable: false }),
+      );
+      unavailableSources.push(SERPER);
+      if (backlinks.length === 0) answered = false;
+    } else {
       try {
         const query = `"${domain}" -site:${domain}`;
         const resp = await meteredVendorFetch("serper", "https://google.serper.dev/search", {
@@ -135,7 +144,7 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
             continue;
           }
           const sourceDomain = deriveResultDomain(sourceUrl, item.displayedLink);
-          if (!sourceDomain || sourceDomain === domain) continue;
+          if (!sourceDomain || isOwnHost(sourceDomain, domain)) continue;
           // Check if already in list
           if (!backlinks.some((b) => b.source_url === sourceUrl)) {
             backlinks.push({
@@ -222,6 +231,13 @@ function extractDomain(url: string): string {
   return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
 }
 
+/** The domain itself or one of its subdomains: a page that cannot be a backlink to it. */
+function isOwnHost(host: string, domain: string): boolean {
+  // "google.com." is google.com: a fully qualified name's trailing dot.
+  const h = host.replace(/\.$/, "");
+  return h === domain || h.endsWith(`.${domain}`);
+}
+
 /** Strale's own vendor-account or test-traffic state, never the provider's outage. */
 function isStraleVendorState(err: Error): boolean {
   return err.name === "VendorUnavailableError" || err.name === "PaidCallBlockedError";
@@ -273,8 +289,9 @@ async function readCommonCrawl(domain: string, timeoutMs: number): Promise<Backl
     parsed += 1;
     const sourceUrl = record?.url ?? "";
     const sourceDomain = extractDomain(sourceUrl);
-    // Only include pages from OTHER domains linking to the target
-    if (sourceDomain && sourceDomain !== domain) {
+    // Only include pages from OTHER domains linking to the target; the
+    // domain's own subdomains are not backlinks (PR #1015 delta review).
+    if (sourceDomain && !isOwnHost(sourceDomain, domain)) {
       backlinks.push({
         source_url: sourceUrl,
         source_domain: sourceDomain,
