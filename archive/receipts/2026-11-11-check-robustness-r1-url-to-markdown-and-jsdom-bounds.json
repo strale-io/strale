@@ -1,0 +1,85 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "f25d9d3eb9a63c9d5564aa612b2c362fb993a0d7"
+  },
+  "at": "2026-11-11T00:18:07.481Z",
+  "inputs": {
+    "url_to_markdown": "https://example.com",
+    "sweep": "apps/api/src jsdom call sites"
+  },
+  "summary": {
+    "jsdom_sites": 3,
+    "caller_markup_sites_bounded": 2,
+    "unbounded_found": 1,
+    "url_to_markdown_live": true,
+    "worst_caller_markup_ms": 172,
+    "nta_worst_ms": 22088
+  },
+  "topic": "robustness-r1-url-to-markdown-and-jsdom-bounds",
+  "raw": {
+    "ok": true,
+    "failures": [],
+    "warnings": [
+      "nta-corporate.ts: jsdom XML parse of nested markup is super-linear (16 KiB 2.7 s, 64 KiB 21.4 s, 1 MiB 20.4 s); upstream is the official NTA API, not the caller; fix dispatched as codex/nta-xml-shape-bound"
+    ],
+    "url_to_markdown_exit": {
+      "call": "POST https://api.strale.io/v1/do capability_slug=url-to-markdown url=https://example.com (anonymous free tier)",
+      "served_commit": "f25d9d3e",
+      "transaction_id": "5e32bc48-721a-469f-9b26-10223c2b650e",
+      "latency_ms": 4369,
+      "result": "markdown returned"
+    },
+    "jsdom_sites": [
+      {
+        "file": "apps/api/src/capabilities/lib/readability-convert-sync.ts",
+        "caller_markup": true,
+        "bound": "#964: one conversion at a time in a worker, 8 s limit, 384 MB heap, 2 MiB converter cap, 512 KiB text checks"
+      },
+      {
+        "file": "apps/api/src/lib/company-enrich/structured-metadata.ts",
+        "caller_markup": true,
+        "bound": "#947: METADATA_SCAN_LIMIT 4 MiB, METADATA_HTML_LIMIT 1.5 MiB into jsdom, linear comment/script stripping",
+        "measured_ms_at_4MiB": {
+          "repeated <p": 162,
+          "repeated <": 158,
+          "repeated <div>": 50,
+          "unclosed script": 17,
+          "repeated comments": 41,
+          "json-ld scripts": 106,
+          "meta tags": 39
+        },
+        "measured_ms_at_8MiB": {
+          "repeated <p": 103,
+          "repeated <": 172,
+          "repeated <div>": 61,
+          "unclosed script": 25,
+          "repeated comments": 46,
+          "json-ld scripts": 103,
+          "meta tags": 34
+        }
+      },
+      {
+        "file": "apps/api/src/lib/nta-corporate.ts",
+        "caller_markup": false,
+        "bound": "MAX_RESPONSE_BYTES 1 MiB, MAX_RECORDS 50, MAX_IN_FLIGHT 4, DOCTYPE/ENTITY refused; no depth or element-count bound",
+        "measured_ms": {
+          "1 MiB single text node": 33,
+          "1 MiB flat <b/> elements": 1279,
+          "16 KiB unclosed nesting": 2676,
+          "64 KiB unclosed nesting": 21428,
+          "64 KiB closed nesting": 12706,
+          "256 KiB unclosed nesting": 22088,
+          "1 MiB unclosed nesting": 20416
+        }
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/browserless-extract.ts",
+        "caller_markup": true,
+        "bound": "#980: htmlToText linear scanner, 2 MiB input cap, 15,000-character output; no jsdom"
+      }
+    ],
+    "method": "grep -rln 'new JSDOM|from \"jsdom\"' apps/api/src (non-test): 3 files; timings by npx tsx scratch harness on this repo's jsdom, single run each, Linux cloud container, 2026-11-11"
+  }
+}
