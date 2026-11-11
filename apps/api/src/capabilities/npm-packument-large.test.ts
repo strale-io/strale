@@ -96,6 +96,9 @@ function registry(target: number) {
     if (u === "https://registry.npmjs.org/big/latest")
       return json({ name: "big", version: "1.0.3", license: "MIT", homepage: "https://big.example", dependencies: { a: "1", b: "2" }, devDependencies: { t: "1" } });
     if (u.startsWith("https://api.npmjs.org/downloads/")) return json({ downloads: 42 });
+    // OSV's answer for a package with no known vulnerability. A 404 here used
+    // to be swallowed; package-security-audit now fails the call on it (row 7).
+    if (u === "https://api.osv.dev/v1/query") return json({});
     return json({}, 404);
   });
 }

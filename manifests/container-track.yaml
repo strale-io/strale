@@ -103,7 +103,7 @@ limitations:
   - title: Carrier website changes can interrupt tracking
     text: >-
       Tracking reads carrier websites, whose page layouts can change without notice and cause
-      temporary failures.
+      temporary failures. When the carrier page cannot be read, the call fails and is not charged.
     category: availability
     severity: warning
     workaround: If tracking fails, use the carrier name and container number to check the carrier's website directly

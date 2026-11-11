@@ -5,6 +5,39 @@ import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 import { SourceBlockedError } from "../lib/site-access.js";
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
+import { UpstreamUnavailableError } from "../lib/upstream-result.js";
+
+/**
+ * The carrier's tracking page could not be read. Upstream failures (2026-11-06
+ * swallowed-failures audit, row 34): a failed read used to fall back to the
+ * check-digit answer, billed as tracking. It now throws, unbilled. A carrier
+ * that refuses Strale throws its `SourceBlockedError` unchanged (DEC-20261023-A:
+ * the call says the site refused us), and a refusal or an error that is already
+ * classified passes through. Strale's own missing Browserless configuration is
+ * returned unchanged, so a defect of ours is never filed as the carrier's.
+ */
+function trackingPageFailure(scrapeUrl: string, err: unknown): Error {
+  if (err instanceof SourceBlockedError || err instanceof UpstreamUnavailableError || isCapabilityRefusal(err)) {
+    return err as Error;
+  }
+  const message = err instanceof Error ? err.message : String(err);
+  if (message.includes("BROWSERLESS_URL")) return err instanceof Error ? err : new Error(message);
+  const host = new URL(scrapeUrl).hostname;
+  const upstream = `carrier tracking page ${host}`;
+  const status = /^URL returned HTTP (\d{3})/.exec(message)?.[1];
+  if (status === "404" || status === "410") {
+    return new UpstreamUnavailableError(upstream, `HTTP ${status}; the page is gone.`, {
+      code: `HTTP ${status}`,
+      retryable: false,
+      cause: err,
+    });
+  }
+  return new UpstreamUnavailableError(upstream, `the page could not be read${status ? ` (HTTP ${status})` : ""}; retry shortly.`, {
+    code: status ? `HTTP ${status}` : null,
+    cause: err,
+  });
+}
 
 // ─── Container tracking — ISO 6346 validation + Browserless scraping ────────
 
@@ -280,29 +313,40 @@ registerCapability("container-track", async (input: CapabilityInput) => {
   }
 
   // Read live status from the carrier's own page, where one is permitted.
+  // When that read is attempted and fails, the call throws (unbilled): the
+  // check-digit fields alone are not the tracking answer this tool sells.
   let trackingData: Record<string, unknown> | null = null;
-  let blockedByCarrier = false;
   const scrapeUrl = liveTrackingUrl(carrier, trackingUrls);
 
   if (scrapeUrl) {
+    let text: string;
     try {
       const html = await fetchRenderedHtml(scrapeUrl, { source: "strale" });
-      const text = htmlToText(html);
+      text = htmlToText(html);
+    } catch (err) {
+      throw trackingPageFailure(scrapeUrl, err);
+    }
+    if (text.length < 200) {
+      throw new UpstreamUnavailableError(
+        `carrier tracking page ${new URL(scrapeUrl).hostname}`,
+        "the page rendered without readable tracking content; retry shortly.",
+        { code: "empty" },
+      );
+    }
 
-      if (text.length >= 200) {
-        const apiKey = process.env.ANTHROPIC_API_KEY;
-        if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
-        const client = createAnthropicClient({ apiKey });
-        // Note: a truncation refusal or parse failure from the helper is
-        // caught by this function's own outer catch below, same as before —
-        // this LLM step is best-effort and falls back to "tracking_unavailable"
-        // either way, so the specific error text here never reaches the caller.
-        trackingData = await extractJsonWithLlm({
-          client,
-          model: MODELS.capability_default.id,
-          maxTokens: 2000,
-          prompt: `Extract container tracking information from this shipping carrier page for container "${validation.container_number}".
+    const client = createAnthropicClient({ apiKey });
+    // A truncation refusal or parse failure from the helper propagates:
+    // the call fails unbilled rather than answering without tracking.
+    // A page that says the container is unknown comes back as
+    // `status: "not_found"`, the real negative, and is returned as is.
+    trackingData = await extractJsonWithLlm({
+      client,
+      model: MODELS.capability_default.id,
+      maxTokens: 2000,
+      prompt: `Extract container tracking information from this shipping carrier page for container "${validation.container_number}".
 
   Return ONLY valid JSON:
   {
@@ -337,16 +381,9 @@ registerCapability("container-track", async (input: CapabilityInput) => {
 
   Page text:
   ${text.slice(0, 12000)}`,
-          truncationGuidance: "The carrier page produced more tracking events than fit in one call.",
-          parseFailureError: () => new Error("Failed to parse container tracking data."),
-        });
-      }
-    } catch (err) {
-      // Tracking scrape failed — return validation results with tracking URLs.
-      // DEC-20261023-A: if the carrier's site refused Strale, say so rather
-      // than implying a transient failure.
-      if (err instanceof SourceBlockedError) blockedByCarrier = true;
-    }
+      truncationGuidance: "The carrier page produced more tracking events than fit in one call.",
+      parseFailureError: () => new Error("Failed to parse container tracking data."),
+    });
   }
 
   return {
@@ -359,13 +396,11 @@ registerCapability("container-track", async (input: CapabilityInput) => {
       serial_number: validation.serial_number,
       carrier: carrier ?? "unknown",
       tracking_urls: trackingUrls,
+      // Reached without tracking data only for a carrier Strale does not read
+      // live: no tracking leg was attempted, and the note says so.
       ...(trackingData ?? {
         status: "tracking_unavailable",
-        note: blockedByCarrier
-          ? "The carrier's website refuses automated access, and Strale does not route around a site's block. Use the tracking URLs above to check manually."
-          : !scrapeUrl
-            ? `Strale reads live tracking only for ${LIVE_TRACKING_CARRIERS}. For this carrier, use the tracking URLs above to check manually.`
-            : "Live tracking data could not be retrieved. Use the tracking URLs above to check manually.",
+        note: `Strale reads live tracking only for ${LIVE_TRACKING_CARRIERS}. For this carrier, use the tracking URLs above to check manually.`,
       }),
     },
     provenance: {

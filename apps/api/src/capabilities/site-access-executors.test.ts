@@ -428,8 +428,11 @@ describe("container-track", () => {
       }),
     );
     const exec = getDirectExecutor("container-track")!;
-    const r = await exec({ container_number: "MSCU1234565", carrier: "msc" });
-    expect(String(r.output.note)).toMatch(/refuses automated access/);
+    // Row 34 of the 2026-11-06 swallowed-failures audit: the refusal now
+    // fails the call (unbilled) instead of a billed check-digit answer.
+    const err = await exec({ container_number: "MSCU1234565", carrier: "msc" }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(SourceBlockedError);
+    expect(String((err as Error).message)).toMatch(/refuses automated access/);
   });
 });
 

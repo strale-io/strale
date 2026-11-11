@@ -56,6 +56,13 @@ output_schema:
       type: array
     outdated_count:
       type: integer
+    unavailable_sources:
+      type: array
+      items:
+        type: string
+      description: >-
+        Present only when a registry lookup failed; the affected dependencies carry unavailable true and were
+        still checked against OSV.dev by their declared version.
 data_source: npm and PyPI registries, plus OSV.dev for known vulnerabilities (declared dependencies only)
 data_source_type: api
 transparency_tag: algorithmic
@@ -104,6 +111,7 @@ test_fixtures:
   health_check_input:
     package_json: "{\"dependencies\":{\"express\":\"^4.18.0\"}}"
 output_field_reliability:
+  unavailable_sources: rare
   summary: guaranteed
   ecosystem: guaranteed
   dependencies: guaranteed
@@ -117,6 +125,13 @@ limitations:
     category: accuracy
     severity: info
     workaround: Supplement with npm audit or pip-audit for vulnerability scanning that includes transitive dependencies
+  - title: OSV.dev and registry availability
+    text: >-
+      If OSV.dev is down, rate-limited or returns an unreadable answer, the call fails and is not charged. If a
+      registry lookup fails for a dependency, that dependency is marked unavailable, still checked against OSV.dev
+      by its declared version, and the registry is named in unavailable_sources.
+    category: availability
+    severity: info
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:
