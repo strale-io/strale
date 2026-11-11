@@ -436,16 +436,45 @@ function ensureSlots(): void {
  * Rejects with HtmlTooComplexError past a limit, ConversionBusyError when the
  * queue is full; both are non-billable refusals.
  */
-export function htmlToCleanMarkdown(
+export async function htmlToCleanMarkdown(
   html: string,
   url: string,
   options?: MarkdownOptions
 ): Promise<ReadabilityResult> {
-  ensureSlots();
   const queuedAt = Date.now();
-  // Every refusal is logged with its reason and how long it took, so real
-  // pages that hit the limits show up (second R1 review of #964, F8).
-  const refused = (err: unknown) => {
+  // Everything before the first await runs synchronously, so a page is queued
+  // (or refused) before this call returns, as when this was not async.
+  try {
+    ensureSlots();
+    assertConverterAvailableForCaller();
+    const callerKey = currentCallerKey();
+    if (queue.length >= CONVERSION_LIMITS.maxQueued) admitOrRefuse(callerKey);
+    const input = boundInput(html);
+    return await new Promise<ReadabilityResult>((resolve, reject) => {
+      const job: Job = {
+        id: nextId++,
+        html: input,
+        url,
+        options,
+        queuedAt,
+        resolve,
+        reject,
+        callerKey,
+      };
+      job.queueTimer = setTimeout(() => {
+        const i = queue.indexOf(job);
+        if (i >= 0) {
+          queue.splice(i, 1);
+          releaseCaller(job);
+          reject(new ConversionBusyError());
+        }
+      }, CONVERSION_LIMITS.maxQueueWaitMs);
+      queue.push(job);
+      dispatch();
+    });
+  } catch (err) {
+    // Every refusal is logged with its reason and how long it took, so real
+    // pages that hit the limits show up (second R1 review of #964, F8).
     if (err instanceof ResourceLimitError) {
       logWarn("readability-convert-refused", err.message, {
         reason: err.name,
@@ -454,69 +483,46 @@ export function htmlToCleanMarkdown(
       });
     }
     throw err;
-  };
-  const callerKey = currentCallerKey();
-  try {
-    assertConverterAvailableForCaller();
-  } catch (err) {
-    return Promise.reject(err).catch(refused);
   }
-  if (queue.length >= CONVERSION_LIMITS.maxQueued) {
-    if (!callerKey)
-      return Promise.reject(new ConversionBusyError()).catch(refused);
-    const counts = new Map<string, { count: number; newestIndex: number }>();
-    for (let i = 0; i < queue.length; i++) {
-      const key = queue[i]!.callerKey;
-      if (!key) continue; // unkeyed pages neither evict nor are evicted
-      const current = counts.get(key);
-      counts.set(key, { count: (current?.count ?? 0) + 1, newestIndex: i });
-    }
-    const incomingCount = counts.get(callerKey)?.count ?? 0;
-    let candidate: { key: string; count: number; newestIndex: number } | null =
-      null;
-    for (const [key, value] of counts) {
-      if (
-        !candidate ||
-        value.count > candidate.count ||
-        (value.count === candidate.count &&
-          value.newestIndex > candidate.newestIndex)
-      ) {
-        candidate = { key, ...value };
-      }
-    }
-    if (!candidate || candidate.count < incomingCount + 2) {
-      return Promise.reject(new ConversionBusyError()).catch(refused);
-    }
-    const [evicted] = queue.splice(candidate.newestIndex, 1);
-    if (evicted?.queueTimer) clearTimeout(evicted.queueTimer);
-    if (evicted) {
-      releaseCaller(evicted);
-      evicted.reject(new ConversionBusyError());
+}
+
+/**
+ * The queue is full. A keyed caller may take the place of the newest queued
+ * page of a caller holding at least 2 more queued pages than it; that page is
+ * refused as busy. Otherwise the new page is refused. Unkeyed pages neither
+ * evict nor are evicted. Throws ConversionBusyError when the page is refused.
+ */
+function admitOrRefuse(callerKey: string | null): void {
+  if (!callerKey) throw new ConversionBusyError();
+  const counts = new Map<string, { count: number; newestIndex: number }>();
+  for (let i = 0; i < queue.length; i++) {
+    const key = queue[i]!.callerKey;
+    if (!key) continue; // unkeyed pages neither evict nor are evicted
+    const current = counts.get(key);
+    counts.set(key, { count: (current?.count ?? 0) + 1, newestIndex: i });
+  }
+  const incomingCount = counts.get(callerKey)?.count ?? 0;
+  let candidate: { key: string; count: number; newestIndex: number } | null =
+    null;
+  for (const [key, value] of counts) {
+    if (
+      !candidate ||
+      value.count > candidate.count ||
+      (value.count === candidate.count &&
+        value.newestIndex > candidate.newestIndex)
+    ) {
+      candidate = { key, ...value };
     }
   }
-  const input = boundInput(html);
-  return new Promise<ReadabilityResult>((resolve, reject) => {
-    const job: Job = {
-      id: nextId++,
-      html: input,
-      url,
-      options,
-      queuedAt,
-      resolve,
-      reject,
-      callerKey,
-    };
-    job.queueTimer = setTimeout(() => {
-      const i = queue.indexOf(job);
-      if (i >= 0) {
-        queue.splice(i, 1);
-        releaseCaller(job);
-        reject(new ConversionBusyError());
-      }
-    }, CONVERSION_LIMITS.maxQueueWaitMs);
-    queue.push(job);
-    dispatch();
-  }).catch(refused);
+  if (!candidate || candidate.count < incomingCount + 2) {
+    throw new ConversionBusyError();
+  }
+  const [evicted] = queue.splice(candidate.newestIndex, 1);
+  if (evicted?.queueTimer) clearTimeout(evicted.queueTimer);
+  if (evicted) {
+    releaseCaller(evicted);
+    evicted.reject(new ConversionBusyError());
+  }
 }
 
 /**
