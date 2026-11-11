@@ -1,0 +1,1577 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "0f66b420ee180bd52e03d086074f14ada2ec553c"
+  },
+  "at": "2026-11-11T13:03:39.191Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/after.json"
+  },
+  "summary": {
+    "ok": true,
+    "expected": "pass",
+    "total": 125,
+    "passed": 125,
+    "failed": 0
+  },
+  "topic": "swallowed-failures-wave2b-after",
+  "raw": {
+    "numTotalTestSuites": 26,
+    "numPassedTestSuites": 26,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 125,
+    "numPassedTests": 125,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794402213202,
+    "success": true,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "PyPI records are read under the 20 MiB registry cap"
+            ],
+            "fullName": "PyPI records are read under the 20 MiB registry cap pypi-package-info",
+            "status": "passed",
+            "title": "pypi-package-info",
+            "duration": 53.49703099999999,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PyPI records are read under the 20 MiB registry cap"
+            ],
+            "fullName": "PyPI records are read under the 20 MiB registry cap package-security-audit (pypi)",
+            "status": "passed",
+            "title": "package-security-audit (pypi)",
+            "duration": 50.14151499999997,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze reads repository files as a bounded prefix"
+            ],
+            "fullName": "github-repo-analyze reads repository files as a bounded prefix README, package.json and requirements.txt are cut at the cap; the analysis still runs",
+            "status": "passed",
+            "title": "README, package.json and requirements.txt are cut at the cap; the analysis still runs",
+            "duration": 4.714652999999998,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze reads repository files as a bounded prefix"
+            ],
+            "fullName": "github-repo-analyze reads repository files as a bounded prefix an API JSON answer past 4 MiB is refused, not buffered",
+            "status": "passed",
+            "title": "an API JSON answer past 4 MiB is refused, not buffered",
+            "duration": 11.213749000000007,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a non-OK answer's body is cancelled before the capability throws or returns null (review N2)"
+            ],
+            "fullName": "a non-OK answer's body is cancelled before the capability throws or returns null (review N2) pypi-package-info {\"package\":\"requests\"} answers HTTP 404",
+            "status": "passed",
+            "title": "pypi-package-info {\"package\":\"requests\"} answers HTTP 404",
+            "duration": 1.3682360000000244,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a non-OK answer's body is cancelled before the capability throws or returns null (review N2)"
+            ],
+            "fullName": "a non-OK answer's body is cancelled before the capability throws or returns null (review N2) pypi-package-info {\"package\":\"requests\"} answers HTTP 503",
+            "status": "passed",
+            "title": "pypi-package-info {\"package\":\"requests\"} answers HTTP 503",
+            "duration": 0.36506700000001047,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a non-OK answer's body is cancelled before the capability throws or returns null (review N2)"
+            ],
+            "fullName": "a non-OK answer's body is cancelled before the capability throws or returns null (review N2) package-security-audit {\"name\":\"requests\",\"ecosystem\":\"pypi\"} answers HTTP 404",
+            "status": "passed",
+            "title": "package-security-audit {\"name\":\"requests\",\"ecosystem\":\"pypi\"} answers HTTP 404",
+            "duration": 0.3114810000000148,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a non-OK answer's body is cancelled before the capability throws or returns null (review N2)"
+            ],
+            "fullName": "a non-OK answer's body is cancelled before the capability throws or returns null (review N2) package-security-audit {\"name\":\"requests\",\"ecosystem\":\"pypi\"} answers HTTP 503",
+            "status": "passed",
+            "title": "package-security-audit {\"name\":\"requests\",\"ecosystem\":\"pypi\"} answers HTTP 503",
+            "duration": 0.28456200000005083,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a non-OK answer's body is cancelled before the capability throws or returns null (review N2)"
+            ],
+            "fullName": "a non-OK answer's body is cancelled before the capability throws or returns null (review N2) package-security-audit {\"name\":\"left-pad\",\"ecosystem\":\"npm\"} answers HTTP 404",
+            "status": "passed",
+            "title": "package-security-audit {\"name\":\"left-pad\",\"ecosystem\":\"npm\"} answers HTTP 404",
+            "duration": 0.663913999999977,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a non-OK answer's body is cancelled before the capability throws or returns null (review N2)"
+            ],
+            "fullName": "a non-OK answer's body is cancelled before the capability throws or returns null (review N2) package-security-audit {\"name\":\"left-pad\",\"ecosystem\":\"npm\"} answers HTTP 503",
+            "status": "passed",
+            "title": "package-security-audit {\"name\":\"left-pad\",\"ecosystem\":\"npm\"} answers HTTP 503",
+            "duration": 0.3247879999998986,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a non-OK answer's body is cancelled before the capability throws or returns null (review N2)"
+            ],
+            "fullName": "a non-OK answer's body is cancelled before the capability throws or returns null (review N2) github-repo-analyze cancels the bodies of the API and raw-file requests that fail",
+            "status": "passed",
+            "title": "github-repo-analyze cancels the bodies of the API and raw-file requests that fail",
+            "duration": 0.6621330000000398,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794402213631,
+        "endTime": 1794402213755.662,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/registry-body-caps.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "cookie-scan failure: the cookie request that fails throws (row 9)"
+            ],
+            "fullName": "cookie-scan failure: the cookie request that fails throws (row 9) throws, unbilled and retryable, when the site's response is HTTP 503",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when the site's response is HTTP 503",
+            "duration": 4.359260000000063,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cookie-scan failure: the cookie request that fails throws (row 9)"
+            ],
+            "fullName": "cookie-scan failure: the cookie request that fails throws (row 9) throws, unbilled and retryable, when the site's response is a network error",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when the site's response is a network error",
+            "duration": 1.0989300000001094,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cookie-scan failure: the cookie request that fails throws (row 9)"
+            ],
+            "fullName": "cookie-scan failure: the cookie request that fails throws (row 9) throws, unbilled and retryable, when the site's response is a timeout",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when the site's response is a timeout",
+            "duration": 0.6108150000000023,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cookie-scan failure: an unusable page analysis is null, not 'no banner' (row 9)"
+            ],
+            "fullName": "cookie-scan failure: an unusable page analysis is null, not 'no banner' (row 9) a model decline keeps the cookies, nulls the analysis and names it",
+            "status": "passed",
+            "title": "a model decline keeps the cookies, nulls the analysis and names it",
+            "duration": 3.7845119999999497,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cookie-scan failure: an unusable page analysis is null, not 'no banner' (row 9)"
+            ],
+            "fullName": "cookie-scan failure: an unusable page analysis is null, not 'no banner' (row 9) a reply that is not JSON keeps the cookies, nulls the analysis and names it",
+            "status": "passed",
+            "title": "a reply that is not JSON keeps the cookies, nulls the analysis and names it",
+            "duration": 1.0056899999999587,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cookie-scan failure: an unusable page analysis is null, not 'no banner' (row 9)"
+            ],
+            "fullName": "cookie-scan failure: an unusable page analysis is null, not 'no banner' (row 9) a reply of the wrong shape keeps the cookies, nulls the analysis and names it",
+            "status": "passed",
+            "title": "a reply of the wrong shape keeps the cookies, nulls the analysis and names it",
+            "duration": 1.1141349999999193,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cookie-scan negative: a site that sets no cookies keeps its exact output"
+            ],
+            "fullName": "cookie-scan negative: a site that sets no cookies keeps its exact output answers an empty inventory, billed",
+            "status": "passed",
+            "title": "answers an empty inventory, billed",
+            "duration": 0.6765870000000405,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cookie-scan negative: a site that sets no cookies keeps its exact output"
+            ],
+            "fullName": "cookie-scan negative: a site that sets no cookies keeps its exact output still reports tracking cookies without a banner the analysis looked for",
+            "status": "passed",
+            "title": "still reports tracking cookies without a banner the analysis looked for",
+            "duration": 1.0843100000000732,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cookie-scan passthrough: Strale's own Browserless state is not wrapped"
+            ],
+            "fullName": "cookie-scan passthrough: Strale's own Browserless state is not wrapped rethrows VendorUnavailableError unchanged",
+            "status": "passed",
+            "title": "rethrows VendorUnavailableError unchanged",
+            "duration": 1.1291820000000143,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) throws, unbilled and retryable, when UPCitemdb fails with HTTP 503 after OFF has none",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when UPCitemdb fails with HTTP 503 after OFF has none",
+            "duration": 1.5053330000000642,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) throws, unbilled and retryable, when UPCitemdb fails with HTTP 429 after OFF has none",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when UPCitemdb fails with HTTP 429 after OFF has none",
+            "duration": 0.5115899999999556,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) throws, unbilled and retryable, when UPCitemdb fails with a network error after OFF has none",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when UPCitemdb fails with a network error after OFF has none",
+            "duration": 0.3685050000000274,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) throws, unbilled and retryable, when UPCitemdb fails with a timeout after OFF has none",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when UPCitemdb fails with a timeout after OFF has none",
+            "duration": 0.3225119999999606,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) throws, unbilled and retryable, when Open Food Facts fails with HTTP 503 and UPCitemdb has none",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when Open Food Facts fails with HTTP 503 and UPCitemdb has none",
+            "duration": 0.4805470000000014,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) throws, unbilled and retryable, when Open Food Facts fails with HTTP 429 and UPCitemdb has none",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when Open Food Facts fails with HTTP 429 and UPCitemdb has none",
+            "duration": 0.3446390000000292,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) throws, unbilled and retryable, when Open Food Facts fails with a network error and UPCitemdb has none",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when Open Food Facts fails with a network error and UPCitemdb has none",
+            "duration": 0.5041269999999258,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) throws, unbilled and retryable, when Open Food Facts fails with a timeout and UPCitemdb has none",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when Open Food Facts fails with a timeout and UPCitemdb has none",
+            "duration": 0.3452150000000529,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) names both databases when neither answers",
+            "status": "passed",
+            "title": "names both databases when neither answers",
+            "duration": 0.4287499999999227,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) throws, not retryable, on a 200 reply that carries no product status",
+            "status": "passed",
+            "title": "throws, not retryable, on a 200 reply that carries no product status",
+            "duration": 0.6449870000000146,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup negative: both databases saying 'none' keeps the exact output"
+            ],
+            "fullName": "barcode-lookup negative: both databases saying 'none' keeps the exact output an unknown product answers found:false, billed",
+            "status": "passed",
+            "title": "an unknown product answers found:false, billed",
+            "duration": 0.4185659999999416,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup negative: both databases saying 'none' keeps the exact output"
+            ],
+            "fullName": "barcode-lookup negative: both databases saying 'none' keeps the exact output a code UPCitemdb rejects as INVALID_UPC answers found:false, billed",
+            "status": "passed",
+            "title": "a code UPCitemdb rejects as INVALID_UPC answers found:false, billed",
+            "duration": 0.31182799999999133,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup negative: both databases saying 'none' keeps the exact output"
+            ],
+            "fullName": "barcode-lookup negative: both databases saying 'none' keeps the exact output answers from UPCitemdb when Open Food Facts is down",
+            "status": "passed",
+            "title": "answers from UPCitemdb when Open Food Facts is down",
+            "duration": 0.38069000000007236,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) throws, unbilled and retryable, when Common Crawl fails with HTTP 503 and Serper is not set up",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when Common Crawl fails with HTTP 503 and Serper is not set up",
+            "duration": 0.7779540000000225,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) throws, unbilled and retryable, when Common Crawl fails with HTTP 429 and Serper is not set up",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when Common Crawl fails with HTTP 429 and Serper is not set up",
+            "duration": 0.3342020000000048,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) throws, unbilled and retryable, when Common Crawl fails with a network error and Serper is not set up",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when Common Crawl fails with a network error and Serper is not set up",
+            "duration": 0.18889799999999468,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) throws, unbilled and retryable, when Common Crawl fails with a timeout and Serper is not set up",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when Common Crawl fails with a timeout and Serper is not set up",
+            "duration": 0.3152670000000626,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) throws, unbilled and retryable, when both sources fail (Serper HTTP 503)",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when both sources fail (Serper HTTP 503)",
+            "duration": 0.4446309999999585,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) throws, unbilled and retryable, when both sources fail (Serper HTTP 429)",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when both sources fail (Serper HTTP 429)",
+            "duration": 0.2965189999999893,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) throws, unbilled and retryable, when both sources fail (Serper a network error)",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when both sources fail (Serper a network error)",
+            "duration": 0.2259319999999434,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) throws, unbilled and retryable, when both sources fail (Serper a timeout)",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when both sources fail (Serper a timeout)",
+            "duration": 0.2759489999999687,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) names Serper when it fails after Common Crawl answered",
+            "status": "passed",
+            "title": "names Serper when it fails after Common Crawl answered",
+            "duration": 6.115054999999984,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) names Common Crawl when Serper answers in its place",
+            "status": "passed",
+            "title": "names Common Crawl when Serper answers in its place",
+            "duration": 1.0439150000000836,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) rethrows Strale's own Serper account state unchanged when Common Crawl is down too",
+            "status": "passed",
+            "title": "rethrows Strale's own Serper account state unchanged when Common Crawl is down too",
+            "duration": 0.35229100000003655,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check negative: a domain Common Crawl holds nothing for keeps its exact output"
+            ],
+            "fullName": "backlink-check negative: a domain Common Crawl holds nothing for keeps its exact output Common Crawl HTTP 404 answers an empty list, billed",
+            "status": "passed",
+            "title": "Common Crawl HTTP 404 answers an empty list, billed",
+            "duration": 0.3019920000000411,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check negative: a domain Common Crawl holds nothing for keeps its exact output"
+            ],
+            "fullName": "backlink-check negative: a domain Common Crawl holds nothing for keeps its exact output Common Crawl an empty 200 answers an empty list, billed",
+            "status": "passed",
+            "title": "Common Crawl an empty 200 answers an empty list, billed",
+            "duration": 0.2736780000000181,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze failure: GitHub that does not answer fails the call (row 21)"
+            ],
+            "fullName": "github-repo-analyze failure: GitHub that does not answer fails the call (row 21) throws, unbilled and retryable, when the commit list is rate limited",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when the commit list is rate limited",
+            "duration": 1.200717999999938,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze failure: GitHub that does not answer fails the call (row 21)"
+            ],
+            "fullName": "github-repo-analyze failure: GitHub that does not answer fails the call (row 21) throws, unbilled and retryable, when the README host answers 429",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when the README host answers 429",
+            "duration": 2.9532369999999446,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze failure: GitHub that does not answer fails the call (row 21)"
+            ],
+            "fullName": "github-repo-analyze failure: GitHub that does not answer fails the call (row 21) throws, unbilled and retryable, when the repo record answers 503",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when the repo record answers 503",
+            "duration": 0.576502000000005,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze failure: GitHub that does not answer fails the call (row 21)"
+            ],
+            "fullName": "github-repo-analyze failure: GitHub that does not answer fails the call (row 21) throws, unbilled and retryable, when the language breakdown times out",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when the language breakdown times out",
+            "duration": 0.456489999999917,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze failure: GitHub that does not answer fails the call (row 21)"
+            ],
+            "fullName": "github-repo-analyze failure: GitHub that does not answer fails the call (row 21) throws, unbilled and retryable, when package.json hits a network error",
+            "status": "passed",
+            "title": "throws, unbilled and retryable, when package.json hits a network error",
+            "duration": 0.4642539999999826,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze failure: GitHub that does not answer fails the call (row 21)"
+            ],
+            "fullName": "github-repo-analyze failure: GitHub that does not answer fails the call (row 21) throws, not retryable, when GitHub refuses the repository (HTTP 451)",
+            "status": "passed",
+            "title": "throws, not retryable, when GitHub refuses the repository (HTTP 451)",
+            "duration": 0.5736510000000408,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze failure: GitHub that does not answer fails the call (row 21)"
+            ],
+            "fullName": "github-repo-analyze failure: GitHub that does not answer fails the call (row 21) a contributor list GitHub will not produce is null and named, not 'no contributors'",
+            "status": "passed",
+            "title": "a contributor list GitHub will not produce is null and named, not 'no contributors'",
+            "duration": 0.6958859999999731,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze negative: what GitHub says is absent keeps its output"
+            ],
+            "fullName": "github-repo-analyze negative: what GitHub says is absent keeps its output a repository without a README, package.json or requirements.txt is analysed as such, billed",
+            "status": "passed",
+            "title": "a repository without a README, package.json or requirements.txt is analysed as such, billed",
+            "duration": 0.5429220000000896,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze negative: what GitHub says is absent keeps its output"
+            ],
+            "fullName": "github-repo-analyze negative: what GitHub says is absent keeps its output an empty repository (commits 409, contributors 204) has no commits and no contributors",
+            "status": "passed",
+            "title": "an empty repository (commits 409, contributors 204) has no commits and no contributors",
+            "duration": 0.6202799999999797,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze negative: what GitHub says is absent keeps its output"
+            ],
+            "fullName": "github-repo-analyze negative: what GitHub says is absent keeps its output a repository GitHub does not show stays 'could not access'",
+            "status": "passed",
+            "title": "a repository GitHub does not show stays 'could not access'",
+            "duration": 0.5189040000000205,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "seo-audit failure: an unreadable robots.txt is not 'No robots.txt' (row 23)"
+            ],
+            "fullName": "seo-audit failure: an unreadable robots.txt is not 'No robots.txt' (row 23) robots.txt HTTP 503 nulls the two checks, names robots.txt and leaves them out of the score",
+            "status": "passed",
+            "title": "robots.txt HTTP 503 nulls the two checks, names robots.txt and leaves them out of the score",
+            "duration": 1.6533330000000888,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "seo-audit failure: an unreadable robots.txt is not 'No robots.txt' (row 23)"
+            ],
+            "fullName": "seo-audit failure: an unreadable robots.txt is not 'No robots.txt' (row 23) robots.txt HTTP 429 nulls the two checks, names robots.txt and leaves them out of the score",
+            "status": "passed",
+            "title": "robots.txt HTTP 429 nulls the two checks, names robots.txt and leaves them out of the score",
+            "duration": 0.776576000000091,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "seo-audit failure: an unreadable robots.txt is not 'No robots.txt' (row 23)"
+            ],
+            "fullName": "seo-audit failure: an unreadable robots.txt is not 'No robots.txt' (row 23) robots.txt a network error nulls the two checks, names robots.txt and leaves them out of the score",
+            "status": "passed",
+            "title": "robots.txt a network error nulls the two checks, names robots.txt and leaves them out of the score",
+            "duration": 0.4003660000000764,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "seo-audit failure: an unreadable robots.txt is not 'No robots.txt' (row 23)"
+            ],
+            "fullName": "seo-audit failure: an unreadable robots.txt is not 'No robots.txt' (row 23) robots.txt a timeout nulls the two checks, names robots.txt and leaves them out of the score",
+            "status": "passed",
+            "title": "robots.txt a timeout nulls the two checks, names robots.txt and leaves them out of the score",
+            "duration": 0.3579650000000356,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "seo-audit negative: a site without robots.txt keeps its exact output"
+            ],
+            "fullName": "seo-audit negative: a site without robots.txt keeps its exact output robots.txt HTTP 404 is 'No robots.txt', billed",
+            "status": "passed",
+            "title": "robots.txt HTTP 404 is 'No robots.txt', billed",
+            "duration": 0.5064499999999725,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "seo-audit negative: a site without robots.txt keeps its exact output"
+            ],
+            "fullName": "seo-audit negative: a site without robots.txt keeps its exact output robots.txt HTTP 403 is 'No robots.txt', billed",
+            "status": "passed",
+            "title": "robots.txt HTTP 403 is 'No robots.txt', billed",
+            "duration": 0.28261699999995926,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "seo-audit negative: a site without robots.txt keeps its exact output"
+            ],
+            "fullName": "seo-audit negative: a site without robots.txt keeps its exact output robots.txt HTTP 410 is 'No robots.txt', billed",
+            "status": "passed",
+            "title": "robots.txt HTTP 410 is 'No robots.txt', billed",
+            "duration": 0.23562900000001719,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "seo-audit negative: a site without robots.txt keeps its exact output"
+            ],
+            "fullName": "seo-audit negative: a site without robots.txt keeps its exact output a robots.txt with a sitemap scores both",
+            "status": "passed",
+            "title": "a robots.txt with a sitemap scores both",
+            "duration": 0.3565879999999879,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24)"
+            ],
+            "fullName": "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24) DNS ESERVFAIL throws, unbilled and retryable",
+            "status": "passed",
+            "title": "DNS ESERVFAIL throws, unbilled and retryable",
+            "duration": 0.6641969999999446,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24)"
+            ],
+            "fullName": "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24) DNS ETIMEOUT throws, unbilled and retryable",
+            "status": "passed",
+            "title": "DNS ETIMEOUT throws, unbilled and retryable",
+            "duration": 0.3371399999999767,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24)"
+            ],
+            "fullName": "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24) DNS ECONNREFUSED throws, unbilled and retryable",
+            "status": "passed",
+            "title": "DNS ECONNREFUSED throws, unbilled and retryable",
+            "duration": 0.2038909999999987,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24)"
+            ],
+            "fullName": "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24) a name with no A record (ENODATA) is registered, so taken, not available",
+            "status": "passed",
+            "title": "a name with no A record (ENODATA) is registered, so taken, not available",
+            "duration": 0.6111929999999575,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24)"
+            ],
+            "fullName": "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24) a handle check that fails with HTTP 503 is null and named, neither available nor taken",
+            "status": "passed",
+            "title": "a handle check that fails with HTTP 503 is null and named, neither available nor taken",
+            "duration": 0.5306610000000092,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24)"
+            ],
+            "fullName": "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24) a handle check that fails with HTTP 429 is null and named, neither available nor taken",
+            "status": "passed",
+            "title": "a handle check that fails with HTTP 429 is null and named, neither available nor taken",
+            "duration": 0.34322899999995116,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24)"
+            ],
+            "fullName": "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24) a handle check that fails with a network error is null and named, neither available nor taken",
+            "status": "passed",
+            "title": "a handle check that fails with a network error is null and named, neither available nor taken",
+            "duration": 0.37366399999996247,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24)"
+            ],
+            "fullName": "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24) a handle check that fails with a timeout is null and named, neither available nor taken",
+            "status": "passed",
+            "title": "a handle check that fails with a timeout is null and named, neither available nor taken",
+            "duration": 0.40276299999993626,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24)"
+            ],
+            "fullName": "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24) the unchecked X handle is not listed as taken",
+            "status": "passed",
+            "title": "the unchecked X handle is not listed as taken",
+            "duration": 0.34620299999994586,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check negative: answers that were given keep their output"
+            ],
+            "fullName": "startup-domain-check negative: answers that were given keep their output NXDOMAIN everywhere and 404 on every platform is all available, billed",
+            "status": "passed",
+            "title": "NXDOMAIN everywhere and 404 on every platform is all available, billed",
+            "duration": 0.3675269999999955,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check negative: answers that were given keep their output"
+            ],
+            "fullName": "startup-domain-check negative: answers that were given keep their output a resolving domain and a 200 handle are taken",
+            "status": "passed",
+            "title": "a resolving domain and a 200 handle are taken",
+            "duration": 0.4483259999999518,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794402214029,
+        "endTime": 1794402214080.4482,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ENOTFOUND as the answer",
+            "status": "passed",
+            "title": "treats ENOTFOUND as the answer",
+            "duration": 1.1600799999999936,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ENODATA as the answer",
+            "status": "passed",
+            "title": "treats ENODATA as the answer",
+            "duration": 0.16479099999992286,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats EBADNAME as the answer",
+            "status": "passed",
+            "title": "treats EBADNAME as the answer",
+            "duration": 0.09150399999998626,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ETIMEOUT as no answer",
+            "status": "passed",
+            "title": "treats ETIMEOUT as no answer",
+            "duration": 0.12330199999996694,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ESERVFAIL as no answer",
+            "status": "passed",
+            "title": "treats ESERVFAIL as no answer",
+            "duration": 0.07980299999996987,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats EREFUSED as no answer",
+            "status": "passed",
+            "title": "treats EREFUSED as no answer",
+            "duration": 0.06254300000000512,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ECONNREFUSED as no answer",
+            "status": "passed",
+            "title": "treats ECONNREFUSED as no answer",
+            "duration": 0.093195000000037,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats EAI_AGAIN as no answer",
+            "status": "passed",
+            "title": "treats EAI_AGAIN as no answer",
+            "duration": 0.06662699999992583,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ECANCELLED as no answer",
+            "status": "passed",
+            "title": "treats ECANCELLED as no answer",
+            "duration": 0.5724969999999985,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats EBADRESP as no answer",
+            "status": "passed",
+            "title": "treats EBADRESP as no answer",
+            "duration": 0.12443399999995108,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ESOMETHINGNEW as no answer",
+            "status": "passed",
+            "title": "treats ESOMETHINGNEW as no answer",
+            "duration": 0.10874300000000403,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats an error without a resolver code as no answer",
+            "status": "passed",
+            "title": "treats an error without a resolver code as no answer",
+            "duration": 0.08819500000004155,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull passes a successful answer through",
+            "status": "passed",
+            "title": "passes a successful answer through",
+            "duration": 0.8186670000000049,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull returns the empty answer for ENOTFOUND",
+            "status": "passed",
+            "title": "returns the empty answer for ENOTFOUND",
+            "duration": 0.19891100000006645,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull returns the empty answer for ENODATA",
+            "status": "passed",
+            "title": "returns the empty answer for ENODATA",
+            "duration": 0.14734999999996035,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ETIMEOUT",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ETIMEOUT",
+            "duration": 0.6848770000000286,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ESERVFAIL",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ESERVFAIL",
+            "duration": 0.26898099999993974,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for EREFUSED",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for EREFUSED",
+            "duration": 0.20213400000000092,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ECONNREFUSED",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ECONNREFUSED",
+            "duration": 0.13616500000000542,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for EAI_AGAIN",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for EAI_AGAIN",
+            "duration": 0.12001699999996163,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ECANCELLED",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ECANCELLED",
+            "duration": 0.14347699999996166,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for EBADRESP",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for EBADRESP",
+            "duration": 0.10562900000002173,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ESOMETHINGNEW",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ESOMETHINGNEW",
+            "duration": 0.09691399999996975,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull rethrows our own defect unchanged rather than blaming the resolver",
+            "status": "passed",
+            "title": "rethrows our own defect unchanged rather than blaming the resolver",
+            "duration": 0.38112999999998465,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "requireAnyLeg"
+            ],
+            "fullName": "requireAnyLeg returns the answering legs when at least one answered",
+            "status": "passed",
+            "title": "returns the answering legs when at least one answered",
+            "duration": 0.1855000000000473,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "requireAnyLeg"
+            ],
+            "fullName": "requireAnyLeg throws when every leg failed, naming the codes and never the legs' messages",
+            "status": "passed",
+            "title": "throws when every leg failed, naming the codes and never the legs' messages",
+            "duration": 0.1686419999999771,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "requireAnyLeg"
+            ],
+            "fullName": "requireAnyLeg treats no legs as no outage",
+            "status": "passed",
+            "title": "treats no legs as no outage",
+            "duration": 0.05295200000000477,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ETIMEOUT). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ETIMEOUT). This says nothing about the domain's records; retry shortly.",
+            "duration": 1.1236229999999523,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ESERVFAIL). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ESERVFAIL). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.6083840000000009,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (EREFUSED). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (EREFUSED). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.2753340000000435,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ECONNREFUSED). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ECONNREFUSED). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.1323099999999613,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (EAI_AGAIN). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (EAI_AGAIN). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.1189239999999927,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ECANCELLED). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ECANCELLED). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.09755500000005668,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (EBADRESP). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (EBADRESP). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.12961300000006304,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ESOMETHINGNEW). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ESOMETHINGNEW). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.08550700000000688,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: Companies House search API: HTTP 429; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: Companies House search API: HTTP 429; retry shortly.",
+            "duration": 0.1288359999999784,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: ESMA MiCA CASP register: no copy of the register could be read (2026-11: HTTP 404; 2026-10: HTTP 503). This is not an answer about the entity; retry later.",
+            "status": "passed",
+            "title": "Upstream unavailable: ESMA MiCA CASP register: no copy of the register could be read (2026-11: HTTP 404; 2026-10: HTTP 503). This is not an answer about the entity; retry later.",
+            "duration": 0.14790400000003956,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure carries a non-retryable verdict through to the outcome",
+            "status": "passed",
+            "title": "carries a non-retryable verdict through to the outcome",
+            "duration": 0.09933300000000145,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable HTTP 429 is an upstream failure, retryable true",
+            "status": "passed",
+            "title": "HTTP 429 is an upstream failure, retryable true",
+            "duration": 0.2130490000000691,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable HTTP 500 is an upstream failure, retryable true",
+            "status": "passed",
+            "title": "HTTP 500 is an upstream failure, retryable true",
+            "duration": 0.12073499999996784,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable HTTP 503 is an upstream failure, retryable true",
+            "status": "passed",
+            "title": "HTTP 503 is an upstream failure, retryable true",
+            "duration": 0.10320899999999256,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable HTTP 400 is an upstream failure, retryable false",
+            "status": "passed",
+            "title": "HTTP 400 is an upstream failure, retryable false",
+            "duration": 0.07043799999996736,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable HTTP 403 is an upstream failure, retryable false",
+            "status": "passed",
+            "title": "HTTP 403 is an upstream failure, retryable false",
+            "duration": 0.06229500000006283,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable HTTP 410 is an upstream failure, retryable false",
+            "status": "passed",
+            "title": "HTTP 410 is an upstream failure, retryable false",
+            "duration": 0.10509300000001076,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable a timeout is an upstream failure",
+            "status": "passed",
+            "title": "a timeout is an upstream failure",
+            "duration": 0.30263000000002194,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable a network error is an upstream failure",
+            "status": "passed",
+            "title": "a network error is an upstream failure",
+            "duration": 0.1257309999999734,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable a body that did not parse is an upstream failure",
+            "status": "passed",
+            "title": "a body that did not parse is an upstream failure",
+            "duration": 0.1324690000000146,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable returns Strale's own vendor-account state, refusals and our own defects unchanged",
+            "status": "passed",
+            "title": "returns Strale's own vendor-account state, refusals and our own defects unchanged",
+            "duration": 0.1678069999999252,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "retry policy honours the executor's verdict"
+            ],
+            "fullName": "retry policy honours the executor's verdict retries a retryable UpstreamUnavailableError once",
+            "status": "passed",
+            "title": "retries a retryable UpstreamUnavailableError once",
+            "duration": 4.679385000000025,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "retry policy honours the executor's verdict"
+            ],
+            "fullName": "retry policy honours the executor's verdict does not retry a non-retryable one",
+            "status": "passed",
+            "title": "does not retry a non-retryable one",
+            "duration": 0.3230030000000852,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794402213918,
+        "endTime": 1794402213934.323,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/lib/upstream-result.test.ts"
+      }
+    ]
+  }
+}
