@@ -1,0 +1,77 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/robustness/r1-adversarial-drive.sh",
+    "commit": "ca1a708b7bb50aeea323fe7d82c42819bdd6ae04"
+  },
+  "at": "2026-11-11T04:15:32.540Z",
+  "inputs": {
+    "adversarial_inputs": [
+      "nested <b><i><u><a> 16 KB",
+      "nested <b><i><u><a> 32 KB"
+    ],
+    "after_commit": "f1282238",
+    "before_commit": "f494ad76^"
+  },
+  "summary": {
+    "inputs": 2,
+    "after_unbilled_refusals": 2,
+    "after_worst_ms": 25,
+    "before_failures": 2,
+    "before_worst_block_ms": 26407
+  },
+  "topic": "robustness-r1-nested-formatting-anchor-fail-before",
+  "raw": {
+    "ok": true,
+    "failures": [],
+    "warnings": [],
+    "method": "Supplements the 2026-11-11 adversarial-inputs receipt, whose 'nested formatting' cases used '<b><i><u>'. The brief's measured input, and html-parse-bound.test.ts, use '<b><i><u><a>'; this receipt runs that variant. Each input is wrapped in <html><body>...</body></html> and run in its own tsx process by scripts/robustness/r1-adversarial-drive.sh. After: htmlToCleanMarkdown from apps/api/src/capabilities/lib/readability-convert.ts at main f1282238 (production /health f1282238), worker warmed with one small page first. Before: readability-convert.ts at f494ad76^ (the commit before #964), synchronous on the main thread, so its ms is time the event loop was blocked; 60 s limit per process. Linux cloud container, Node 22, single run each, 2026-11-11.",
+    "inputs_built_as": {
+      "nested-formatting-a": "'<b><i><u><a>' repeated to the size, then 'x'"
+    },
+    "after": [
+      {
+        "mode": "after",
+        "case": "nested-formatting-a-16KB",
+        "input_bytes": 16407,
+        "outcome": "refused",
+        "error": "HtmlTooComplexError",
+        "unbilled_refusal": true,
+        "ms": 19,
+        "max_event_loop_gap_ms": 10
+      },
+      {
+        "mode": "after",
+        "case": "nested-formatting-a-32KB",
+        "input_bytes": 32787,
+        "outcome": "refused",
+        "error": "HtmlTooComplexError",
+        "unbilled_refusal": true,
+        "ms": 25,
+        "max_event_loop_gap_ms": 10
+      }
+    ],
+    "before_fail_before": [
+      {
+        "mode": "before",
+        "case": "nested-formatting-a-16KB",
+        "input_bytes": 16407,
+        "outcome": "threw",
+        "error": "RangeError",
+        "message": "Maximum call stack size exceeded",
+        "ms": 11341,
+        "max_event_loop_gap_ms": 0
+      },
+      {
+        "mode": "before",
+        "case": "nested-formatting-a-32KB",
+        "input_bytes": 32787,
+        "outcome": "threw",
+        "error": "RangeError",
+        "message": "Maximum call stack size exceeded",
+        "ms": 26407,
+        "max_event_loop_gap_ms": 0
+      }
+    ]
+  }
+}
