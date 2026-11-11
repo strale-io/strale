@@ -34,3 +34,24 @@ No workflow schedule, `/health/jobs` implementation, API code, deployment check,
 
 - The network-dependent `c2pa-node` postinstall did not run; it is unrelated to production-watch and was bypassed with `npm ci --ignore-scripts` so the specified offline tests and builds could run.
 - No production probe was run, because the brief limits data to the repository and specifies offline tests.
+
+## Claude review round (2026-11-11)
+
+The independent read-only review of bad9263a gave **GO**. Its mutation runs confirmed that the masking, expiry and validation tests discriminate.
+
+### Fixed here
+
+- **Warning annotation:** the workflow now calls `production(github, context, undefined, { core })`, so the "now healthy, acknowledgement can be removed" warning appears as a GitHub annotation, not a log line. The workflow-reachability test's expected call is updated to match.
+- **Committed-file test:** it now validates against today's date, not a date pinned to 2026-11-11. A legitimate renewal after 2026-12-26 is therefore not rejected.
+- **New tests:**
+  - an acknowledgement still covers its expiry day (UTC);
+  - an acknowledgement covers only its exact job id; a near-miss id does not mask.
+- **Pre-existing bug, found by the review:**
+  - **What happened:** when the open-issue listing failed after `/health/jobs` was read, `job-inventory` was pushed twice, once `ok:true` and then once `ok:false`. The first reset the counter on every run, so a persistent GitHub listing failure never turned the run red.
+  - **Fix:** the catch block now marks the existing entry `ok:false` instead of adding a second one.
+  - **Test:** "a failing issue listing alarms once as job-inventory instead of resetting itself".
+- **Fail-before, checked by mutation:** the listing-failure test fails with the old double push, and the expiry-day test fails with an exclusive expiry.
+
+### Commands
+
+- `node --test scripts/production-watch/*.test.mjs`: 40 passed, 0 failed.

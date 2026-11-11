@@ -203,9 +203,42 @@ test('a healthy acknowledged job warns without making production red', async () 
   assert.match(warnings[0], /ingest-ee-directors.*can be removed/);
 });
 
-test('the committed known failures file is valid on 2026-11-11', () => {
+test('the committed known failures file is valid today', () => {
+  // Today's date, so a legitimate renewal is never rejected by a pinned clock.
   const entries = JSON.parse(readFileSync(new URL('./known-failures.json', import.meta.url), 'utf8'));
-  assert.deepEqual(validateKnownFailures(entries, acknowledgementNow), entries);
+  assert.deepEqual(validateKnownFailures(entries, new Date()), entries);
+});
+
+test('an acknowledgement still covers its expiry day', async () => {
+  const { github } = fakeGithub();
+  const acknowledgement = { ...eeAcknowledgement, expires: acknowledgementNow.toISOString().slice(0, 10) };
+  const read = productionRead(['ingest-ee-directors']);
+  await production(github, { repo: {}, runId: 1 }, read, knownFailureOptions([acknowledgement]));
+  await production(github, { repo: {}, runId: 2 }, read, knownFailureOptions([acknowledgement]));
+});
+
+test('an acknowledgement covers only its exact job id', async () => {
+  const { github } = fakeGithub();
+  const near = { ...eeAcknowledgement, id: 'ingest-ee-director' };
+  const read = productionRead(['ingest-ee-directors']);
+  await production(github, { repo: {}, runId: 1 }, read, knownFailureOptions([near]));
+  await assert.rejects(
+    production(github, { repo: {}, runId: 2 }, read, knownFailureOptions([near])),
+    /ingest-ee-directors/,
+  );
+});
+
+test('a failing issue listing alarms once as job-inventory instead of resetting itself', async () => {
+  const { github, issues } = fakeGithub();
+  const listing = github.paginate;
+  github.paginate = async (method, args) => {
+    if (args?.state === 'open') throw new Error('GitHub listing failed');
+    return listing(method, args);
+  };
+  const read = productionRead();
+  await production(github, { repo: {}, runId: 1 }, read, knownFailureOptions([]));
+  await assert.rejects(production(github, { repo: {}, runId: 2 }, read, knownFailureOptions([])), /job-inventory/);
+  assert.ok(issues.some((issue) => issue.title === '[production-watch] job-inventory' && issue.state === 'open'));
 });
 test('health request has the ten-second AbortSignal and handles no JSON', async () => {
   await assert.rejects(json('https://example.invalid', async (_url, options) => {
@@ -271,7 +304,7 @@ test('new monitoring workflows are reachable and use only the default token perm
   const { default: yaml } = await import('js-yaml');
   const specs = [
     ['deploy-verify', 'watch.mjs', 'deploy(github, context)', false],
-    ['production-watch', 'watch.mjs', 'production(github, context)', true],
+    ['production-watch', 'watch.mjs', 'production(github, context, undefined, { core })', true],
     ['package-contract', 'package-probe.mjs', 'packageContract(github, context)', true],
   ];
   for (const [file, script, invoke, scheduled] of specs) {

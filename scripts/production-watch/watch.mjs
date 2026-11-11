@@ -185,7 +185,14 @@ export async function production(github, context, read = json, options = {}) {
       const id = /^\[production-watch\] ([a-z][a-z0-9-]+)$/.exec(issue.title)?.[1];
       if (issue.state === 'open' && id && !signals.some((s) => s.id === id)) signals.push({ id, ok: false });
     }
-  } catch { signals.push({ id: 'job-inventory', ok: false }); }
+  } catch {
+    // The issue listing can fail after the inventory was read and marked ok;
+    // flip that entry rather than adding a second one, whose ok:true would
+    // reset the counter on every run and keep a persistent failure from alarming.
+    const inventory = signals.find((s) => s.id === 'job-inventory');
+    if (inventory) inventory.ok = false;
+    else signals.push({ id: 'job-inventory', ok: false });
+  }
   const expired = [];
   const unacknowledged = [];
   const reported = signals.map((signal) => {
