@@ -10,7 +10,7 @@ No Codex readiness message from the dispatcher on this account yet (the newest d
 
 ## Done this session
 
-- Robustness T3 signal 3 (production-watch): scheduled run 42976490573 green; forced-mismatch receipt `archive/receipts/2026-11-11-check-r3-production-watch-forced-mismatch.json` (4 of 4 watches fired). The run also reported `ingest-ee-directors` healthy: remove the #856 acknowledgement once a second scheduled run agrees.
+- Robustness T3 signal 3 (production-watch): scheduled run 42976490573 green; forced-mismatch receipt `archive/receipts/2026-11-11-check-r3-production-watch-forced-mismatch.json` (4 of 4 watches fired). `ingest-ee-directors` is still failing (`/health/jobs`: ok false, no last success), so the #856 acknowledgement stays.
 - Robustness T3 signal 4: the 2026-11-06 check-in's weekly-drift misreading is LESSONS F7 incident 15 (count 14 to 15), checked against the job logs.
 - Asks posted on the bus: growth-readiness triage answer (PR #1011), id 6791877369; npm trusted publishers for straleio, straleio-langchain and n8n-nodes-strale, id 6791877924.
 
