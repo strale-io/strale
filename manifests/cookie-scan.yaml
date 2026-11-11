@@ -74,14 +74,20 @@ output_schema:
       - gstatic.com
     consent_banner_detected: false
   properties:
+    unavailable_sources:
+      type: array
+      items:
+        type: string
+      description: >-
+        Present only when the page analysis could not be read; the analysis fields are then null, not empty.
     cookies:
       type: array
     total_cookies:
       type: number
     tracking_scripts:
-      type: array
+      type: ["array", "null"]
     consent_banner_detected:
-      type: boolean
+      type: ["boolean", "null"]
 data_source: Web page rendering (cookie detection, script analysis, consent banner check)
 data_source_type: scrape
 transparency_tag: ai_generated
@@ -103,14 +109,20 @@ test_fixtures:
 output_field_reliability:
   cookies: guaranteed
   total_cookies: guaranteed
-  tracking_scripts: guaranteed
-  consent_banner_detected: guaranteed
+  tracking_scripts: common
+  consent_banner_detected: common
+  unavailable_sources: rare
 limitations:
   - title: Only cookies set on initial page load are captured
     text: Scans cookies set on initial page load — cookies set after user interaction or on sub-pages may not be captured
     category: coverage
     severity: info
     workaround: Run separate scans on high-traffic sub-pages (e.g., /checkout, /login) and merge the cookie inventories
+  - title: A failed request is not an empty result
+    text: >-
+      If the site does not answer the cookie request (timeout, network error or a 5xx), the call fails unbilled rather than reporting no cookies. If the page analysis cannot be read (the model declines or answers in the wrong shape), the cookie inventory is still returned; tracking_scripts, consent_banner_detected, consent_banner_text, third_party_domains and potential_issues are null and the page analysis is named in unavailable_sources.
+    category: availability
+    severity: info
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

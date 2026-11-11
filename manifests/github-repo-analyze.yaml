@@ -128,6 +128,12 @@ output_schema:
     documentation_quality: excellent
     maintenance_health_score: 95
   properties:
+    unavailable_sources:
+      type: array
+      items:
+        type: string
+      description: >-
+        Present only when GitHub declined to list the contributors; top_contributors and bus_factor_estimate are then null.
     stars:
       type: integer
     tech_stack:
@@ -185,8 +191,9 @@ output_field_reliability:
   stars: guaranteed
   tech_stack: guaranteed
   activity_level: guaranteed
-  top_contributors: guaranteed
+  top_contributors: common
   maintenance_health_score: guaranteed
+  unavailable_sources: rare
 limitations:
   - title: Code quality and test coverage are not assessed
     text: >-
@@ -195,6 +202,11 @@ limitations:
     category: coverage
     severity: info
     workaround: Combine with dependency-audit for security insights and code-review for quality assessment of specific files
+  - title: GitHub must answer for the analysis to run
+    text: >-
+      If GitHub rate-limits or does not answer a request the analysis depends on (repository record, commits, languages, README, package.json or requirements.txt), the call fails unbilled rather than analysing a repository with missing data. A file GitHub reports absent (404) is analysed as absent. If GitHub declines to list the contributors (very large repositories), top_contributors and bus_factor_estimate are null and the contributor list is named in unavailable_sources.
+    category: availability
+    severity: info
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

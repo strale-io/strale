@@ -6,6 +6,7 @@ import {
   readTextWithLimit,
 } from "../lib/resource-limits.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
+import { fetchUnavailable, httpUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
 import {
   deriveResultDomain,
   isGotoLink,
@@ -13,6 +14,16 @@ import {
   startSerperBudget,
   usableResultUrl,
 } from "../lib/serper-links.js";
+
+const COMMON_CRAWL = "Common Crawl index API";
+const SERPER = "Serper Google search API";
+
+interface Backlink {
+  source_url: string;
+  source_domain: string;
+  anchor_text: string | null;
+  first_seen: string | null;
+}
 
 // F-0-006 Bucket D (preemptive migration): user domain is embedded in the
 // query string to hardcoded third-party APIs (index.commoncrawl.org,
@@ -47,51 +58,23 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
   // Google redirect links that stayed opaque, so a dropped row is a reported
   // absence rather than a silent one.
   let unresolvedLinkCount = 0;
-  const backlinks: Array<{
-    source_url: string;
-    source_domain: string;
-    anchor_text: string | null;
-    first_seen: string | null;
-  }> = [];
+  const backlinks: Backlink[] = [];
+  // A leg that could not answer is named here, and the call throws when no leg
+  // answered: an empty list must mean the sources found nothing, never that
+  // they were down (2026-11-06 swallowed-upstream-failures audit, row 16).
+  const unavailableSources: string[] = [];
+  const failures: Error[] = [];
 
   // Attempt 1: CommonCrawl Index API
   try {
-    const ccUrl = `https://index.commoncrawl.org/CC-MAIN-2024-10-index?url=*.${encodeURIComponent(domain)}&output=json&limit=50`;
-    const ccResp = await safeFetch(ccUrl, {
-      headers: { "User-Agent": "Strale/1.0" },
-      signal: AbortSignal.timeout(budget.searchTimeoutMs),
-    });
-
-    if (ccResp.ok) {
-      const text = await readTextWithLimit(
-        ccResp,
-        MAX_FETCHED_API_RESPONSE_BYTES,
-        "domain",
-        "a domain whose Common Crawl index response is",
-      );
-      const lines = text.trim().split("\n").filter(Boolean);
-      for (const line of lines) {
-        try {
-          const record = JSON.parse(line);
-          const sourceUrl = record.url ?? "";
-          const sourceDomain = extractDomain(sourceUrl);
-          // Only include pages from OTHER domains linking to the target
-          if (sourceDomain && sourceDomain !== domain) {
-            backlinks.push({
-              source_url: sourceUrl,
-              source_domain: sourceDomain,
-              anchor_text: null,
-              first_seen: record.timestamp ?? null,
-            });
-          }
-        } catch {
-          // Skip malformed NDJSON lines
-        }
-      }
-    }
-  } catch {
-    // CommonCrawl may timeout or be unavailable
+    backlinks.push(...(await readCommonCrawl(domain, budget.searchTimeoutMs)));
+  } catch (err) {
+    // degraded-ok: a Common Crawl outage is named in unavailable_sources, and the call throws below unless Serper answers.
+    if (!(err instanceof UpstreamUnavailableError)) throw err;
+    failures.push(err);
+    unavailableSources.push(COMMON_CRAWL);
   }
+  let answered = failures.length === 0;
 
   // Attempt 2: If CommonCrawl yielded few results, try Serper.dev Google search
   if (backlinks.length < 5) {
@@ -109,58 +92,82 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
           signal: AbortSignal.timeout(Math.max(1_000, Math.min(budget.searchTimeoutMs, budget.resolveDeadline - Date.now()))),
         }, 1, safeFetch);
 
-        if (resp.ok) {
-          source = "google-serper";
-          const data = await readJsonWithLimit<Record<string, unknown>>(
-            resp,
-            MAX_FETCHED_API_RESPONSE_BYTES,
-            "domain",
-          );
-          // Google wraps every organic link past the top three in an opaque
-          // `google.com/goto` redirect (2026-10-30). Unresolved, the old
-          // `extractDomain` read `google.com` off each wrapper and pushed it
-          // into `backlinks` — so `referring_domains_count` counted Google as
-          // a site linking to the caller, and `source_url` was unopenable.
-          await resolveSerperLinks(data, serperKey, safeFetch, budget.resolveDeadline);
-          const organic = (data.organic as any[]) ?? [];
-          for (const item of organic) {
-            const sourceUrl = item.link ?? item.url ?? "";
-            // A link whose real URL is unknown is dropped, not guessed at.
-            // A backlink list is a list of addresses; an entry without one is
-            // not a weaker row, it is a wrong row. `unresolved_link_count`
-            // makes the absence visible rather than silent.
-            //
-            // The wrapper test comes first on purpose: it must count even
-            // when no host could be derived at all, which is the ordinary
-            // case for a wrapper with no `displayedLink` breadcrumb.
-            // Round-2 review: test the URL, not just the wrapper. An
-            // organic entry with no `link` at all but a `displayedLink`
-            // breadcrumb used to be skipped (`extractDomain("")` was `""`);
-            // deriving the host from the breadcrumb would now admit it with
-            // `source_url: ""`, inflating `total_backlinks` and
-            // `referring_domains_count` with an address nobody can open —
-            // exactly the wrong row the comment above refuses.
-            if (!usableResultUrl(sourceUrl)) {
-              if (isGotoLink(sourceUrl)) unresolvedLinkCount += 1;
-              continue;
-            }
-            const sourceDomain = deriveResultDomain(sourceUrl, item.displayedLink);
-            if (!sourceDomain || sourceDomain === domain) continue;
-            // Check if already in list
-            if (!backlinks.some((b) => b.source_url === sourceUrl)) {
-              backlinks.push({
-                source_url: sourceUrl,
-                source_domain: sourceDomain,
-                anchor_text: item.title ?? null,
-                first_seen: null,
-              });
-            }
+        if (!resp.ok) {
+          await resp.body?.cancel();
+          throw httpUnavailable(SERPER, resp.status);
+        }
+        const data = await readJsonWithLimit<Record<string, unknown>>(
+          resp,
+          MAX_FETCHED_API_RESPONSE_BYTES,
+          "domain",
+        );
+        if (!data || typeof data !== "object" || (data.organic !== undefined && !Array.isArray(data.organic))) {
+          throw new UpstreamUnavailableError(SERPER, "the reply carried no result list.", { code: "unparseable", retryable: false });
+        }
+        source = "google-serper";
+        // Google wraps every organic link past the top three in an opaque
+        // `google.com/goto` redirect (2026-10-30). Unresolved, the old
+        // `extractDomain` read `google.com` off each wrapper and pushed it
+        // into `backlinks` — so `referring_domains_count` counted Google as
+        // a site linking to the caller, and `source_url` was unopenable.
+        await resolveSerperLinks(data, serperKey, safeFetch, budget.resolveDeadline);
+        const organic = (data.organic as any[]) ?? [];
+        for (const item of organic) {
+          const sourceUrl = item.link ?? item.url ?? "";
+          // A link whose real URL is unknown is dropped, not guessed at.
+          // A backlink list is a list of addresses; an entry without one is
+          // not a weaker row, it is a wrong row. `unresolved_link_count`
+          // makes the absence visible rather than silent.
+          //
+          // The wrapper test comes first on purpose: it must count even
+          // when no host could be derived at all, which is the ordinary
+          // case for a wrapper with no `displayedLink` breadcrumb.
+          // Round-2 review: test the URL, not just the wrapper. An
+          // organic entry with no `link` at all but a `displayedLink`
+          // breadcrumb used to be skipped (`extractDomain("")` was `""`);
+          // deriving the host from the breadcrumb would now admit it with
+          // `source_url: ""`, inflating `total_backlinks` and
+          // `referring_domains_count` with an address nobody can open —
+          // exactly the wrong row the comment above refuses.
+          if (!usableResultUrl(sourceUrl)) {
+            if (isGotoLink(sourceUrl)) unresolvedLinkCount += 1;
+            continue;
+          }
+          const sourceDomain = deriveResultDomain(sourceUrl, item.displayedLink);
+          if (!sourceDomain || sourceDomain === domain) continue;
+          // Check if already in list
+          if (!backlinks.some((b) => b.source_url === sourceUrl)) {
+            backlinks.push({
+              source_url: sourceUrl,
+              source_domain: sourceDomain,
+              anchor_text: item.title ?? null,
+              first_seen: null,
+            });
           }
         }
-      } catch {
-        // Serper unavailable
+        answered = true;
+      } catch (err) {
+        // degraded-ok: a Serper failure is named in unavailable_sources; the call throws below when Common Crawl did not answer either.
+        const failure = fetchUnavailable(SERPER, err);
+        if (!(failure instanceof UpstreamUnavailableError) && !isStraleVendorState(failure)) throw failure;
+        failures.push(failure);
+        unavailableSources.push(SERPER);
       }
     }
+  }
+
+  if (!answered) {
+    // Strale's own Serper account state passes through unchanged: it is ours,
+    // not the provider's, and must not count against the capability.
+    const strale = failures.find(isStraleVendorState);
+    if (strale) throw strale;
+    if (failures.length === 1) throw failures[0];
+    const upstream = failures as UpstreamUnavailableError[];
+    throw new UpstreamUnavailableError(
+      `${COMMON_CRAWL} and ${SERPER}`,
+      `neither source answered (${upstream.map((f) => f.code ?? "error").join(", ")}).`,
+      { code: upstream[0].code, retryable: upstream.some((f) => f.retryable) },
+    );
   }
 
   // Compute referring domains
@@ -189,6 +196,7 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
       top_anchors: topAnchors,
       dofollow_estimate: null,
       nofollow_estimate: null,
+      ...(unavailableSources.length > 0 ? { unavailable_sources: unavailableSources } : {}),
     },
     provenance: {
       source,
@@ -202,9 +210,73 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
 });
 
 function extractDomain(url: string): string {
+  if (!URL.canParse(url)) return "";
+  return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+}
+
+/** Strale's own vendor-account or test-traffic state, never the provider's outage. */
+function isStraleVendorState(err: Error): boolean {
+  return err.name === "VendorUnavailableError" || err.name === "PaidCallBlockedError";
+}
+
+/**
+ * Common Crawl's captures for the domain. The index answers a domain it holds
+ * no captures for with HTTP 404 (the real negative, `[]`). Any other non-OK
+ * status, a timeout, or a body none of whose lines parse is not an answer and
+ * throws UpstreamUnavailableError.
+ */
+async function readCommonCrawl(domain: string, timeoutMs: number): Promise<Backlink[]> {
+  const ccUrl = `https://index.commoncrawl.org/CC-MAIN-2024-10-index?url=*.${encodeURIComponent(domain)}&output=json&limit=50`;
+  let text: string;
   try {
-    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
-  } catch {
-    return "";
+    const ccResp = await safeFetch(ccUrl, {
+      headers: { "User-Agent": "Strale/1.0" },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (ccResp.status === 404) {
+      await ccResp.body?.cancel();
+      return [];
+    }
+    if (!ccResp.ok) {
+      await ccResp.body?.cancel();
+      throw httpUnavailable(COMMON_CRAWL, ccResp.status);
+    }
+    text = await readTextWithLimit(
+      ccResp,
+      MAX_FETCHED_API_RESPONSE_BYTES,
+      "domain",
+      "a domain whose Common Crawl index response is",
+    );
+  } catch (err) {
+    throw fetchUnavailable(COMMON_CRAWL, err);
   }
+
+  const backlinks: Backlink[] = [];
+  const lines = text.trim().split("\n").filter(Boolean);
+  let parsed = 0;
+  for (const line of lines) {
+    let record: Record<string, any>;
+    try {
+      record = JSON.parse(line);
+    } catch {
+      // degraded-ok: one malformed NDJSON line is skipped; a reply none of whose lines parse throws below.
+      continue;
+    }
+    parsed += 1;
+    const sourceUrl = record?.url ?? "";
+    const sourceDomain = extractDomain(sourceUrl);
+    // Only include pages from OTHER domains linking to the target
+    if (sourceDomain && sourceDomain !== domain) {
+      backlinks.push({
+        source_url: sourceUrl,
+        source_domain: sourceDomain,
+        anchor_text: null,
+        first_seen: record?.timestamp ?? null,
+      });
+    }
+  }
+  if (lines.length > 0 && parsed === 0) {
+    throw new UpstreamUnavailableError(COMMON_CRAWL, "no line of the reply parsed.", { code: "unparseable", retryable: false });
+  }
+  return backlinks;
 }

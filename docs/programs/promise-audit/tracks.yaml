@@ -12,43 +12,45 @@ tracks:
     next_action: "Owner: orchestrator/Claude for billing-path implementation;
       Codex may build non-sensitive supporting scaffolding under rule 5. Wave 1
       landed in PRs 938/939 and the catch-handler CI guard with its shrinking
-      baseline in the resume file's batch. Wave 2a, branch
-      fix/swallowed-failures-wave2a: audit rows 7 (package-security-audit), 8
-      (dependency-audit), 17 (business-day-check), 19 (eori-validate), 27
-      (domain-age-check) and 34 (container-track) are done in that PR. Each
-      upstream failure throws UpstreamUnavailableError (unbilled), secondary legs
-      are named in unavailable_sources, real negatives keep their output, and
-      the 12 baseline entries for those files are removed (196 to 184). The
-      fail-before and after test receipts are in evidence. The PR is tier 2
-      under REVIEW.md and needs its independent review before merge. Still open:
-      the remaining wave 2 and wave 3 audit rows (including 26 and 29),
-      reconciled first against later repairs such as customs PR999; the
-      Nager.Date no-calendar path (a weekends-only answer for countries such as
-      TH, still billed) as a follow-up candidate; the perturbation replays
-      (http_503, http_429, network_error, blocked_200, DNS ETIMEOUT) for every
-      network executor with fail-before evidence; then measuring past billed
-      calls from the affected paths since their earliest releases, deciding
-      refunds per policy with a DEC-20260504-B drain plan, and the wallet-debit
-      sweep against listed and dry-run prices (P-011, P-008). Do not assume the
-      proposed degraded billing marker shipped. No production financial run or
-      refund was performed by either batch. Review fixes on that branch (commit
-      8e17f619, review-fixes receipts in evidence): package-security-audit
-      risk_score_complete, container-track page_error and rendering-service
-      attribution, domain-age-check no-creation-date refusal, business-day-check
-      out-of-range refusal. Pre-existing defects found in that review, not fixed
-      there: dependency-audit severity is always low because OSV querybatch
-      returns only id and modified (critical CVEs billed as low; summary and
-      aliases empty); unpinned PyPI requirements and registry-404 dependencies
-      never reach OSV, and malicious-removed npm packages with MAL- advisories
-      are billed as 0 vulnerabilities; dependency-audit with only 404s and
-      unavailable sources and nothing queryable bills an empty audit
+      baseline in the resume file's batch; wave 2a (rows 7, 8, 17, 19, 27, 34)
+      merged in PR 1014. Wave 2b, branch fix/swallowed-failures-wave2b: audit
+      rows 9 (cookie-scan), 15 (barcode-lookup), 16 (backlink-check), 21
+      (github-repo-analyze), 23 (seo-audit) and 24 (startup-domain-check) are
+      done in that PR once merged. Each upstream failure throws
+      UpstreamUnavailableError (unbilled; retryable for 429, 5xx, timeouts and
+      network errors, not for replies that carry no answer), secondary legs are
+      nulled and named in unavailable_sources, real negatives keep their output,
+      startup-domain-check reads available only on NXDOMAIN, and the 16 baseline
+      entries for those files are removed (184 to 168). Fail-before and after
+      receipts are in evidence. The PR is tier 2 under REVIEW.md and needs its
+      independent review before merge. Next: wave 2c, rows 5, 6, 20, 26, 28 and
+      29; then wave 2d, rows 30, 31, 32, 33 and 35; each reconciled first
+      against later repairs such as customs PR999. Then wave 3; the Nager.Date
+      no-calendar path (a weekends-only answer for countries such as TH, still
+      billed) as a follow-up candidate; the perturbation replays (http_503,
+      http_429, network_error, blocked_200, DNS ETIMEOUT) for every network
+      executor with fail-before evidence; then measuring past billed calls from
+      the affected paths since their earliest releases, deciding refunds per
+      policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against
+      listed and dry-run prices (P-011, P-008). Do not assume the proposed
+      degraded billing marker shipped. No production financial run or refund was
+      performed by any wave. Pre-existing defects found in the wave 2a review,
+      not fixed there: dependency-audit severity is always low because OSV
+      querybatch returns only id and modified (critical CVEs billed as low;
+      summary and aliases empty); unpinned PyPI requirements and registry-404
+      dependencies never reach OSV, and malicious-removed npm packages with MAL-
+      advisories are billed as 0 vulnerabilities; dependency-audit with only
+      404s and unavailable sources and nothing queryable bills an empty audit
       (requireSomeAnswer edge); business-day-check next and previous business
       day use only the current year's holidays (wrong on 31 Dec), and a 404 for
       an unknown country code such as ZZ is billed as weekends-only;
       eori-validate bills valid false for GB EORI numbers (the EU service says
       Not valid); package-security-audit with a nonexistent explicit npm version
       gets an empty OSV answer and is billed low; holiday-calendar getHolidays
-      caches a non-list 200 body for 24h."
+      caches a non-list 200 body for 24h. Found in wave 2b, not fixed there:
+      github-repo-analyze reads only README.md (a readme.md or README.rst reads
+      as No README); startup-domain-check uses DNS, not RDAP, so a registered
+      domain with no DNS records still reads available."
     resume_file: handoff/_general/from-code/2026-11-11-upstream-catch-guard.md
     exit:
       - Every network executor under apps/api/src/capabilities either throws or

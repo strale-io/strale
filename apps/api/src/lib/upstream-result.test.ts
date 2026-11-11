@@ -9,6 +9,8 @@ import {
   dnsOrEmpty,
   dnsOrNull,
   dnsUnavailable,
+  fetchUnavailable,
+  httpUnavailable,
   isDnsNegative,
   requireAnyLeg,
   UpstreamUnavailableError,
@@ -122,6 +124,42 @@ describe("UpstreamUnavailableError is filed as an unbilled, retryable provider f
   it("carries a non-retryable verdict through to the outcome", () => {
     const err = new UpstreamUnavailableError("ESMA register", "every path answered HTTP 404.", { retryable: false });
     expect(outcomeFromError(err)).toMatchObject({ failure_class: "provider_unavailable", retryable: false, billable: false });
+  });
+});
+
+describe("httpUnavailable / fetchUnavailable", () => {
+  it.each([[429, true], [500, true], [503, true], [400, false], [403, false], [410, false]])(
+    "HTTP %i is an upstream failure, retryable %s",
+    (status, retryable) => {
+      const err = httpUnavailable("Example API", status);
+      expect(err).toBeInstanceOf(UpstreamUnavailableError);
+      expect(err).toMatchObject({ code: `HTTP ${status}`, retryable });
+      expect(outcomeFromError(err)).toMatchObject({ billable: false, failure_class: "provider_unavailable" });
+    },
+  );
+
+  it.each([
+    ["a timeout", new DOMException("The operation was aborted due to timeout", "TimeoutError"), "timeout", true],
+    ["a network error", Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNRESET" } }), "ECONNRESET", true],
+    // A reply that arrived but carries no answer: retrying asks the same question again.
+    ["a body that did not parse", new SyntaxError("Unexpected token <"), "unparseable", false],
+  ])("%s is an upstream failure", (_label, thrown, code, retryable) => {
+    const err = fetchUnavailable("Example API", thrown);
+    expect(err).toBeInstanceOf(UpstreamUnavailableError);
+    expect(err).toMatchObject({ code, retryable });
+    expect(outcomeFromError(err)).toMatchObject({ billable: false, failure_class: "provider_unavailable" });
+    expect(err.message).not.toMatch(/not found|invalid|missing|required/i);
+  });
+
+  it("returns Strale's own vendor-account state, refusals and our own defects unchanged", () => {
+    const vendor = Object.assign(new Error("Vendor 'serper' is exhausted; the request was refused before spending or charging."), {
+      name: "VendorUnavailableError",
+    });
+    const defect = new RangeError("boom");
+    expect(fetchUnavailable("Example API", vendor)).toBe(vendor);
+    expect(fetchUnavailable("Example API", defect)).toBe(defect);
+    const already = httpUnavailable("Example API", 503);
+    expect(fetchUnavailable("Other API", already)).toBe(already);
   });
 });
 
