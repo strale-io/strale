@@ -62,6 +62,16 @@ function isUncoveredCountry(err: unknown): boolean {
 }
 
 /**
+ * Nager.Date answers HTTP 400 for a year outside the range it holds (it held
+ * 1976 to 2079 when checked live on 2026-11-11; 1975 and 2080 both drew 400).
+ * That is a fact about the caller's date, not an outage: a refusal, unbilled
+ * and not counted against the capability.
+ */
+function isYearOutOfRange(err: unknown): boolean {
+  return /^Nager\.Date API error: HTTP 400$/.test(err instanceof Error ? err.message : "");
+}
+
+/**
  * Nager.Date gave no answer: 429 or 5xx, a timeout, a network error or a body
  * that does not parse. An error that is none of these (our own code breaking)
  * is returned unchanged, so a defect is never relabelled as the provider's.
@@ -130,7 +140,19 @@ registerCapability("business-day-check", async (input: CapabilityInput) => {
     // holiday calendar to apply, so only weekends are checked, as before. Any
     // other failure used to land here too and answer `is_business_day: true`
     // on a public holiday, billed (2026-11-06 swallowed-failures audit, row 17).
+    if (isYearOutOfRange(err)) {
+      throw inputRefusal(
+        `'date' must be in a year the Nager.Date holiday calendar covers (1976 to 2079); ${year} is outside that range.`,
+        "date",
+        "Send 'date' as a YYYY-MM-DD date in a year from 1976 to 2079.",
+      );
+    }
     if (!isUncoveredCountry(err)) throw holidayFailure(err);
+  }
+  // A 200 whose body parses but is not a holiday list is no answer either:
+  // without this it surfaced as a TypeError from `.map` below.
+  if (!Array.isArray(holidays)) {
+    throw new UpstreamUnavailableError(NAGER, "the response was not a holiday list.", { code: "unparseable" });
   }
 
   const holidayDates = new Set(holidays.map((h: any) => h.date));

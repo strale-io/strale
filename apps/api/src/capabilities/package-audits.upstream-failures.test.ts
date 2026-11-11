@@ -148,6 +148,34 @@ describe("package-security-audit: secondary legs are marked, never clean (row 7)
     await expectBillable("package-security-audit", r.output);
   });
 
+  it("does not read a failed deps.dev as an unlicensed package: no license penalty, risk_score_complete false", async () => {
+    psaRoutes();
+    let exec = await load("package-security-audit", "./package-security-audit.js");
+    const complete = await exec(PSA_INPUT);
+    expect(complete.output.license).toMatchObject({ spdx: "MIT" });
+
+    psaRoutes({ current: () => status(503) });
+    exec = await load("package-security-audit", "./package-security-audit.js");
+    const r = await exec(PSA_INPUT);
+    expect(r.output.license).toBeNull();
+    // Same score as the complete MIT answer: the -15 "no license" penalty is
+    // not applied to a license nobody could read.
+    expect(r.output.risk_score).toBe(complete.output.risk_score);
+    expect(r.output.risk_level).toBe(complete.output.risk_level);
+    expect(r.output.risk_score_complete).toBe(false);
+    await expectBillable("package-security-audit", r.output);
+  });
+
+  it("reports risk_score_complete false when the previous-version read or the Scorecard fails", async () => {
+    psaRoutes({ previous: () => status(503) });
+    let exec = await load("package-security-audit", "./package-security-audit.js");
+    expect((await exec(PSA_INPUT)).output.risk_score_complete).toBe(false);
+
+    psaRoutes({ project: () => status(503) });
+    exec = await load("package-security-audit", "./package-security-audit.js");
+    expect((await exec(PSA_INPUT)).output.risk_score_complete).toBe(false);
+  });
+
   it("names the previous-version deps.dev read when only it fails", async () => {
     psaRoutes({ previous: async () => { throw timeout(); } });
     const exec = await load("package-security-audit", "./package-security-audit.js");
@@ -170,6 +198,7 @@ describe("package-security-audit: secondary legs are marked, never clean (row 7)
     const exec = await load("package-security-audit", "./package-security-audit.js");
     const r = await exec(PSA_INPUT);
     expect(r.output).not.toHaveProperty("unavailable_sources");
+    expect(r.output.risk_score_complete).toBe(true);
     expect(r.output.vulnerabilities).toEqual({ total: 0, critical: 0, high: 0, medium: 0, low: 0, details: [] });
     expect(r.output.dependency_count).toBe(0);
     expect(r.output.license).toBeNull();
@@ -184,6 +213,7 @@ describe("package-security-audit: secondary legs are marked, never clean (row 7)
     const exec = await load("package-security-audit", "./package-security-audit.js");
     const r = await exec(PSA_INPUT);
     expect(r.output).not.toHaveProperty("unavailable_sources");
+    expect(r.output.risk_score_complete).toBe(true);
     expect(r.output.scorecard).toEqual({ score: 7.5, checks: { Maintained: 9 } });
     expect(r.output.license).toMatchObject({ spdx: "MIT" });
     await expectBillable("package-security-audit", r.output);

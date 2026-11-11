@@ -87,6 +87,30 @@ describe("business-day-check: Nager.Date failures throw (row 17)", () => {
     expect(err.message).toContain("did not parse");
   });
 
+  it("throws, unbilled, when Nager.Date answers 200 with JSON that is not a holiday list", async () => {
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify({ status: "maintenance" }), { status: 200 }));
+    const exec = await load("business-day-check", "./business-day-check.js");
+    const err = await expectUnbilledUpstreamFailure(exec(CHRISTMAS));
+    expect(err.message).toContain("not a holiday list");
+    expect((err as { code?: unknown }).code).toBe("unparseable");
+  });
+
+  it.each([["1975-06-02", 1975], ["2080-06-03", 2080]])(
+    "refuses %s, a year Nager.Date does not cover (HTTP 400): unbilled, not counted against the capability",
+    async (date, year) => {
+      fetchMock.mockImplementation(async () => status(400));
+      const exec = await load("business-day-check", "./business-day-check.js");
+      const err = (await exec({ date, country_code: "SE" }).catch((e: unknown) => e)) as Error;
+      expect(err.name).not.toBe("UpstreamUnavailableError");
+      const { isCapabilityRefusal } = await import("../lib/capability-refusal.js");
+      expect(isCapabilityRefusal(err)).toBe(true);
+      expect(isCapabilityRefusal(err.message)).toBe(true);
+      expect(err.message).toContain(`${year} is outside that range`);
+      const { outcomeFromError } = await import("../lib/execution-outcome.js");
+      expect(outcomeFromError(err)).toMatchObject({ billable: false, failure_class: "capability_refused", counts_against_capability: false });
+    },
+  );
+
   it("answers a holiday correctly when Nager.Date answers", async () => {
     fetchMock.mockImplementation(async () => new Response(JSON.stringify(SE_HOLIDAYS), { status: 200 }));
     const exec = await load("business-day-check", "./business-day-check.js");

@@ -73,8 +73,10 @@ limitations:
   - title: Registration-date coverage
     text: >-
       Registration dates come from the registry's RDAP service, or WHOIS where the TLD has no RDAP service. Some
-      ccTLD registries publish no creation date; for those, and for a TLD with neither service, the call fails and
-      is not charged.
+      ccTLD registries never publish a creation date (DENIC for .de, EURid for .eu, nic.at for .at, and RDAP
+      registries whose record has no registration event); for those, and for a TLD with neither service, the call
+      is refused as outside coverage and is not charged. A registry that cannot be reached, answers empty or
+      rate-limits the lookup fails the call, also not charged.
     category: coverage
     severity: info
   - title: Rate limiting

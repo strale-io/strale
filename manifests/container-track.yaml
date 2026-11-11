@@ -86,7 +86,7 @@ test_fixtures:
   health_check_input:
     container_number: test
 output_field_reliability:
-  events: guaranteed
+  events: common
   status: guaranteed
   carrier: guaranteed
   valid_format: guaranteed
@@ -103,7 +103,9 @@ limitations:
   - title: Carrier website changes can interrupt tracking
     text: >-
       Tracking reads carrier websites, whose page layouts can change without notice and cause
-      temporary failures. When the carrier page cannot be read, the call fails and is not charged.
+      temporary failures. When the carrier page cannot be read, or shows an error, maintenance, consent or login
+      page instead of a tracking result, the call fails and is not charged. status not_found is returned only when
+      the carrier's page says it has no record of the container.
     category: availability
     severity: warning
     workaround: If tracking fails, use the carrier name and container number to check the carrier's website directly

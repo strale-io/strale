@@ -103,15 +103,37 @@ const REGISTRIES = "domain registration registries";
  * `risk_indicator: "unknown"` are decided here:
  *
  *   - A WHOIS reply with no creation date. When the reply says the domain is
- *     not registered, that is the real negative and keeps its output. Any other
- *     such reply (a rate-limit notice, an empty reply, a registry that does not
- *     publish the date) is no answer and throws.
- *   - A TLD with neither an RDAP service nor a WHOIS server here. Nothing was
- *     asked and nothing is known, so it is a refusal (unbilled, not counted
- *     against the capability), not a billed "unknown".
+ *     not registered, that is the real negative and keeps its output. An empty
+ *     reply or a rate-limit notice is no answer and throws. A registry that
+ *     never publishes the date (WHOIS_WITHOUT_CREATION_DATE) answered as fully
+ *     as it ever will: that is a coverage limit, so it is a refusal (unbilled,
+ *     not counted against the capability's health), not an outage. Any other
+ *     dateless reply is one this parser cannot use and throws.
+ *   - A TLD with neither an RDAP service nor a WHOIS server here, or whose
+ *     RDAP record carries no registration event and that has no WHOIS server.
+ *     Nothing more can be asked, so it is a refusal, not a billed "unknown".
  */
 const WHOIS_NOT_REGISTERED =
-  /\bno match\b|\bnot found\b|no data found|no entries found|nothing found|no object found|\bstatus:\s*(free|available)\b|\bis (free|available for registration)\b|domain not registered/i;
+  /\bno match\b|\bnot found\b|no data found|no entries found|nothing found|no object found|\bstatus:\s*(free|available)\b|\bis (free|available for registration)\b|domain not registered|we do not have an entry in our database matching your query/i;
+
+/**
+ * WHOIS servers whose replies never carry a creation date for a registered
+ * domain, by the registry's own policy: DENIC (.de) and nic.at (.at) publish
+ * only a last-changed date, EURid (.eu) none at all.
+ */
+const WHOIS_WITHOUT_CREATION_DATE: Record<string, string> = {
+  "whois.denic.de": "DENIC (.de)",
+  "whois.eu": "EURid (.eu)",
+  "whois.nic.at": "nic.at (.at)",
+};
+
+function noCreationDateRefusal(registry: string) {
+  return inputRefusal(
+    `'domain' must be under a registry that publishes creation dates; ${registry} does not publish one, so this domain's age cannot be looked up.`,
+    "domain",
+    "Send 'domain' under a TLD whose registry publishes creation dates, such as example.com or example.se; for this domain, ask its registrar for the registration date.",
+  );
+}
 const WHOIS_RATE_LIMITED = /limit (exceeded|reached)|exceeded .*limit|rate.?limit|too many (queries|requests)|try again later|quota/i;
 
 function registriesUnavailable(detail: string, options: { code?: string; retryable?: boolean } = {}): UpstreamUnavailableError {
@@ -155,6 +177,8 @@ registerCapability("domain-age-check", async (input: CapabilityInput) => {
   const server = TLD_SERVERS[tld];
   let rdapBase: string | null = null;
   let rdapFailure: string | null = null;
+  // The RDAP registry answered, and its record has no registration event.
+  let rdapWithoutCreationDate: string | null = null;
 
   try {
     rdapBase = await getRdapBase(tld);
@@ -173,6 +197,7 @@ registerCapability("domain-age-check", async (input: CapabilityInput) => {
         return resultFromDates(domain, "rdap", rdap.host, rdap.created, rdap.expires, rdap.registrar);
       }
       rdapFailure = `RDAP registry ${rdap.host} failed: no registration event`;
+      rdapWithoutCreationDate = rdap.host;
     } catch (error) {
       // degraded-ok: the failure is kept in rdapFailure; WHOIS answers in its place, or the call throws carrying it.
       const host = new URL(rdapBase).hostname;
@@ -181,6 +206,9 @@ registerCapability("domain-age-check", async (input: CapabilityInput) => {
   }
 
   if (!server) {
+    // The registry answered without a registration event and there is no
+    // WHOIS server to ask instead: a coverage limit, not an outage.
+    if (rdapWithoutCreationDate) throw noCreationDateRefusal(`the .${tld} RDAP registry ${rdapWithoutCreationDate}`);
     if (rdapFailure) throw registriesUnavailable(rdapFailure);
     throw inputRefusal(
       `'domain' must be under a TLD with an RDAP or WHOIS service Strale can query; .${tld} has neither, so its age cannot be looked up.`,
@@ -206,6 +234,8 @@ registerCapability("domain-age-check", async (input: CapabilityInput) => {
     if (WHOIS_RATE_LIMITED.test(whoisText)) {
       throw registriesUnavailable(`${prefix}WHOIS registry ${server} failed: rate limited`, { code: "rate_limited" });
     }
+    const registry = WHOIS_WITHOUT_CREATION_DATE[server];
+    if (registry) throw noCreationDateRefusal(registry);
     // The registry answered and its reply carries no creation date: a reply
     // this parser cannot use, and a retry gets the same one.
     throw registriesUnavailable(`${prefix}WHOIS registry ${server} failed: the reply carried no creation date`, {
@@ -221,7 +251,7 @@ registerCapability("domain-age-check", async (input: CapabilityInput) => {
         domain, age_days: null, age_years: null, created_date: null,
         registrar, expiry_date: expires?.toISOString().split("T")[0] ?? null,
         is_new: null, risk_indicator: "unknown",
-        note: "Creation date not found in WHOIS data",
+        note: "Domain is not registered according to the registry WHOIS service",
       },
       provenance: { source: "whois", upstream: server, fetched_at: new Date().toISOString() },
     };

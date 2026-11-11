@@ -14,8 +14,10 @@ import { UpstreamUnavailableError } from "../lib/upstream-result.js";
  * packages nobody had checked. A registry lookup that fails (429, 5xx,
  * network, timeout, unparseable) marks that dependency `unavailable: true`,
  * names the registry in `unavailable_sources`, and still sends the declared
- * version to OSV, so a registry outage never hides a known vulnerability. A
- * registry 404 stays what it was: an `error` on that dependency.
+ * version to OSV when there is one. A dependency that declares none (an
+ * unpinned PyPI requirement) is not checked, and its zero count means
+ * unchecked (recorded in the promise-audit T1 next_action). A registry 404
+ * stays what it was: an `error` on that dependency.
  */
 
 const OSV = "OSV vulnerability database";

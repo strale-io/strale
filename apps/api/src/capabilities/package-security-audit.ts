@@ -116,7 +116,10 @@ registerCapability("package-security-audit", async (input: CapabilityInput) => {
   const license = deps?.license ?? null;
   if (license) {
     if (COPYLEFT_LICENSES.has(license)) riskScore -= 5;
-  } else {
+  } else if (depsResult.status === "fulfilled") {
+    // "No license" only when deps.dev answered and declared none. When deps.dev
+    // failed the license is unknown, not absent; penalising it would sell a
+    // missing source as an unlicensed package.
     riskScore -= 15;
   }
 
@@ -139,6 +142,10 @@ registerCapability("package-security-audit", async (input: CapabilityInput) => {
       ecosystem,
       risk_score: riskScore,
       risk_level: riskLevel,
+      // False when a source that feeds the score (deps.dev's license and
+      // attestation, the previous version's attestation, the Scorecard) could
+      // not be read: its penalty was skipped, so the score may read too high.
+      risk_score_complete: unavailableSources.length === 0,
       vulnerabilities: vulns
         ? {
             total: vulns.total,

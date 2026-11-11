@@ -316,9 +316,84 @@ describe("domain-age-check upstream failures (row 27)", () => {
     expect(result.output).toEqual({
       domain: "available.com", age_days: null, age_years: null, created_date: null,
       registrar: null, expiry_date: null, is_new: null, risk_indicator: "unknown",
-      note: "Creation date not found in WHOIS data",
+      note: "Domain is not registered according to the registry WHOIS service",
     });
     expect(result.provenance).toMatchObject({ source: "whois", upstream: "whois.verisign-grs.com" });
     expect(outcomeFromOutput("domain-age-check", result.output)).toMatchObject({ billable: true });
+  });
+
+  it("reads SWITCH's (.ch/.li) not-registered reply as the real negative", async () => {
+    state.fetch.mockResolvedValueOnce(bootstrap([]));
+    state.whoisMode = "text";
+    state.whoisText = "We do not have an entry in our database matching your query.\r\n";
+    const result = await execute({ domain: "unregistered-example.ch" });
+    expect(result.output).toEqual({
+      domain: "unregistered-example.ch", age_days: null, age_years: null, created_date: null,
+      registrar: null, expiry_date: null, is_new: null, risk_indicator: "unknown",
+      note: "Domain is not registered according to the registry WHOIS service",
+    });
+    expect(result.provenance).toMatchObject({ source: "whois", upstream: "whois.nic.ch" });
+    expect(outcomeFromOutput("domain-age-check", result.output)).toMatchObject({ billable: true });
+  });
+});
+
+// Review fix (PR #1014): a registry that never publishes a creation date has
+// answered as fully as it ever will. That is a coverage limit, a refusal that
+// does not count against the capability's health, not an upstream outage.
+describe("domain-age-check registries that publish no creation date", () => {
+  const expectCoverageRefusal = (error: unknown, registry: string) => {
+    expect((error as Error).name).not.toBe("UpstreamUnavailableError");
+    expect(isCapabilityRefusal(error)).toBe(true);
+    // The message alone (all the async and x402 rails keep) is still a refusal.
+    expect(isCapabilityRefusal((error as Error).message)).toBe(true);
+    expect((error as Error).message).toContain(`${registry} does not publish one`);
+    expect(outcomeFromError(error)).toMatchObject({
+      billable: false,
+      failure_class: "capability_refused",
+      counts_against_capability: false,
+    });
+  };
+
+  it.each([
+    ["DENIC (.de)", "example.de", "Domain: example.de\nNserver: a.iana-servers.net\nStatus: connect\nChanged: 2018-03-12T21:44:25+01:00\n"],
+    ["EURid (.eu)", "example.eu", "Domain: example.eu\nScript: LATIN\n\nRegistrant:\n        NOT DISCLOSED!\n\nTechnical:\n        Organisation: Example\n"],
+    ["nic.at (.at)", "example.at", "domain:         example.at\nregistrant:     ABC123-NICAT\nnserver:        ns1.example.at\nchanged:        20200101 12:00:00\nsource:         AT-DOM\n"],
+  ])("refuses, unbilled and not counted, when %s answers without a creation date", async (registry, domain, reply) => {
+    state.fetch.mockResolvedValueOnce(bootstrap([]));
+    state.whoisMode = "text";
+    state.whoisText = reply;
+    const error = await execute({ domain }).catch((caught) => caught);
+    expectCoverageRefusal(error, registry);
+  });
+
+  it("refuses when the RDAP record has no registration event and the TLD has no WHOIS server", async () => {
+    state.fetch
+      .mockResolvedValueOnce(bootstrap(XYZ_SERVICE))
+      .mockResolvedValueOnce(rdap({ objectClassName: "domain", ldhName: "example.xyz", events: [] }));
+    const error = await execute({ domain: "example.xyz" }).catch((caught) => caught);
+    expectCoverageRefusal(error, "the .xyz RDAP registry rdap.registry.example");
+    expect(state.whoisConnections).toBe(0);
+  });
+
+  it("still throws upstream unavailable when DENIC rate-limits or answers empty", async () => {
+    state.fetch.mockResolvedValueOnce(bootstrap([]));
+    state.whoisMode = "text";
+    state.whoisText = "55000000002 Connection refused; access control limit reached.\n";
+    let error = await execute({ domain: "example.de" }).catch((caught) => caught);
+    expect((error as Error).name).toBe("UpstreamUnavailableError");
+    expect((error as Error).message).toContain("rate limited");
+
+    state.whoisText = "";
+    error = await execute({ domain: "example.de" }).catch((caught) => caught);
+    expect((error as Error).name).toBe("UpstreamUnavailableError");
+    expect((error as Error).message).toContain("empty reply");
+  });
+
+  it("keeps DENIC's not-registered reply as the real negative", async () => {
+    state.fetch.mockResolvedValueOnce(bootstrap([]));
+    state.whoisMode = "text";
+    state.whoisText = "Domain: unregistered-example.de\nStatus: free\n";
+    const result = await execute({ domain: "unregistered-example.de" });
+    expect(result.output).toMatchObject({ risk_indicator: "unknown", note: "Domain is not registered according to the registry WHOIS service" });
   });
 });
