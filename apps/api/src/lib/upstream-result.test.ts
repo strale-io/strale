@@ -203,10 +203,36 @@ describe("tail: quotedLegCodes never quotes a 401 or 403", () => {
     expect(categorizeFailureReason(combined.message)).toBe("transient");
   });
 
-  it("drops 401 and 403 even when they are the only codes", () => {
+  it("drops 401 and 403 whenever a leg is retryable", () => {
     expect(quotedLegCodes([rateLimited403()])).not.toMatch(/\b40[13]\b/);
-    expect(quotedLegCodes([httpUnavailable("A", 401), httpUnavailable("B", 403)])).not.toMatch(/\b40[13]\b/);
-    expect(quotedLegCodes([httpUnavailable("A", 403), httpUnavailable("B", 404)])).toBe("HTTP 404");
+    expect(quotedLegCodes([rateLimited403(), httpUnavailable("B", 401)])).not.toMatch(/\b40[13]\b/);
+  });
+
+  // tail2 (PR #1017 review): with no retryable leg the 401/403 is the truth,
+  // and quoting it keeps the combined error non-retryable for the breaker.
+  it("tail2: keeps 401 and 403 when no leg is retryable", () => {
+    expect(quotedLegCodes([httpUnavailable("A", 401), httpUnavailable("B", 403)])).toBe("HTTP 401, HTTP 403");
+    expect(quotedLegCodes([httpUnavailable("A", 403), httpUnavailable("B", 404)])).toBe("HTTP 403, HTTP 404");
+  });
+});
+
+describe("tail2: a combined error built from quotedLegCodes reads the way its retryable flag says", () => {
+  const rateLimited403 = () =>
+    new UpstreamUnavailableError("GitHub REST API", "rate limited; retry shortly.", { code: "HTTP 403", retryable: true });
+
+  it.each([
+    ["503 + 403", () => [httpUnavailable("A", 503), httpUnavailable("B", 403)]],
+    ["rate-limited 403 + 404", () => [rateLimited403(), httpUnavailable("B", 404)]],
+    ["rate-limited 403 alone", () => [rateLimited403()]],
+    ["401 + 403", () => [httpUnavailable("A", 401), httpUnavailable("B", 403)]],
+    ["403 alone", () => [httpUnavailable("A", 403)]],
+    ["403 + 404", () => [httpUnavailable("A", 403), httpUnavailable("B", 404)]],
+    ["410 + 404", () => [httpUnavailable("A", 410), httpUnavailable("B", 404)]],
+  ])("%s", (_l, makeLegs) => {
+    const legs = makeLegs();
+    const retryable = legs.some((l) => l.retryable);
+    const combined = new UpstreamUnavailableError("A and B", `neither source answered (${quotedLegCodes(legs)}).`, { retryable });
+    expect(isRetryableFailure(categorizeFailureReason(combined.message))).toBe(retryable);
   });
 });
 

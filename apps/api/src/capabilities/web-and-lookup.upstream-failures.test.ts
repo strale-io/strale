@@ -288,64 +288,70 @@ describe("barcode-lookup negative: both databases saying 'none' keeps the exact 
 });
 
 // ─── backlink-check (row 16) ────────────────────────────────────────────────
+//
+// Serper-only since the #1017 review: Common Crawl's `url=*.domain` query only
+// ever returned the domain's own hosts, which are never backlinks.
 
-const CC_RECORD = JSON.stringify({ url: "https://blog.example/post", timestamp: "20240301000000" });
-
-function backlinks(cc: () => Promise<Response> | Response, serper?: () => Promise<Response> | Response) {
-  safeFetchMock.mockImplementation(async () => cc());
+/** Serper answers `serper`; no other request is expected. */
+function backlinks(serper?: () => Promise<Response> | Response) {
+  safeFetchMock.mockImplementation(async () => {
+    throw new Error("backlink-check asked something other than Serper");
+  });
   meteredFetchMock.mockImplementation(async () => {
     if (!serper) throw new Error("Serper was not expected");
     return serper();
   });
 }
+const organic = (...links: string[]) => json({ organic: links.map((link, i) => ({ title: `Post ${i}`, link })) });
 
-describe("backlink-check failure: no answering source is never 'no backlinks' (row 16)", () => {
-  it.each(transient)("throws, unbilled and retryable, when Common Crawl fails with %s and Serper is not set up", async (_l, answer) => {
+describe("tail2: backlink-check asks Serper only, and a Serper that did not answer is never 'no backlinks'", () => {
+  it.each(transient)("Serper %s throws, unbilled and retryable", async (_l, answer) => {
+    process.env.SERPER_API_KEY = "test";
     backlinks(answer);
     const err = await expectUnbilledUpstreamFailure(exec("backlink-check")({ domain: "mysite.example" }));
-    expect(err.message).toContain("Common Crawl index API");
+    expect(err.message).toContain("Serper Google search API");
     expect(err.retryable).toBe(true);
+    expect(isRetryableFailure(categorizeFailureReason(err.message))).toBe(true);
   });
 
-  it.each(transient)("throws, unbilled and retryable, when both sources fail (Serper %s)", async (_l, answer) => {
-    process.env.SERPER_API_KEY = "test";
-    backlinks(() => status(503), answer);
+  it("an unset SERPER_API_KEY throws, unbilled, and classifies dependency_missing by the key's name", async () => {
+    backlinks();
     const err = await expectUnbilledUpstreamFailure(exec("backlink-check")({ domain: "mysite.example" }));
-    expect(err.message).toContain("Common Crawl index API and Serper Google search API");
-    expect(err.retryable).toBe(true);
+    expect(err.message).toContain("SERPER_API_KEY");
+    expect(err.retryable).toBe(false);
+    expect(categorizeFailureReason(err.message)).toBe("dependency_missing");
+    expect(meteredFetchMock).not.toHaveBeenCalled();
   });
 
-  it("names Serper when it fails after Common Crawl answered", async () => {
+  it("a reply with no result list throws, not retryable", async () => {
     process.env.SERPER_API_KEY = "test";
-    backlinks(() => status(200, CC_RECORD), () => status(429));
-    const out = await billed("backlink-check", exec("backlink-check")({ domain: "mysite.example" }));
-    expect(out.backlinks.map((b: Out) => b.source_domain)).toEqual(["blog.example"]);
-    expect(out.unavailable_sources).toEqual(["Serper Google search API"]);
+    backlinks(() => json({ organic: "nope" }));
+    const err = await expectUnbilledUpstreamFailure(exec("backlink-check")({ domain: "mysite.example" }));
+    expect(err.retryable).toBe(false);
   });
 
-  it("names Common Crawl when Serper answers in its place", async () => {
+  it.each([
+    ["VendorUnavailableError", vendorDown],
+    ["PaidCallBlockedError", () => Object.assign(new Error("Paid call to 'serper' blocked in a test context."), { name: "PaidCallBlockedError" })],
+  ])("Strale's own %s is rethrown unchanged", async (_l, make) => {
     process.env.SERPER_API_KEY = "test";
-    backlinks(() => status(502), () => json({ organic: [{ title: "A post", link: "https://news.example/a" }] }));
+    const own = make();
+    backlinks(() => { throw own; });
+    await expect(exec("backlink-check")({ domain: "mysite.example" })).rejects.toBe(own);
+  });
+
+  it("answers from Serper alone, with no Common Crawl request and no unavailable_sources", async () => {
+    process.env.SERPER_API_KEY = "test";
+    backlinks(() => organic("https://news.example/a"));
     const out = await billed("backlink-check", exec("backlink-check")({ domain: "mysite.example" }));
     expect(out.backlinks.map((b: Out) => b.source_domain)).toEqual(["news.example"]);
-    expect(out.unavailable_sources).toEqual(["Common Crawl index API"]);
+    expect(out).not.toHaveProperty("unavailable_sources");
+    expect(safeFetchMock).not.toHaveBeenCalled();
   });
 
-  it("rethrows Strale's own Serper account state unchanged when Common Crawl is down too", async () => {
+  it("Serper finding nothing is the real negative, billed with its exact output", async () => {
     process.env.SERPER_API_KEY = "test";
-    const down = vendorDown();
-    backlinks(() => status(503), () => { throw down; });
-    await expect(exec("backlink-check")({ domain: "mysite.example" })).rejects.toBe(down);
-  });
-});
-
-describe("backlink-check negative: a domain Common Crawl holds nothing for keeps its exact output", () => {
-  it.each([
-    ["HTTP 404", () => status(404)],
-    ["an empty 200", () => status(200, "")],
-  ])("Common Crawl %s and Serper finding nothing answer an empty list, billed", async (_l, cc) => {
-    process.env.SERPER_API_KEY = "test";
-    backlinks(cc, () => json({ organic: [] }));
+    backlinks(() => json({ organic: [] }));
     const out = await billed("backlink-check", exec("backlink-check")({ domain: "mysite.example" }));
     expect(out).toEqual({
       domain: "mysite.example",
@@ -357,6 +363,35 @@ describe("backlink-check negative: a domain Common Crawl holds nothing for keeps
       dofollow_estimate: null,
       nofollow_estimate: null,
     });
+  });
+});
+
+describe("tail2: backlink-check normalises the domain before dropping its own hosts", () => {
+  const RESULTS = [
+    "https://www.google.com/about",
+    "https://maps.google.com/x",
+    "https://notgoogle.com/a",
+    "https://evilgoogle.com/b",
+    "https://google.com.evil.example/c",
+  ];
+
+  it.each(["google.com.", "Google.COM:443", "https://Google.com:8443/path", "GOOGLE.COM"])(
+    "%s drops google.com's own hosts and keeps look-alikes",
+    async (domain) => {
+      process.env.SERPER_API_KEY = "test";
+      backlinks(() => organic(...RESULTS));
+      const out = await billed("backlink-check", exec("backlink-check")({ domain }));
+      expect(out.domain).toBe("google.com");
+      expect(out.backlinks.map((b: Out) => b.source_domain)).toEqual(["notgoogle.com", "evilgoogle.com", "google.com.evil.example"]);
+    },
+  );
+
+  it("an internationalised domain is compared in its ASCII form", async () => {
+    process.env.SERPER_API_KEY = "test";
+    backlinks(() => organic("https://shop.xn--bcher-kva.example/x", "https://other.example/y"));
+    const out = await billed("backlink-check", exec("backlink-check")({ domain: "Bücher.example" }));
+    expect(out.domain).toBe("xn--bcher-kva.example");
+    expect(out.backlinks.map((b: Out) => b.source_domain)).toEqual(["other.example"]);
   });
 });
 
@@ -604,34 +639,6 @@ describe("review fix: github-repo-analyze 403s classify as transient, not auth_e
   });
 });
 
-describe("review fix: backlink-check throws a failed Serper leg when nothing was found", () => {
-  it.each([
-    ["HTTP 429", () => status(429)],
-    ["HTTP 503", () => status(503)],
-    ["a timeout", () => { throw timeout(); }],
-  ] as Array<[string, () => Response]>)("Common Crawl 404 and Serper %s throws, unbilled and retryable", async (_l, serper) => {
-    process.env.SERPER_API_KEY = "test";
-    backlinks(() => status(404), serper);
-    const err = await expectUnbilledUpstreamFailure(exec("backlink-check")({ domain: "mysite.example" }));
-    expect(err.message).toContain("Serper Google search API");
-    expect(err.retryable).toBe(true);
-  });
-
-  it("Common Crawl 404 and Strale's own Serper account state rethrows it unchanged", async () => {
-    process.env.SERPER_API_KEY = "test";
-    const down = vendorDown();
-    backlinks(() => status(404), () => { throw down; });
-    await expect(exec("backlink-check")({ domain: "mysite.example" })).rejects.toBe(down);
-  });
-
-  it("Common Crawl 404 and a blocked paid call rethrows PaidCallBlockedError unchanged", async () => {
-    process.env.SERPER_API_KEY = "test";
-    const blocked = Object.assign(new Error("Paid call to 'serper' blocked in a test context."), { name: "PaidCallBlockedError" });
-    backlinks(() => status(404), () => { throw blocked; });
-    await expect(exec("backlink-check")({ domain: "mysite.example" })).rejects.toBe(blocked);
-  });
-});
-
 describe("review fix: cookie-scan failures of the caller's own site do not open the breaker", () => {
   it.each(transient.filter(([label]) => label !== "HTTP 429"))(
     "the site's %s stays unbilled and reads as the target's failure",
@@ -695,14 +702,6 @@ describe("review fix: a retryable combined failure never quotes another leg's 40
     expect(err.retryable).toBe(true);
     expect(isRetryableFailure(categorizeFailureReason(err.message))).toBe(true);
   });
-
-  it("backlink-check: Common Crawl 403 and Serper 503 is retryable for the breaker too", async () => {
-    process.env.SERPER_API_KEY = "test";
-    backlinks(() => status(403), () => status(503));
-    const err = await expectUnbilledUpstreamFailure(exec("backlink-check")({ domain: "mysite.example" }));
-    expect(err.retryable).toBe(true);
-    expect(isRetryableFailure(categorizeFailureReason(err.message))).toBe(true);
-  });
 });
 
 describe("review fix: cookie-scan reads an unstated consent banner as unknown", () => {
@@ -742,16 +741,6 @@ describe("tail: startup-domain-check keeps the caller's name out of error messag
 
 describe("tail: seo-audit robots.txt errors are logged, and our own defects are not hidden", () => {
   it.each([
-    ["a TypeError", () => new TypeError("Cannot read properties of undefined (reading 'ok')")],
-    ["a ReferenceError", () => new ReferenceError("robotsRes is not defined")],
-    ["a SyntaxError", () => new SyntaxError("Unexpected token < in JSON at position 0")],
-  ])("%s that is not a fetch transport error is rethrown", async (_l, makeErr) => {
-    const bug = makeErr();
-    seo(async () => { throw bug; });
-    await expect(exec("seo-audit")({ url: "https://site.test" })).rejects.toBe(bug);
-  });
-
-  it.each([
     ["fetch failed", () => networkError()],
     ["terminated", () => new TypeError("terminated")],
   ])("a fetch transport TypeError (%s) is still unavailable, not a defect", async (_l, makeErr) => {
@@ -786,41 +775,6 @@ describe("tail: cookie-scan reads a redirect loop on the caller's site as the ta
   });
 });
 
-describe("tail: backlink-check never counts the domain's own hosts or bills a Serper it could not ask", () => {
-  it("drops Common Crawl captures on the domain's own subdomains", async () => {
-    process.env.SERPER_API_KEY = "test";
-    const cc = [
-      { url: "https://www.mysite.example/a", timestamp: "20240301000000" },
-      { url: "https://blog.mysite.example/b", timestamp: "20240301000000" },
-      { url: "https://deep.shop.mysite.example/c", timestamp: "20240301000000" },
-      { url: "https://notmysite.example/d", timestamp: "20240301000000" },
-    ]
-      .map((r) => JSON.stringify(r))
-      .join("\n");
-    backlinks(() => status(200, cc), () => json({ organic: [] }));
-    const out = await billed("backlink-check", exec("backlink-check")({ domain: "mysite.example" }));
-    expect(out.backlinks.map((b: Out) => b.source_domain)).toEqual(["notmysite.example"]);
-    expect(out.referring_domains_count).toBe(1);
-  });
-
-  it.each([
-    ["HTTP 404", () => status(404)],
-    ["an empty 200", () => status(200, "")],
-  ])("Common Crawl %s with no Serper key throws, unbilled, naming Serper", async (_l, cc) => {
-    backlinks(cc);
-    const err = await expectUnbilledUpstreamFailure(exec("backlink-check")({ domain: "mysite.example" }));
-    expect(err.message).toContain("Serper Google search API");
-    expect(meteredFetchMock).not.toHaveBeenCalled();
-  });
-
-  it("a few Common Crawl backlinks with no Serper key are kept, with Serper named", async () => {
-    backlinks(() => status(200, CC_RECORD));
-    const out = await billed("backlink-check", exec("backlink-check")({ domain: "mysite.example" }));
-    expect(out.backlinks.map((b: Out) => b.source_domain)).toEqual(["blog.example"]);
-    expect(out.unavailable_sources).toEqual(["Serper Google search API"]);
-  });
-});
-
 describe("tail: github-repo-analyze names a 403 only as what its body says", () => {
   it.each([
     ["the repository record", (u: string) => u.endsWith("/repos/o/r")],
@@ -841,5 +795,41 @@ describe("tail: github-repo-analyze names a 403 only as what its body says", () 
     const err = await expectUnbilledUpstreamFailure(exec("github-repo-analyze")({ url: "https://github.com/o/r" }));
     expect(err.message).toMatch(/abuse detection/);
     expect(categorizeFailureReason(err.message)).toBe("transient");
+  });
+});
+
+// ─── Fix round on PR #1017 ──────────────────────────────────────────────────
+//
+// Tagged "tail2:" (the backlink-check blocks above carry the same tag). Each
+// failure case fails against the executors at 8ce8e177 and passes after.
+
+describe("tail2: seo-audit degrades on any error from the robots.txt fetch itself", () => {
+  it("a robots.txt redirect to an unparseable Location ('http://exa mple.com/') is unavailable, not a throw", async () => {
+    fetchRenderedHtml.mockResolvedValue(SEO_PAGE);
+    // What safe-fetch's followRedirects throws for that Location: the real
+    // TypeError from new URL(), code ERR_INVALID_URL.
+    safeFetchMock.mockImplementation(async (url: string) => {
+      new URL("http://exa mple.com/", url);
+      return status(200);
+    });
+    const out = await billed("seo-audit", exec("seo-audit")({ url: "https://site.test" }));
+    expect(out.checks.robots_txt).toEqual({ present: null });
+    expect(out.unavailable_sources).toEqual(["robots.txt"]);
+  });
+
+  it("any TypeError the fetch call throws is the site's, not ours", async () => {
+    seo(async () => { throw new TypeError("Cannot read properties of undefined (reading 'headers')"); });
+    const out = await billed("seo-audit", exec("seo-audit")({ url: "https://site.test" }));
+    expect(out.unavailable_sources).toEqual(["robots.txt"]);
+  });
+
+  it("a defect while reading the body is still rethrown", async () => {
+    const bug = new ReferenceError("robotsTxt is not defined");
+    const res = status(200, "User-agent: *");
+    Object.defineProperty(res, "body", { get() { throw bug; } });
+    Object.defineProperty(res, "text", { value: () => { throw bug; } });
+    Object.defineProperty(res, "arrayBuffer", { value: () => { throw bug; } });
+    seo(async () => res);
+    await expect(exec("seo-audit")({ url: "https://site.test" })).rejects.toBe(bug);
   });
 });
