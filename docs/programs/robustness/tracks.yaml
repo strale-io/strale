@@ -112,7 +112,13 @@ tracks:
       unperturbed in the replay test. Remaining: a green scheduled run on
       2026-11-16. The six fixture-bound manifests still on strale.dev move to
       strale.io with a DB backfill and re-capture (needs the PC; readiness
-      item 11)."
+      item 11). Still open: the 2026-11-06 check-in said every sweep was
+      clean except the robots sweep (report-only, outside the aggregate
+      exit), while the logs show manifest-drift failing run 40334936804
+      (clean again by run 42662225022, MD=0) and upstream recordings failing
+      run 41485423344. Record that misreading in LESSONS (F1 as first
+      assigned, or F7 next to incident 12 if that fits better), with the
+      count it changes."
     resume_file: handoff/_general/from-code/2026-11-06-checkin-morning.md
     exit:
       - "A vendor:status receipt after the block 0147 deploy shows no false

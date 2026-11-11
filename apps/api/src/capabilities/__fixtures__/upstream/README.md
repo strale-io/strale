@@ -52,7 +52,7 @@ A recording that passes through a redirect keeps the hop as recorded: the
 replay test perturbs only the answer the redirect leads to, because a hop
 carries no content the contract reads. When the target is Strale's own site,
 the recorder refuses the file while `FRONTEND_URL` is set (its value appears
-in the redirected body); capture with it unset (`env -u FRONTEND_URL`).
+in the Location header and the destination page); capture with it unset (`env -u FRONTEND_URL`).
 
 ## First batch (2026-10-28)
 

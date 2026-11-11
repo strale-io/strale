@@ -219,8 +219,8 @@ export function isRedirect(recorded: RecordedResponse): boolean {
 /** A Response carrying a recorded answer, as fetch would have returned it for `url`. */
 export function recordedResponse(url: string, recorded: RecordedResponse, perturb?: Perturbation): Response {
   // A redirect hop is transport, not content: perturbing it would drop its
-  // Location header, the executor would throw on the hop, and the content the
-  // contract reads would never be reached. The hop replays as recorded; the
+  // Location header, the hop would fail, and the content the contract reads
+  // would never be reached. The hop replays as recorded; the
   // answer it leads to is perturbed.
   if (perturb && isRedirect(recorded)) perturb = undefined;
   const body = NULL_BODY_STATUSES.has(recorded.status)
@@ -249,7 +249,8 @@ export interface ReplayFetch {
  * A fetch that answers only from the recording, matching method, URL and
  * body exactly. Identical requests are answered in recorded order, and the
  * last answer repeats. `perturb` answers every request with the recorded
- * status and content type but a perturbed body (see `perturbed`): an
+ * status and content type but a perturbed body (see `perturbed`), except a
+ * redirect hop, which replays as recorded (see `recordedResponse`): an
  * executor whose contract still passes then does not depend on the upstream
  * content, and its test proves nothing about parsing. The response `url` is
  * always the request URL; replay does not model a fetch-followed redirect.
