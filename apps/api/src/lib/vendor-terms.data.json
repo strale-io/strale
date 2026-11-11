@@ -418,7 +418,7 @@
     "basis": "published_terms"
     },
   {
-    "vendor": "CMS Hasche Sigle (GDPR Enforcement Tracker)",
+    "vendor": "CMS (GDPR Enforcement Tracker)",
     "hosts": ["www.enforcementtracker.com", "enforcementtracker.com"],
     "capabilities": ["gdpr-fine-lookup"],
     "resale": "prohibited",
@@ -429,9 +429,10 @@
     "findings": [
       "Licence page, verbatim: 'The enforcementtracker database is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License. When reusing (parts of) the enforcementtracker database under the terms of such license, identify the creator as follows: enforcementtracker.com, provided by CMS'.",
       "Licence page, verbatim: 'In accordance with §§ 44b, 87c German Copyright Law (Urheberrechtsgesetz, UrhG), we reserve the right to reproduce the contents of the database and essential parts thereof for the purposes of text and data mining.'",
-      "CC BY-NC-SA 4.0 is non-commercial, and gdpr-fine-lookup sold each lookup per call (EUR 0.20), so resale is outside the licence; under DEC-20261023-A resale against a source's terms is never lane. robots.txt allows / for every agent, so this is a licence ruling, not a robots one.",
-      "Withheld by Petter on 2026-11-11 (option 'a: withhold it now'): gdpr-fine-lookup is in DEACTIVATED and block 0153 withholds every solution that has it as a step. Routes back: a commercial licence from CMS, or a rebuild on the data protection authorities' own published decisions."
+      "CC BY-NC-SA 4.0 is non-commercial and text and data mining is reserved, while gdpr-fine-lookup sold each lookup per call (EUR 0.20). It therefore fails the condition of DEC-20261023-A's checks lane for per-call reads of public sources Strale chooses: the source's terms must permit automated per-call access, and these do not. Never item 6 (reselling against vendor terms) applies only by analogy. robots.txt allows / for every agent, so this is a licence ruling, not a robots one.",
+      "Withheld by Petter on 2026-11-11 (option 'a: withhold it now'): gdpr-fine-lookup is in DEACTIVATED and block 0153 withholds every solution that has it as a step. Routes back: a commercial licence from CMS, or a rebuild on the data protection authorities' own published decisions.",
+      "Open, queued for Petter: whether enforcementtracker.com is also a never item 5 aggregator (CMS reserves rights under § 87c UrhG, the database-maker right), as the adoption table of docs/strategy/2026-10-23-data-access-risk-rule-proposal.md asks. Until that is decided it is not on tos-blocklist.ts, so a customer-directed single fetch of the site is not refused."
     ],
-    "decision_ref": "DEC-20261023-A, never lane (resale against a source's terms); Petter 2026-11-11, withhold gdpr-fine-lookup"
+    "decision_ref": "DEC-20261023-A, checks lane condition for per-call reads of public sources Strale chooses (terms must permit automated per-call access) not met; Petter 2026-11-11, withhold gdpr-fine-lookup; never item 5 classification open for Petter"
   }
 ]

@@ -121,5 +121,5 @@ export const BLOCK_RUN_POLICY: Readonly<Record<string, { policy: BlockRunPolicy;
   runMigration0150_publishPepCheckLimitations: { policy: "once", reason: "deletes five named pep-check limitation rows by exact text and inserts the manifest's three where missing (DQ-47); a re-run must not undo a later edit" },
   runMigration0151_correctSanctionsLimitations: { policy: "once", reason: "corrects only the two sanctions-check rows matching the old limitation text; preserves later edits" },
   runMigration0152_businessSummaryDeliveries: { policy: "once", reason: "one CREATE TABLE IF NOT EXISTS; schema validation checks the table on later boots" },
-  runMigration0153_withholdGdprFineLookup: { policy: "once", reason: "records the reason on one capability row once the boot sync has cleared its flags, and withholds the solutions that still have it as a step while it stays withheld; a re-run must not undo a relisting on a licensed or regulator source" },
+  runMigration0153_withholdGdprFineLookup: { policy: "every_boot", reason: "returns normally with its work deferred when the boot sync has not cleared the capability yet; both steps are guarded on the withheld state, so a re-run cannot undo a relisting" },
 };

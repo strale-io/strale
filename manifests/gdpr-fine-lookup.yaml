@@ -60,13 +60,10 @@ output_field_reliability:
   total_fines: guaranteed
   total_amount_eur: guaranteed
 limitations:
-  - title: Withheld 2026-11-11 — the source's licence is non-commercial
+  - title: Tool is currently unavailable
     text: >-
-      The source, enforcementtracker.com (CMS Hasche Sigle), licenses its database under CC BY-NC-SA
-      4.0, which is non-commercial, and reserves reproduction of the database for text and data
-      mining under §§ 44b and 87c UrhG. This was a paid per-call capability, so it is withheld
-      (Petter, 2026-11-11; DEC-20261023-A). Reactivating requires a commercial licence from CMS, or
-      a rebuild on the data protection authorities' own published decisions.
+      This tool is currently unavailable and does not return GDPR fine data. Its source licenses
+      the database for non-commercial use only, so it is not offered as a paid tool.
     category: legal
     severity: warning
   - title: New fines can take up to 7 days to appear

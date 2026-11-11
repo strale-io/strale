@@ -21,8 +21,13 @@ import { wasDeactivatedDeliberately } from "./solution-activation.js";
 /**
  * Petter withheld gdpr-fine-lookup on 2026-11-11: enforcementtracker.com is
  * CC BY-NC-SA 4.0 (non-commercial) with text and data mining reserved under
- * §§ 44b and 87c UrhG, and Strale sold the lookup per call (DEC-20261023-A,
- * never lane). Each assertion below fails on main before this change.
+ * §§ 44b and 87c UrhG, and Strale sold the lookup per call, which fails
+ * DEC-20261023-A's checks-lane condition for per-call reads of public sources
+ * Strale chooses. Every wiring assertion below fails on main.
+ *
+ * The SQL assertions compare the generated text and parameters: there is no
+ * Postgres-backed harness for startup-migration blocks (CLAUDE.md
+ * test-harness exemption, DEC-20260504-A).
  */
 
 const dialect = new PgDialect();
@@ -49,6 +54,20 @@ describe("gdpr-fine-lookup is withheld (Petter, 2026-11-11)", () => {
     expect(reason).toContain("DEC-20261023-A");
   });
 
+  it("cites the rule it fails precisely: the checks-lane condition, never item 6 only by analogy", () => {
+    const record = VENDOR_TERMS_RECORDS.find((r) => r.hosts.includes("enforcementtracker.com"));
+    for (const [where, text] of [
+      ["DEACTIVATED reason", getDeactivatedCapabilities().get("gdpr-fine-lookup") ?? ""],
+      ["block 0153 capability reason", GDPR_FINE_LOOKUP_WITHHELD_REASON],
+      ["block 0153 solution reason", GDPR_FINE_LOOKUP_SOLUTION_REASON],
+      ["vendor-terms findings", (record?.findings ?? []).join(" ")],
+    ] as const) {
+      expect(text, where).toMatch(/checks[- ]lane/);
+      expect(text, where).not.toMatch(/is never lane|\(DEC-20261023-A, never lane\)|never lane under/);
+    }
+    expect(record?.vendor).toBe("CMS (GDPR Enforcement Tracker)");
+  });
+
   it("the source host is a prohibited upstream, in both spellings the executor could use", () => {
     expect(PROHIBITED_UPSTREAM_HOSTS.get("www.enforcementtracker.com")).toBe("CC BY-NC-SA 4.0; TDM reserved under §§44b/87c UrhG");
     expect(PROHIBITED_UPSTREAM_HOSTS.get("enforcementtracker.com")).toBe("CC BY-NC-SA 4.0; TDM reserved under §§44b/87c UrhG");
@@ -73,14 +92,21 @@ describe("gdpr-fine-lookup is withheld (Petter, 2026-11-11)", () => {
   it("the manifest says it is unavailable and names the licence", () => {
     const manifest = readFileSync(resolve(repoRoot, "manifests/gdpr-fine-lookup.yaml"), "utf8");
     expect(manifest).toMatch(/^description: "Currently unavailable\. /m);
-    expect(manifest).toMatch(/title: Withheld 2026-11-11/);
+    expect(manifest).toMatch(/title: Tool is currently unavailable/);
+    expect(manifest).toMatch(/licenses\s+the database for non-commercial use only/);
+    // Customer-facing copy: no internal decision ids or statute citations.
+    const limitation = manifest.slice(manifest.indexOf("title: Tool is currently unavailable"), manifest.indexOf("title: New fines"));
+    expect(limitation).not.toMatch(/DEC-|Petter|UrhG|§/);
   });
 });
 
 describe("block 0153: records the reason and withholds every solution with the step", () => {
-  it("is registered to run at startup, once", () => {
+  it("is registered to run at startup, on every boot", () => {
     expect(BLOCKS).toContain(runMigration0153_withholdGdprFineLookup);
-    expect(BLOCK_RUN_POLICY.runMigration0153_withholdGdprFineLookup?.policy).toBe("once");
+    // Not "once": if the DEACTIVATED boot sync fails on the shipping boot,
+    // both steps match nothing and return normally, and "once" would record
+    // the block as done with ai-act-assess still on sale.
+    expect(BLOCK_RUN_POLICY.runMigration0153_withholdGdprFineLookup?.policy).toBe("every_boot");
   });
 
   it("writes the capability reason only once the boot sync has cleared all three flags", async () => {
@@ -101,7 +127,7 @@ describe("block 0153: records the reason and withholds every solution with the s
     await runMigration0153_withholdGdprFineLookup(tx);
     expect(flat(queries[1].sql)).toBe(
       "UPDATE solutions SET is_active = false, x402_enabled = false, deactivation_reason = $1, updated_at = now() " +
-        "WHERE id IN (SELECT solution_id FROM solution_steps WHERE capability_slug = $2) AND (is_active = true OR x402_enabled = true) " +
+        "WHERE id IN (SELECT solution_id FROM solution_steps WHERE capability_slug = $2) AND (is_active = true OR x402_enabled = true OR deactivation_reason LIKE 'vendor:%') " +
         "AND EXISTS ( SELECT 1 FROM capabilities WHERE slug = $3 AND is_active = false AND deactivation_reason = $4)",
     );
     expect(queries[1].params).toEqual([
@@ -112,6 +138,18 @@ describe("block 0153: records the reason and withholds every solution with the s
     ]);
     // No automated sweep may switch it back on (lib/solution-activation.ts).
     expect(wasDeactivatedDeliberately(GDPR_FINE_LOOKUP_SOLUTION_REASON)).toBe(true);
+  });
+
+  it("also takes a vendor-suspended bundle, so the vendor control tower cannot restore it to sale", async () => {
+    // vendor-control-tower suspends a solution with a `vendor:` reason (both
+    // rails off) and later restores its previous rails only while that exact
+    // marker is still there. Matching on the marker and overwriting it with
+    // this block's reason turns that restore into a no-op.
+    const { tx, queries } = recordingTx([0, 1]);
+    await runMigration0153_withholdGdprFineLookup(tx);
+    const where = flat(queries[1].sql).slice(flat(queries[1].sql).indexOf(" WHERE "));
+    expect(where).toContain("(is_active = true OR x402_enabled = true OR deactivation_reason LIKE 'vendor:%')");
+    expect(GDPR_FINE_LOOKUP_SOLUTION_REASON.startsWith("vendor:")).toBe(false);
   });
 
   it("cannot undo a relisting: it never sets a capability flag", async () => {
