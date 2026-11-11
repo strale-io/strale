@@ -174,8 +174,11 @@ export function httpUnavailable(upstream: string, status: number): UpstreamUnava
  * (GitHub's rate limit answers HTTP 403), and quoting it would turn a
  * retry-shortly outage into a half-hour suspension for every caller (PR #1015
  * delta review). When no leg is retryable every code is quoted, 401 and 403
- * included, so the message reads as non-retryable as the error is (PR #1017
- * review). The status stays on each leg's own `code`.
+ * included (PR #1017 review), so legs that failed with 401, 403, 404 or 410
+ * give a message the breaker reads as non-retryable, as the error is. Other
+ * non-retryable codes, such as `unparseable` or `HTTP 400`, classify
+ * `unknown`, which the breaker treats as retryable; this function does not
+ * change that. The status stays on each leg's own `code`.
  */
 export function quotedLegCodes(failures: UpstreamUnavailableError[]): string {
   const retryable = failures.filter((f) => f.retryable);

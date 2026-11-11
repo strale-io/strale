@@ -122,6 +122,11 @@ limitations:
       If the Google search through Serper fails, times out or is not configured, the call fails unbilled rather than returning an empty list. An empty list means the search answered and found no page other than the domain's own (its subdomains are never counted as backlinks).
     category: availability
     severity: info
+  - title: Unopened Google redirect links are counted, not listed
+    text: >-
+      Google returns most results past the first three as redirect links, which are opened through Serper. A link that could not be opened is left out of backlinks and counted in unresolved_link_count, so when every result was such a link the backlinks list is empty and the call is billed; read unresolved_link_count before treating an empty list as no backlinks.
+    category: coverage
+    severity: info
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

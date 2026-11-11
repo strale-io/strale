@@ -11,12 +11,11 @@ const ROBOTS = "robots.txt";
 
 /**
  * A JavaScript runtime error of ours, as opposed to fetch's own transport
- * TypeError or a URL that does not parse (code ERR_INVALID_URL), which comes
- * from the site's input. Applied only to errors thrown after the fetch.
+ * TypeError. Applied to errors thrown after the fetch, where an
+ * ERR_INVALID_URL can only be ours too (PR #1017 delta review).
  */
 function isOwnDefect(err: unknown): boolean {
   if (!(err instanceof TypeError || err instanceof ReferenceError || err instanceof SyntaxError)) return false;
-  if ((err as { code?: unknown }).code === "ERR_INVALID_URL") return false;
   return !(err instanceof TypeError && (err.message === "fetch failed" || err.message === "terminated"));
 }
 
@@ -120,13 +119,16 @@ registerCapability("seo-audit", async (input: CapabilityInput) => {
     });
   } catch (err) {
     // degraded-ok: an unreadable robots.txt nulls the robots and sitemap checks, is named in unavailable_sources and is left out of the score; it is never reported as "No robots.txt".
-    // Every error the fetch itself throws, other than a refusal, is the
-    // site's: "Too many redirects", a redirect to a restricted address
-    // (PR #1015 review), or a redirect whose Location does not parse, which
-    // throws a TypeError from new URL() (PR #1017 review). None of them says
-    // anything about the page being audited, and none counts against this
-    // capability's breaker.
+    // The fetch's errors are the site's: "Too many redirects", a redirect to
+    // a restricted address (PR #1015 review), and the TypeErrors a site can
+    // drive: a redirect whose Location does not parse (ERR_INVALID_URL, PR
+    // #1017 review), undici's refusal of a credentialed redirect, "fetch
+    // failed" and "terminated". None of them says anything about the page
+    // being audited, and none counts against this capability's breaker. A
+    // ReferenceError or SyntaxError cannot come from the site: it is a
+    // defect in our own fetch code and must surface (PR #1017 delta review).
     if (isCapabilityRefusal(err)) throw err;
+    if (err instanceof ReferenceError || err instanceof SyntaxError) throw err;
     robotsUnavailable = true;
     robotsError = err;
   }
