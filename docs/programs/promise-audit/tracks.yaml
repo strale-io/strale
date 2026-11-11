@@ -31,7 +31,24 @@ tracks:
       refunds per policy with a DEC-20260504-B drain plan, and the wallet-debit
       sweep against listed and dry-run prices (P-011, P-008). Do not assume the
       proposed degraded billing marker shipped. No production financial run or
-      refund was performed by either batch."
+      refund was performed by either batch. Review fixes on that branch (commit
+      8e17f619, review-fixes receipts in evidence): package-security-audit
+      risk_score_complete, container-track page_error and rendering-service
+      attribution, domain-age-check no-creation-date refusal, business-day-check
+      out-of-range refusal. Pre-existing defects found in that review, not fixed
+      there: dependency-audit severity is always low because OSV querybatch
+      returns only id and modified (critical CVEs billed as low; summary and
+      aliases empty); unpinned PyPI requirements and registry-404 dependencies
+      never reach OSV, and malicious-removed npm packages with MAL- advisories
+      are billed as 0 vulnerabilities; dependency-audit with only 404s and
+      unavailable sources and nothing queryable bills an empty audit
+      (requireSomeAnswer edge); business-day-check next and previous business
+      day use only the current year's holidays (wrong on 31 Dec), and a 404 for
+      an unknown country code such as ZZ is billed as weekends-only;
+      eori-validate bills valid false for GB EORI numbers (the EU service says
+      Not valid); package-security-audit with a nonexistent explicit npm version
+      gets an empty OSV answer and is billed low; holiday-calendar getHolidays
+      caches a non-list 200 body for 24h."
     resume_file: handoff/_general/from-code/2026-11-11-upstream-catch-guard.md
     exit:
       - Every network executor under apps/api/src/capabilities either throws or
@@ -47,6 +64,8 @@ tracks:
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-fail-before.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-after.json
       - archive/receipts/2026-11-11-check-upstream-catch-guard-wave2a.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-review-fixes-fail-before.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-review-fixes-after.json
   - id: T2
     title: "T2: Compliance-answer correctness (reference answers)"
     status: queued

@@ -1,0 +1,488 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "apps/api vitest (4 files), the five changed executors from 53ae9452",
+    "commit": "8e17f6192203fe9e329428b0b171ed7cfc716c6c"
+  },
+  "at": "2026-11-11T10:22:34.629Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user-strale/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/fail-before.json"
+  },
+  "summary": {
+    "ok": false,
+    "expected": "fail",
+    "total": 106,
+    "passed": 78,
+    "failed": 28,
+    "note": "Every new review-fix failure-path test fails against the 53ae9452 executors; the 78 that pass are pre-existing tests and new tests that pin behaviour already correct at 53ae9452."
+  },
+  "topic": "swallowed-failures-wave2a-review-fixes-fail-before",
+  "raw": {
+    "ok": false,
+    "label": "fail-before: the five changed executors checked out from 53ae9452, tests from the review-fix working tree",
+    "executors_from": "53ae9452 (PR head before the review fixes)",
+    "command": "cd apps/api && npx vitest run src/capabilities/package-audits.upstream-failures.test.ts src/capabilities/business-day-eori.upstream-failures.test.ts src/capabilities/container-track.upstream-failures.test.ts src/capabilities/domain-age-check.test.ts",
+    "total": 106,
+    "passed": 78,
+    "failed": 28,
+    "expected_ok": false,
+    "files": [
+      {
+        "file": "src/capabilities/business-day-eori.upstream-failures.test.ts",
+        "tests": 21,
+        "passed": 18,
+        "failed": 3,
+        "results": [
+          {
+            "name": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, when Nager.Date fails with HTTP 503",
+            "status": "passed"
+          },
+          {
+            "name": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, when Nager.Date fails with HTTP 429",
+            "status": "passed"
+          },
+          {
+            "name": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, when Nager.Date fails with network error",
+            "status": "passed"
+          },
+          {
+            "name": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, when Nager.Date fails with timeout",
+            "status": "passed"
+          },
+          {
+            "name": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, when Nager.Date answers 200 with a body that does not parse",
+            "status": "passed"
+          },
+          {
+            "name": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, when Nager.Date answers 200 with JSON that is not a holiday list",
+            "status": "failed"
+          },
+          {
+            "name": "business-day-check: Nager.Date failures throw (row 17) refuses 1975-06-02, a year Nager.Date does not cover (HTTP 400): unbilled, not counted against the capability",
+            "status": "failed"
+          },
+          {
+            "name": "business-day-check: Nager.Date failures throw (row 17) refuses 2080-06-03, a year Nager.Date does not cover (HTTP 400): unbilled, not counted against the capability",
+            "status": "failed"
+          },
+          {
+            "name": "business-day-check: Nager.Date failures throw (row 17) answers a holiday correctly when Nager.Date answers",
+            "status": "passed"
+          },
+          {
+            "name": "business-day-check: Nager.Date failures throw (row 17) keeps the real negative: a country Nager.Date does not recognise (404) is checked for weekends only, as before",
+            "status": "passed"
+          },
+          {
+            "name": "business-day-check: Nager.Date failures throw (row 17) keeps the real negative: a country Nager.Date holds no data for (204) is checked for weekends only, as before",
+            "status": "passed"
+          },
+          {
+            "name": "eori-validate: service failures throw (row 19) throws, unbilled, when the EORI service fails with HTTP 503",
+            "status": "passed"
+          },
+          {
+            "name": "eori-validate: service failures throw (row 19) throws, unbilled, when the EORI service fails with HTTP 429",
+            "status": "passed"
+          },
+          {
+            "name": "eori-validate: service failures throw (row 19) throws, unbilled, when the EORI service fails with network error",
+            "status": "passed"
+          },
+          {
+            "name": "eori-validate: service failures throw (row 19) throws, unbilled, when the EORI service fails with timeout",
+            "status": "passed"
+          },
+          {
+            "name": "eori-validate: service failures throw (row 19) throws, unbilled, when the EORI service fails with HTTP 500 SOAP fault",
+            "status": "passed"
+          },
+          {
+            "name": "eori-validate: service failures throw (row 19) throws, not retryable, when the endpoint is gone (404)",
+            "status": "passed"
+          },
+          {
+            "name": "eori-validate: service failures throw (row 19) throws, unbilled, when a 200 reply carries no validation status (it used to read valid: false)",
+            "status": "passed"
+          },
+          {
+            "name": "eori-validate: service failures throw (row 19) keeps the real negative: a number the service says is not valid",
+            "status": "passed"
+          },
+          {
+            "name": "eori-validate: service failures throw (row 19) keeps the positive answer",
+            "status": "passed"
+          },
+          {
+            "name": "eori-validate: service failures throw (row 19) still answers a malformed number from the format check without calling the service",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "src/capabilities/container-track.upstream-failures.test.ts",
+        "tests": 23,
+        "passed": 9,
+        "failed": 14,
+        "results": [
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the carrier, on a plain-request 400",
+            "status": "passed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the carrier, on a plain-request 404 (the page is gone)",
+            "status": "passed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the carrier, on a 404 relayed through Browserless (the page is gone)",
+            "status": "failed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the carrier, on a 410 relayed through Browserless (the page is gone)",
+            "status": "failed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the carrier, on a refused connection",
+            "status": "failed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the carrier, on a page that took too long to load (Browserless 408)",
+            "status": "failed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the carrier, on a permanent navigation failure",
+            "status": "failed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the rendering service and not the carrier, on a network error reaching Browserless",
+            "status": "failed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the rendering service and not the carrier, on a timeout on the Browserless request",
+            "status": "failed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the rendering service and not the carrier, on Browserless's own 5xx",
+            "status": "failed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the rendering service and not the carrier, on Browserless's rate limit",
+            "status": "failed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the rendering service and not the carrier, on an empty render",
+            "status": "failed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) throws, unbilled, naming the rendering service and not the carrier, on an exhausted Browserless account",
+            "status": "failed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) returns Strale's own missing Browserless configuration unchanged, never filed as an outage",
+            "status": "passed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) passes a refusal through unchanged (unbilled, not counted against the capability)",
+            "status": "passed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) returns an unrecognised error unchanged rather than blaming the carrier",
+            "status": "failed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) throws, unbilled, when the carrier page is an error, maintenance or consent page (page_error)",
+            "status": "failed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) tells the model to separate a page with no tracking result from a carrier with no record",
+            "status": "failed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) throws, unbilled, when the page renders without readable tracking content",
+            "status": "passed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) passes a carrier's refusal through as the source block it is (unbilled)",
+            "status": "passed"
+          },
+          {
+            "name": "container-track: a failed tracking leg throws (row 34) fails the call, unbilled, when the extraction step fails instead of answering without tracking",
+            "status": "passed"
+          },
+          {
+            "name": "container-track: answers that are not failures keep their output (row 34) keeps the not-found answer read from the carrier page",
+            "status": "passed"
+          },
+          {
+            "name": "container-track: answers that are not failures keep their output (row 34) keeps the check-digit answer for a carrier Strale does not read live, with its note",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "src/capabilities/domain-age-check.test.ts",
+        "tests": 36,
+        "passed": 29,
+        "failed": 7,
+        "results": [
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback uses a registration event and registrar vCard from RDAP",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback treats RDAP 404 as a successful not-registered answer and cancels its body",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback falls back to WHOIS after an RDAP HTTP 503",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback falls back to WHOIS after an RDAP timeout",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback cancels an unread RDAP error body before WHOIS fallback",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback goes straight to WHOIS when the bootstrap has no TLD entry",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback still succeeds through WHOIS when the bootstrap fetch fails",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback refuses, unbilled, a TLD with neither an RDAP service nor a WHOIS server",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback throws the RDAP failure when the TLD has no WHOIS fallback",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback reads a nested fetch cause code ECONNRESET",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback reads a nested fetch cause code ECONNREFUSED",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback reads a nested fetch cause code ETIMEDOUT",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback names both public registry paths and the reset without sanitizer masking",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback caches the IANA bootstrap for 24 hours across calls",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback shares one in-flight IANA bootstrap fetch between concurrent calls",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback does not refetch a failed bootstrap within 60 seconds",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback names a remembered bootstrap failure for a TLD without WHOIS inside the 60-second window",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback does not refetch a failed bootstrap just before 60 seconds",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback retries a failed bootstrap after 60 seconds",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check RDAP precedence and WHOIS fallback refuses an oversized RDAP body cleanly",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check upstream failures (row 27) throws unbilled when RDAP fails (HTTP 503) and the TLD has no WHOIS server",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check upstream failures (row 27) throws unbilled when RDAP fails (HTTP 429) and the TLD has no WHOIS server",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check upstream failures (row 27) throws unbilled when RDAP fails (network error) and the TLD has no WHOIS server",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check upstream failures (row 27) throws unbilled when RDAP fails (timeout) and the TLD has no WHOIS server",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check upstream failures (row 27) throws unbilled when RDAP fails and the WHOIS connection resets",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check upstream failures (row 27) throws unbilled when the WHOIS reply is empty",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check upstream failures (row 27) throws unbilled when the WHOIS registry answers with a rate-limit notice",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check upstream failures (row 27) throws unbilled, not retryable, when the WHOIS reply carries no creation date",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check upstream failures (row 27) keeps the not-registered WHOIS answer exactly as before (real negative)",
+            "status": "failed"
+          },
+          {
+            "name": "domain-age-check upstream failures (row 27) reads SWITCH's (.ch/.li) not-registered reply as the real negative",
+            "status": "failed"
+          },
+          {
+            "name": "domain-age-check registries that publish no creation date refuses, unbilled and not counted, when DENIC (.de) answers without a creation date",
+            "status": "failed"
+          },
+          {
+            "name": "domain-age-check registries that publish no creation date refuses, unbilled and not counted, when EURid (.eu) answers without a creation date",
+            "status": "failed"
+          },
+          {
+            "name": "domain-age-check registries that publish no creation date refuses, unbilled and not counted, when nic.at (.at) answers without a creation date",
+            "status": "failed"
+          },
+          {
+            "name": "domain-age-check registries that publish no creation date refuses when the RDAP record has no registration event and the TLD has no WHOIS server",
+            "status": "failed"
+          },
+          {
+            "name": "domain-age-check registries that publish no creation date still throws upstream unavailable when DENIC rate-limits or answers empty",
+            "status": "passed"
+          },
+          {
+            "name": "domain-age-check registries that publish no creation date keeps DENIC's not-registered reply as the real negative",
+            "status": "failed"
+          }
+        ]
+      },
+      {
+        "file": "src/capabilities/package-audits.upstream-failures.test.ts",
+        "tests": 26,
+        "passed": 22,
+        "failed": 4,
+        "results": [
+          {
+            "name": "package-security-audit: OSV is required (row 7) throws, unbilled, when OSV fails with HTTP 503",
+            "status": "passed"
+          },
+          {
+            "name": "package-security-audit: OSV is required (row 7) throws, unbilled, when OSV fails with HTTP 429",
+            "status": "passed"
+          },
+          {
+            "name": "package-security-audit: OSV is required (row 7) throws, unbilled, when OSV fails with network error",
+            "status": "passed"
+          },
+          {
+            "name": "package-security-audit: OSV is required (row 7) throws, unbilled, when OSV fails with timeout",
+            "status": "passed"
+          },
+          {
+            "name": "package-security-audit: OSV is required (row 7) throws, unbilled, when OSV fails with HTTP 404 (the endpoint is gone)",
+            "status": "passed"
+          },
+          {
+            "name": "package-security-audit: OSV is required (row 7) throws, unbilled, when OSV answers 200 with a body that is not a vulnerability list",
+            "status": "passed"
+          },
+          {
+            "name": "package-security-audit: OSV is required (row 7) throws, unbilled, when OSV answers 200 with a body that does not parse",
+            "status": "passed"
+          },
+          {
+            "name": "package-security-audit: OSV is required (row 7) throws, unbilled, when ecosystem detection cannot reach the npm registry",
+            "status": "passed"
+          },
+          {
+            "name": "package-security-audit: secondary legs are marked, never clean (row 7) names deps.dev in unavailable_sources and reports attestation unknown when it fails",
+            "status": "passed"
+          },
+          {
+            "name": "package-security-audit: secondary legs are marked, never clean (row 7) does not read a failed deps.dev as an unlicensed package: no license penalty, risk_score_complete false",
+            "status": "failed"
+          },
+          {
+            "name": "package-security-audit: secondary legs are marked, never clean (row 7) reports risk_score_complete false when the previous-version read or the Scorecard fails",
+            "status": "failed"
+          },
+          {
+            "name": "package-security-audit: secondary legs are marked, never clean (row 7) names the previous-version deps.dev read when only it fails",
+            "status": "passed"
+          },
+          {
+            "name": "package-security-audit: secondary legs are marked, never clean (row 7) names the Scorecard when its read fails",
+            "status": "passed"
+          },
+          {
+            "name": "package-security-audit: secondary legs are marked, never clean (row 7) keeps the real negative: OSV {} and deps.dev 404 give the same answer, with no unavailable_sources",
+            "status": "failed"
+          },
+          {
+            "name": "package-security-audit: secondary legs are marked, never clean (row 7) keeps the complete answer unchanged when every leg answers",
+            "status": "failed"
+          },
+          {
+            "name": "dependency-audit: OSV is required (row 8) throws, unbilled, when OSV fails with HTTP 503",
+            "status": "passed"
+          },
+          {
+            "name": "dependency-audit: OSV is required (row 8) throws, unbilled, when OSV fails with HTTP 429",
+            "status": "passed"
+          },
+          {
+            "name": "dependency-audit: OSV is required (row 8) throws, unbilled, when OSV fails with network error",
+            "status": "passed"
+          },
+          {
+            "name": "dependency-audit: OSV is required (row 8) throws, unbilled, when OSV fails with timeout",
+            "status": "passed"
+          },
+          {
+            "name": "dependency-audit: OSV is required (row 8) throws, unbilled, when OSV fails with HTTP 404 (the endpoint is gone)",
+            "status": "passed"
+          },
+          {
+            "name": "dependency-audit: OSV is required (row 8) throws, unbilled, when OSV's answer does not match the queries sent",
+            "status": "passed"
+          },
+          {
+            "name": "dependency-audit: OSV is required (row 8) throws, unbilled, when OSV's body does not parse",
+            "status": "passed"
+          },
+          {
+            "name": "dependency-audit: OSV is required (row 8) throws, unbilled, when every registry lookup fails and OSV has no version to check",
+            "status": "passed"
+          },
+          {
+            "name": "dependency-audit: registry failures are marked, never clean (row 8) marks a dependency whose registry lookup failed, names the registry, and still sends it to OSV",
+            "status": "passed"
+          },
+          {
+            "name": "dependency-audit: registry failures are marked, never clean (row 8) marks a PyPI dependency whose lookup hit a network error",
+            "status": "passed"
+          },
+          {
+            "name": "dependency-audit: registry failures are marked, never clean (row 8) keeps the real negative: a registry 404 and an OSV answer of no vulnerabilities, with no unavailable_sources",
+            "status": "passed"
+          }
+        ]
+      }
+    ]
+  }
+}
