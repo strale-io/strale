@@ -216,7 +216,10 @@ describe("tail: quotedLegCodes quotes no 401 or 403 when a leg is retryable", ()
   });
 });
 
-describe("tail2: a combined error built from quotedLegCodes reads the way its retryable flag says", () => {
+// Covers 401, 403, 404, 410 and retryable 5xx legs only: legs such as
+// unparseable + unparseable or HTTP 400 + HTTP 400 classify `unknown`, which
+// the breaker treats as retryable whatever the flag says.
+describe("tail2: with 401, 403, 404, 410 or 5xx legs, a combined error from quotedLegCodes reads the way its retryable flag says", () => {
   const rateLimited403 = () =>
     new UpstreamUnavailableError("GitHub REST API", "rate limited; retry shortly.", { code: "HTTP 403", retryable: true });
 

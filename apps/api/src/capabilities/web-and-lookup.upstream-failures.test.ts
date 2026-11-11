@@ -803,7 +803,7 @@ describe("tail: github-repo-analyze names a 403 only as what its body says", () 
 // Tagged "tail2:" (the backlink-check blocks above carry the same tag). Each
 // failure case fails against the executors at 8ce8e177 and passes after.
 
-describe("tail2: seo-audit degrades on any error from the robots.txt fetch itself", () => {
+describe("tail2: seo-audit degrades on a TypeError from the robots.txt fetch itself", () => {
   it("a robots.txt redirect to an unparseable Location ('http://exa mple.com/') is unavailable, not a throw", async () => {
     fetchRenderedHtml.mockResolvedValue(SEO_PAGE);
     // What safe-fetch's followRedirects throws for that Location: the real
@@ -825,6 +825,48 @@ describe("tail2: seo-audit degrades on any error from the robots.txt fetch itsel
 
   it("a defect while reading the body is still rethrown", async () => {
     const bug = new ReferenceError("robotsTxt is not defined");
+    const res = status(200, "User-agent: *");
+    Object.defineProperty(res, "body", { get() { throw bug; } });
+    Object.defineProperty(res, "text", { value: () => { throw bug; } });
+    Object.defineProperty(res, "arrayBuffer", { value: () => { throw bug; } });
+    seo(async () => res);
+    await expect(exec("seo-audit")({ url: "https://site.test" })).rejects.toBe(bug);
+  });
+});
+
+// ─── Delta review of e1ab64bd ───────────────────────────────────────────────
+//
+// Tagged "tail3:". At the fetch stage only a TypeError can be the site's; a
+// ReferenceError or SyntaxError there is a defect in our own fetch code. After
+// the fetch, an ERR_INVALID_URL can only be ours.
+
+describe("tail3: seo-audit separates the site's robots.txt errors from our own defects", () => {
+  it.each([
+    ["a ReferenceError", () => new ReferenceError("redirectCount is not defined")],
+    ["a SyntaxError", () => new SyntaxError("Invalid regular expression: /[/: Unterminated character class")],
+  ])("%s from the robots.txt fetch is rethrown", async (_l, makeErr) => {
+    const bug = makeErr();
+    seo(async () => { throw bug; });
+    await expect(exec("seo-audit")({ url: "https://site.test" })).rejects.toBe(bug);
+  });
+
+  it("the malformed-redirect TypeError (ERR_INVALID_URL) from the fetch still degrades", async () => {
+    seo(async () => {
+      new URL("http://exa mple.com/", "https://site.test/robots.txt");
+      return status(200);
+    });
+    const out = await billed("seo-audit", exec("seo-audit")({ url: "https://site.test" }));
+    expect(out.unavailable_sources).toEqual(["robots.txt"]);
+  });
+
+  it("an ERR_INVALID_URL thrown after the fetch, while reading the body, is rethrown", async () => {
+    let bug: unknown;
+    try {
+      new URL("not a url");
+    } catch (err) {
+      bug = err;
+    }
+    expect((bug as { code?: string }).code).toBe("ERR_INVALID_URL");
     const res = status(200, "User-agent: *");
     Object.defineProperty(res, "body", { get() { throw bug; } });
     Object.defineProperty(res, "text", { value: () => { throw bug; } });
