@@ -1,0 +1,31 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "332cbd8ab4f0f89714fd898a265b6a3c240181aa"
+  },
+  "at": "2026-11-11T23:35:15.740Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/r3/after-summ.json"
+  },
+  "summary": {
+    "tests_total": 271,
+    "tests_passed": 271,
+    "tests_failed": 0,
+    "source_commit": "332cbd8a"
+  },
+  "topic": "swallowed-failures-wave2c-r3-after",
+  "raw": {
+    "summary": {
+      "phase": "after: round-3 tests on round-3 sources",
+      "source_commit": "332cbd8a",
+      "files": 4,
+      "tests_total": 271,
+      "tests_passed": 271,
+      "tests_failed": 0,
+      "suites_failed": 0,
+      "review_tests_failed": 0
+    },
+    "failed_tests": []
+  }
+}

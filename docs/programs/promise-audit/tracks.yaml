@@ -37,19 +37,24 @@ tracks:
       (Repository access blocked) still counts toward the breaker as
       retryable; safe-fetch's ssrf-too-many-redirects warning logs the start
       URL with its query string (older than PR 1017). Wave 2c (rows 5
-      pricing-page-extract, 6 gdpr-fine-lookup, 20 company-fundamentals, 26
-      country-trade-data, 28 whois-lookup, 29 page-exists), branch
-      fix/swallowed-failures-wave2c, is done once its PR merges; its
-      fail-before, after, guard and full API suite receipts (round 1 and the
-      review round 2 r2 set) are in evidence. Found in wave 2c,
-      not fixed there: country-trade-data returns its embedded 2023 estimates
-      under the requested year (now stated in its limitation), and its partial
-      country-name match reads KE as Turkey; a 5xx from enforcementtracker.com
-      still reads as the caller's URL failing (breaker-exempt);
-      gdpr-fine-lookup now reads the case list the tracker's front page embeds,
-      because the site ignores ?query= and statistics.html?C= answers 404 (seen
-      live on 2026-11-11), so a change to that embedded list fails calls as
-      no_case_data until the parser follows; an empty pricing render caused by
+      pricing-page-extract, 20 company-fundamentals, 26 country-trade-data, 28
+      whois-lookup, 29 page-exists), branch fix/swallowed-failures-wave2c, is
+      done once its PR merges. Row 6 gdpr-fine-lookup moved out of wave 2c to
+      the separate PR that withholds the capability (Petter's decision: the
+      enforcementtracker.com data is CC BY-NC-SA 4.0 with a TDM reservation,
+      and its substring match billed other companies' fines), and closes with
+      that PR. Wave 2c's fail-before, after, guard and full API suite receipts
+      (round 1, r2 and r3 sets) are in evidence. Its review round 3 billed
+      page-exists dns_nxdomain only for the requested host, counted pricing's
+      model-judged page_error against the capability, stopped
+      country-trade-data mixing live and embedded totals, and narrowed the
+      Domain Trust Check solution copy to WHOIS age for domains under common
+      TLDs and to one input for link safety rather than phishing detection;
+      that copy reaches the live solutions row only through a seed-solutions
+      run or a guarded startup block, not yet done. Found in wave 2c, not fixed
+      there: country-trade-data returns its embedded 2023 estimates under the
+      requested year (stated in its limitation and description), and its
+      partial country-name match reads KE as Turkey; an empty pricing render caused by
       Strale's own Browserless is filed as the target's fault (unbilled,
       breaker-exempt and outside the quality floor), a blind spot to follow up;
       whois-lookup no longer covers TLDs outside its registry map (following
@@ -118,6 +123,9 @@ tracks:
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r2-fail-before.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r2-after.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r2-full-api-suite.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r3-fail-before.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r3-after.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r3-full-api-suite.json
 
   - id: T2
     title: "T2: Compliance-answer correctness (reference answers)"
