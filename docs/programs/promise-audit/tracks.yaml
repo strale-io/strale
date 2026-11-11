@@ -40,7 +40,7 @@ tracks:
       pricing-page-extract, 6 gdpr-fine-lookup, 20 company-fundamentals, 26
       country-trade-data, 28 whois-lookup, 29 page-exists), branch
       fix/swallowed-failures-wave2c, is done once its PR merges; its
-      fail-before, after and guard receipts are in evidence. Found in wave 2c,
+      fail-before, after, guard and full API suite receipts are in evidence. Found in wave 2c,
       not fixed there: country-trade-data labels its embedded 2023 figures with
       the requested year, and its partial country-name match reads KE as
       Turkey; a 5xx from enforcementtracker.com still reads as the caller's
@@ -106,6 +106,7 @@ tracks:
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-fail-before.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-after.json
       - archive/receipts/2026-11-11-check-upstream-catch-guard-wave2c.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-full-api-suite.json
   - id: T2
     title: "T2: Compliance-answer correctness (reference answers)"
     status: queued
