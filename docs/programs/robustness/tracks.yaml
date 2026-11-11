@@ -9,18 +9,18 @@ tracks:
     gate: none
     depends_on: []
     owner: session
-    next_action: "Owner: orchestrator. Done: #964 (url-to-markdown: one conversion at a time
-      in a worker with an 8 s limit, a 384 MB heap, a 2 MiB converter cap and
-      512 KiB text checks) merged and live since 2026-11-07. Next, in order: (1)
-      after any deploy, call url-to-markdown on an ordinary page and write the
-      receipt for the exit (DEC-20260504-C). (2) browserless-extract.ts
-      htmlToText: the same regex chain, measured at 26.8 s for 256 KB of
-      repeated <p, reachable from eight tools that fetch a caller URL; this is
-      the next R1 batch (Codex brief). (3) Sweep the other places that hand
-      fetched markup to jsdom (lib/company-enrich/structured-metadata.ts,
-      bounded since #947, and lib/nta-corporate.ts) and record each one's bound
-      in that receipt. (4) Per-caller fairness in the single converter (one free
-      account can keep it busy; needs caller identity in executors)."
+    next_action: "Owner: orchestrator. Done: #964 (url-to-markdown worker: 8 s
+      limit, 384 MB heap, 2 MiB converter cap) live since 2026-11-07; #980
+      (browserless-extract htmlToText, a linear scanner) live since 2026-11-08;
+      the live url-to-markdown exit check and the jsdom sweep in the receipt
+      dated 2026-11-11. The sweep found that the site-metadata path stays under
+      0.2 s on every hostile shape, and that nta-corporate.ts has no nesting
+      bound: jsdom took 20.4 s on 1 MiB, and 2.7 s on 16 KiB, of unclosed
+      nesting, from the official NTA API rather than the caller. Next, in
+      order: (1) review and ship codex/nta-xml-shape-bound (a linear depth
+      and element-count check before jsdom), then record the after timings.
+      (2) Per-caller fairness in the single converter (one free account can
+      keep it busy; needs caller identity in executors)."
     resume_file: handoff/_general/from-code/2026-11-06-orchestrator-state.md
     exit:
       - "A receipt shows every adversarial input in the brief (nested div 16, 32
@@ -31,7 +31,8 @@ tracks:
         readability tests pass."
       - "Every jsdom call site on fetched or caller-supplied markup in
         apps/api/src has a stated bound in the sweep receipt, or a fix."
-    evidence: []
+    evidence:
+      - archive/receipts/2026-11-11-check-robustness-r1-url-to-markdown-and-jsdom-bounds.json
   - id: T2
     title: "R2: Data currency of hard-coded reference lists and vendor terms"
     status: queued
