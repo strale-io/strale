@@ -6,7 +6,8 @@ import { keyCapError } from "../api-keys.js";
 import { getShareableUrl } from "../audit-token.js";
 import { noteUnknownCost, setCostDeadline } from "../call-cost.js";
 import { refusalDetails } from "../capability-refusal.js";
-import { runAsCaller } from "../caller-scope.js";
+import { callerKeyForRequest, runAsCaller } from "../caller-scope.js";
+import { clientIpOrNull } from "../client-ip.js";
 import { recordFailure, recordSuccess } from "../circuit-breaker.js";
 import { pgErrorCode } from "../db-error.js";
 import { apiError, type ApiError } from "../errors.js";
@@ -88,9 +89,7 @@ export type InvocationActor =
   | { kind: "account"; userId: string };
 
 /** Build the anonymous rail's opaque identity from already-sanitized request data. */
-export function anonymousCallerKey(ipHash: string | null | undefined, payer?: string | null): string {
-  return payer ? `x402:${payer.toLowerCase()}` : `ip:${ipHash ?? "unknown"}`;
-}
+export const anonymousCallerKey = callerKeyForRequest;
 
 /**
  * Execute with retry for non-deterministic capabilities.
@@ -301,7 +300,7 @@ export async function executeFreeTier({ c, db, capability, executor, executionIn
 
   const x402Verified = c.get("x402_verified");
   const x402Payer = x402Verified ? extractPayerAddress(x402Verified) : null;
-  const callerKey = anonymousCallerKey(c.get("requestContext")?.ipHash, x402Payer);
+  const callerKey = anonymousCallerKey(clientIpOrNull(c), x402Payer);
   const paymentHash = c.get("x402_payment_hash");
   let claimId: string | null = null;
   let releaseClaim = true;

@@ -208,7 +208,8 @@ export function refusalDetails(error: unknown): Record<string, unknown> | undefi
     return { retryable: true, retry_after_seconds: 5, next_step: "Wait a few seconds, then retry this page." };
   }
   if (error instanceof Error && error.name === "ConversionCallerCooldownError") {
-    return { retryable: true, retry_after_seconds: 30, next_step: "Wait 30 seconds, then retry this page." };
+    const seconds = "retryAfterSeconds" in error && typeof error.retryAfterSeconds === "number" ? error.retryAfterSeconds : undefined;
+    return { retryable: true, retry_after_seconds: seconds, next_step: `Wait ${seconds} seconds, then retry this page.` };
   }
   if (isAccessPolicyRefusal(message) && message.includes("'s robots.txt could not be read (")) return { ...ROBOTS_UNAVAILABLE_DETAILS };
   if (isAccessPolicyRefusal(message)) return { retryable: false, fix: "Choose a different URL or source; this site does not permit automated access." };

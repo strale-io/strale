@@ -16,8 +16,7 @@ import { persistCallCost } from "../lib/persist-call-cost.js";
  */
 
 import { refusalDetails } from "../lib/capability-refusal.js";
-import { runAsCaller } from "../lib/caller-scope.js";
-import { hashIp } from "../lib/middleware.js";
+import { callerKeyForRequest, runAsCaller } from "../lib/caller-scope.js";
 
 import { Hono } from "hono";
 import { deployCommitOrNull } from "../lib/receipt/deploy-identity.js";
@@ -1357,9 +1356,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
   executionStarted = true;
   const solutionPayer = verified ? extractPayerAddress(verified) : null;
   const solutionIp = clientIpOrNull(c);
-  const result = await runAsCaller(solutionPayer
-    ? `x402:${solutionPayer.toLowerCase()}`
-    : `ip:${solutionIp ? hashIp(solutionIp) : "unknown"}`, () => executeSolution(sol.id, inputs, {
+  const result = await runAsCaller(callerKeyForRequest(solutionIp, solutionPayer), () => executeSolution(sol.id, inputs, {
     // x402 callers have no account — payment IS the auth. Null here is the
     // honest value, and it matches how x402 transaction rows already record
     // the payer (2,592 paid rows in a 30-day window carry a NULL user_id).
@@ -1785,9 +1782,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     // failure path below; the 300 s authorization window absorbs the ~1 s wait.
     const payer = verified ? extractPayerAddress(verified) : null;
     const callerIp = clientIpOrNull(c);
-    result = await runAsCaller(payer
-      ? `x402:${payer.toLowerCase()}`
-      : `ip:${callerIp ? hashIp(callerIp) : "unknown"}`, async () => await executeWithTransientRetry(async input => {
+    result = await runAsCaller(callerKeyForRequest(callerIp, payer), async () => await executeWithTransientRetry(async input => {
       if (claimId && paymentHash) await beginX402Execution(claimId, paymentHash);
       executionStarted = true;
       return executor(input);

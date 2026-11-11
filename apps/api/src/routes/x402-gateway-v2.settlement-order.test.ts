@@ -246,7 +246,7 @@ describe("x402-gateway-v2 — DEC-14 settlement ordering", () => {
     });
 
     it("settleX402Execution is called only after executeSolution() returns", () => {
-      const execIdx = body.indexOf("executeSolution(");
+      const execIdx = body.indexOf("() => executeSolution(sol.id");
       expect(execIdx, "executeSolution() call must exist").toBeGreaterThan(-1);
 
       const settles = settleIndices(body);
