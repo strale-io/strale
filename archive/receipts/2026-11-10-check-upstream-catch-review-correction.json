@@ -1,0 +1,32 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "b1c30adee5a7167bbe0fd5d7126c8e2d16941e71"
+  },
+  "at": "2026-11-10T23:48:10.289Z",
+  "inputs": {
+    "source": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/upstream-lint-nov11/review-correction-input.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "warnings_count": 1,
+    "scope": "Final-review correction: suppressed debug logs cannot satisfy catch observability"
+  },
+  "topic": "upstream-catch-review-correction",
+  "raw": {
+    "checks": {
+      "final_review": "Opus/high GO with medium debug-log issue to fix; fixed with fail-before evidence; low suggestions addressed",
+      "fail_before": "2 structured-debug cases failed before correction",
+      "pass_after": "58 tests passed including exception visibility",
+      "scan": "406 files265handlers200existing candidates0waivers; baseline unchanged"
+    },
+    "ok": true,
+    "scope": "Final-review correction: suppressed debug logs cannot satisfy catch observability",
+    "warnings": [
+      "Static guard only; billing correctness and remaining T1 remediation stay open"
+    ],
+    "failures": []
+  }
+}

@@ -20,11 +20,13 @@ highest harm down.
 ## Resume here
 
 Read [tracks.yaml](tracks.yaml), then the active track's `next_action` and
-`resume_file`. T1 (money promises) is active: wave 1 of the swallowed-failure fix is
-on branch `fix/swallowed-upstream-failures-wave1`, and the finding behind it is
-`archive/sessions/2026-11-06-swallowed-upstream-failures-audit.md`. When the wave-1
-handoff lands under `handoff/_general/from-code/`, that file becomes T1's
-`resume_file`; until it exists the resume file is the inventory.
+`resume_file`. T1 (money promises) remains active. Wave 1 landed in PRs 938/939;
+the static catch-handler guard and its shrinking baseline are recorded in
+`handoff/_general/from-code/2026-11-11-upstream-catch-guard.md`. Remaining
+billing-path repairs, catalogue-wide perturbation replays and past-charge
+reconciliation are still open. The original finding remains
+`archive/sessions/2026-11-06-swallowed-upstream-failures-audit.md`; reconcile its
+dated rows against later fixes rather than treating it as current execution state.
 
 | Register ID | Track | Why this order |
 |---|---|---|
