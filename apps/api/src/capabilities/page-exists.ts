@@ -185,6 +185,7 @@ registerCapability("page-exists", async (input: CapabilityInput) => {
       },
     });
   } catch (err: unknown) {
+    // degraded-ok: NXDOMAIN is the resolver's answer that the host name does not exist, so no page under it can; it is returned as exists:false (reason dns_nxdomain), and every other failure throws.
     if (isCapabilityRefusal(err)) throw err;
     // SSRF refusals on redirect hops (url-validator's "restricted address"
     // errors thrown inside safeFetch) are input-safety refusals, not

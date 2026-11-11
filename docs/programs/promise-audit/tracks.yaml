@@ -40,15 +40,23 @@ tracks:
       pricing-page-extract, 6 gdpr-fine-lookup, 20 company-fundamentals, 26
       country-trade-data, 28 whois-lookup, 29 page-exists), branch
       fix/swallowed-failures-wave2c, is done once its PR merges; its
-      fail-before, after, guard and full API suite receipts are in evidence. Found in wave 2c,
-      not fixed there: country-trade-data labels its embedded 2023 figures with
-      the requested year, and its partial country-name match reads KE as
-      Turkey; a 5xx from enforcementtracker.com still reads as the caller's
-      URL failing (breaker-exempt); whois-lookup no longer covers TLDs outside
-      its registry map (following IANA refer: would restore them), and an
-      unparsed registry reply that is not a rate-limit or refusal notice is
-      still billed raw; page-exists now fails a DNS NXDOMAIN rather than
-      answering exists false. Next: wave 2d, rows 30, 31, 32, 33 and 35,
+      fail-before, after, guard and full API suite receipts (round 1 and the
+      review round 2 r2 set) are in evidence. Found in wave 2c,
+      not fixed there: country-trade-data returns its embedded 2023 estimates
+      under the requested year (now stated in its limitation), and its partial
+      country-name match reads KE as Turkey; a 5xx from enforcementtracker.com
+      still reads as the caller's URL failing (breaker-exempt);
+      gdpr-fine-lookup now reads the case list the tracker's front page embeds,
+      because the site ignores ?query= and statistics.html?C= answers 404 (seen
+      live on 2026-11-11), so a change to that embedded list fails calls as
+      no_case_data until the parser follows; an empty pricing render caused by
+      Strale's own Browserless is filed as the target's fault (unbilled,
+      breaker-exempt and outside the quality floor), a blind spot to follow up;
+      whois-lookup no longer covers TLDs outside its registry map (following
+      IANA refer: would restore them; until then the Domain Trust Check
+      solution's WHOIS step refuses .xyz and .top, and its example output
+      shows registrar \"IANA\"), and an unparsed registry reply that is not a
+      rate-limit or refusal notice is still billed raw. Next: wave 2d, rows 30, 31, 32, 33 and 35,
       reconciled first against later repairs such as customs PR999. Then wave 3; the Nager.Date
       no-calendar path (a weekends-only answer for countries such as TH, still
       billed) as a follow-up candidate; the perturbation replays (http_503,
@@ -107,6 +115,9 @@ tracks:
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-after.json
       - archive/receipts/2026-11-11-check-upstream-catch-guard-wave2c.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-full-api-suite.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r2-fail-before.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r2-after.json
+
   - id: T2
     title: "T2: Compliance-answer correctness (reference answers)"
     status: queued

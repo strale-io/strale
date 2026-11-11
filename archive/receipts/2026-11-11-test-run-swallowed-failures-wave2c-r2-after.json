@@ -1,0 +1,36 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "86390191af89e8825a7da546fcd943683acb9286"
+  },
+  "at": "2026-11-11T23:03:52.070Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/r2/after-summary.json"
+  },
+  "summary": {
+    "ok": true,
+    "expected": "pass",
+    "total": 567,
+    "passed": 567,
+    "failed": 0,
+    "files": 10,
+    "executors_at": "86390191",
+    "tests_at": "86390191",
+    "note": "round-2 review tests plus related suites: actionable-errors-round2, body-reader ratchet, quality-floor, execution-outcome, robots-txt, safe-fetch-hardening"
+  },
+  "topic": "swallowed-failures-wave2c-r2-after",
+  "raw": {
+    "summary": {
+      "phase": "pass-after",
+      "source_commit": "86390191",
+      "files": 10,
+      "tests_total": 567,
+      "tests_passed": 567,
+      "tests_failed": 0,
+      "suites_failed": 0,
+      "review_tests_failed": 0
+    },
+    "failed_tests": []
+  }
+}
