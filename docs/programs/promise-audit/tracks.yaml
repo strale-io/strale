@@ -117,6 +117,7 @@ tracks:
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-full-api-suite.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r2-fail-before.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r2-after.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r2-full-api-suite.json
 
   - id: T2
     title: "T2: Compliance-answer correctness (reference answers)"
