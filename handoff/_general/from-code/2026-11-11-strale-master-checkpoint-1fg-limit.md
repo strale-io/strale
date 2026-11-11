@@ -17,7 +17,7 @@ No open PR from this session after #1008. No worktree but the trunk.
 ## Robustness T3 (active): the four signals
 
 1. **Serper `vendor:status` receipt.** Blocked here: needs the operator DB (PC, or a permission to read the Bitwarden secret through `bws run`; listing was refused by the classifier and must not be worked around).
-2. **x402 settlement-drop alert** (#950, draft, do not merge): redesign as a per-payer burst cap. A Codex brief candidate (`codex/<slug>` branch with the brief, then the bare slug to the dispatcher).
+2. **x402 settlement-drop alert:** the per-payer burst cap is already merged (#950, 2026-11-07, with fail-before receipts). An earlier version of this file and of `tracks.yaml` called it a draft; that was stale. Remaining: a receipt from its first production week with no false page, due from Sat 14 Nov (Railway logs for the settlement watch and any alert sent). No Codex brief is needed.
 3. **production-watch:** manual run 42937874567 (02:17 Swedish time) green; still owes a green *scheduled* run and a forced-mismatch receipt (`scripts/production-watch/demonstrate-alerts.mjs`).
 4. **weekly-drift:** fixed by #1008; owes the green scheduled run on Mon 16 Nov about 08:00 Swedish time. Still open: record the 2026-11-06 check-in's misreading of the weekly-drift causes in LESSONS (F1 or F7, with the count it changes).
 
