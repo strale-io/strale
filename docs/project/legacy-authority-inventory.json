@@ -258,7 +258,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "c26f46a6cb0b38b8c4967349d7f869aeaff2aa01926b8f40b73f2cc8373c189b",
+      "sha256": "a7f08e4820b324361c338ffc584d79e8542100d36e46f13182b00d8a761033ae",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -300,6 +300,8 @@
         "docs/operations/orchestrator-carryover-facts.md",
         "docs/operations/vendor-permissions/2026-10-27-serper.md",
         "docs/operations/weekly-revenue-checks.md",
+        "docs/plan/BASELINE-2026-11-11.md",
+        "docs/plan/PLAN.md",
         "docs/programs/brand-website/PROGRAM.md",
         "docs/programs/brand-website/SWITCHOVER-REFERENCES.md",
         "docs/programs/brand-website/homepage-brief.json",
@@ -376,6 +378,7 @@
         "docs/lanes/codex/nordic-statistics-brief.md",
         "docs/operations/distribution-registry.md",
         "docs/operations/orchestrator-carryover-facts.md",
+        "docs/plan/BASELINE-2026-11-11.md",
         "docs/programs/brand-website/SWITCH-OVER-READINESS.md",
         "docs/programs/brand-website/SWITCHOVER-REFERENCES.md",
         "docs/programs/brand-website/tracks.yaml",
@@ -410,6 +413,7 @@
         "apps/api/src/lib/x402-eligibility.ts",
         "docs/company/DECISION-QUEUE.md",
         "docs/operations/orchestrator-carryover-facts.md",
+        "docs/plan/BASELINE-2026-11-11.md",
         "docs/programs/brand-website/SWITCHOVER-REFERENCES.md",
         "docs/programs/cto-readiness/tracks.yaml",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",

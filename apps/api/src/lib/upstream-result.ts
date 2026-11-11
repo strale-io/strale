@@ -140,3 +140,78 @@ export function requireAnyLeg<T>(results: PromiseSettledResult<T>[], label: stri
   }
   return fulfilled.map((r) => r.value);
 }
+
+/**
+ * The error for an upstream's non-OK HTTP answer that carries no answer to
+ * the question asked. 429 and 5xx are transient (retryable); any other status
+ * is deterministic for now, so the rail does not spend a retry on it.
+ *
+ * The caller decides first which statuses ARE the answer (a 404 "no such
+ * product", say) and never passes those here.
+ *
+ * The status is quoted in the message, and the breaker classifies by message:
+ * 429 and 5xx read as transient or unknown (both retryable there too), 401
+ * and 403 as auth_expired. A caller whose 401 or 403 is really a rate limit
+ * or another transient refusal (GitHub's) must not pass it here; it builds a
+ * retryable error without the number, as github-repo-analyze does.
+ */
+export function httpUnavailable(upstream: string, status: number): UpstreamUnavailableError {
+  const transient = status === 429 || status >= 500;
+  return new UpstreamUnavailableError(upstream, `HTTP ${status}${transient ? "; retry shortly." : "."}`, {
+    code: `HTTP ${status}`,
+    retryable: transient,
+  });
+}
+
+/**
+ * The codes to quote in one error that stands for several failed legs.
+ *
+ * The breaker reads the message, not `retryable` (`categorizeFailureReason`
+ * in lib/trust-helpers.ts files any "401" or "403" as auth_expired, which
+ * opens the breaker at once for 30 minutes). So a combined error that is
+ * retryable because one leg is transient quotes only the retryable legs'
+ * codes, and no 401 or 403 among them: a retryable leg can carry one too
+ * (GitHub's rate limit answers HTTP 403), and quoting it would turn a
+ * retry-shortly outage into a half-hour suspension for every caller (PR #1015
+ * delta review). When no leg is retryable every code is quoted, 401 and 403
+ * included (PR #1017 review), so legs that failed with 401, 403, 404 or 410
+ * give a message the breaker reads as non-retryable, as the error is. Other
+ * non-retryable codes, such as `unparseable` or `HTTP 400`, classify
+ * `unknown`, which the breaker treats as retryable; this function does not
+ * change that. The status stays on each leg's own `code`.
+ */
+export function quotedLegCodes(failures: UpstreamUnavailableError[]): string {
+  const retryable = failures.filter((f) => f.retryable);
+  const legs = retryable.length > 0 ? retryable : failures;
+  let codes = [...new Set(legs.map((f) => f.code ?? "error"))];
+  if (retryable.length > 0) codes = codes.filter((c) => !AUTH_STATUS.test(c));
+  return codes.length > 0 ? codes.join(", ") : "declined";
+}
+
+/** A status the breaker would read as expired credentials. */
+const AUTH_STATUS = /\b40[13]\b/;
+
+/**
+ * The error for a request to an upstream that threw: a timeout, a network
+ * error, or a body that did not parse. Anything else is returned unchanged:
+ * Strale's own vendor-account state (`VendorUnavailableError`), a refusal, a
+ * size cap or our own defect keeps its own class rather than being relabelled
+ * as the upstream's outage.
+ */
+export function fetchUnavailable(upstream: string, err: unknown): Error {
+  if (err instanceof UpstreamUnavailableError) return err;
+  const name = (err as { name?: unknown } | null)?.name;
+  const message = err instanceof Error ? err.message : String(err);
+  if (name === "TimeoutError" || name === "AbortError") {
+    return new UpstreamUnavailableError(upstream, "timeout; retry shortly.", { code: "timeout", cause: err });
+  }
+  if (err instanceof TypeError && (message === "fetch failed" || message === "terminated")) {
+    const cause = (err as { cause?: { code?: unknown } }).cause;
+    const code = typeof cause?.code === "string" ? cause.code : null;
+    return new UpstreamUnavailableError(upstream, `network error${code ? ` (${code})` : ""}; retry shortly.`, { code, cause: err });
+  }
+  if (err instanceof SyntaxError) {
+    return new UpstreamUnavailableError(upstream, "the response did not parse.", { code: "unparseable", retryable: false, cause: err });
+  }
+  return err instanceof Error ? err : new Error(message);
+}

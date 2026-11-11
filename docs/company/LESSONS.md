@@ -855,7 +855,7 @@ reasoned suppression a surface file can declare — diagnosed today, not shipped
 > never executed, a branch recorded as deleted that still exists, a document
 > whose evidence went stale months ago.
 
-**Count: 14 (incident 14, 2026-10-28, below, is incident 12's arm with a price on it; incident 13, 2026-10-31, below; incident 11, 2026-09-12, is the manifest-to-production arm and is counted in F1 row 8 for its damage; incident 12, 2026-09-17, is a third arm — a mechanism whose static declaration stayed true while the thing it declared stopped running). Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 and incident 9 on 2026-09-06 are different arms, and incident 10 (it happened on 2026-08-25, before incident 8, and was found on 2026-09-11) is incident 8's arm — see below.** A capability recorded as switched off that served errors for two
+**Count: 15 (incident 15, 2026-11-06, below, is incident 12's arm at the reading end: the scheduled check ran and failed, and the report that read it named the wrong cause; incident 14, 2026-10-28, below, is incident 12's arm with a price on it; incident 13, 2026-10-31, below; incident 11, 2026-09-12, is the manifest-to-production arm and is counted in F1 row 8 for its damage; incident 12, 2026-09-17, is a third arm — a mechanism whose static declaration stayed true while the thing it declared stopped running). Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 and incident 9 on 2026-09-06 are different arms, and incident 10 (it happened on 2026-08-25, before incident 8, and was found on 2026-09-11) is incident 8's arm — see below.** A capability recorded as switched off that served errors for two
 more days; three branches recorded as deleted that were still on the remote;
 GOALS.md carrying three claims that re-measurement contradicted; a docstring
 asserting a wiring that had never existed — and, on 2026-08-23, **the same
@@ -1379,6 +1379,32 @@ reason this went unnoticed for two days is that nobody enumerated it.
 capability whose source refuses it. Fixing that means a test type that
 distinguishes "the source answered" from "the schema validated", which is F1
 work and wants its own batch, not a line in this one.
+
+#### Incident 15 — 2026-11-06 — a red sweep read as red for a reason it did not have
+
+The 2026-11-06 morning check-in
+(`handoff/_general/from-code/2026-11-06-checkin-morning.md`) recorded the two
+consecutive `weekly-drift` failures (2026-10-26, 2026-11-02) as "every sweep
+reports clean except the robots.txt strict sweep". The robots sweep is
+report-only and is not in the aggregate exit, so it cannot turn the run red.
+The logs say what did: run 40334936804 (2026-10-26) failed on `MD=1`, manifest
+drift (two capabilities drifted, `domain-contact-extract` and
+`social-profile-check`, and eight manifests missing in the database), and run
+41485423344 (2026-11-02) failed on `UR=1`, the upstream recordings; every other
+sweep exited 0 in both. Read from the job logs on 2026-11-11.
+
+**Why F7 and not F1.** No capability was blamed for anything; the recorded
+cause of a red check disagreed with the cause the check recorded, and the
+record was then acted on (the next steps went to robots-disallowed tools, not
+to the drift or the recordings). That is incident 12's arm — a scheduled check
+whose result does not reach its reader — at the reading end, not the wiring end.
+It cost about a week: manifest drift was clean again by run 42662225022
+(2026-11-09) through unrelated work, and the recordings were fixed by #1008.
+
+**The rule this adds.** A red aggregate is explained from the per-sweep exit
+codes it printed (`MD=`, `UR=` and the rest in the aggregate step), never from
+the most prominent section of the report. A sweep that is outside the aggregate
+exit is never named as the cause of a red run.
 
 ### F8 · Duplicated authority
 

@@ -159,7 +159,8 @@ const USER_INPUT_ERROR_PATTERNS = [
   "No DNS records found",        // dns-lookup: non-existent domain (correct result)
   "Domain may not exist",        // dns-lookup: variant
   "URL returned HTTP 4",         // url-to-markdown: 400/401/403/404 from target site
-  "URL returned HTTP 5",         // url-to-markdown: 5xx from target site (target's problem, not ours)
+  "URL returned HTTP 5",         // url-to-markdown, cookie-scan: 5xx from target site (target's problem, not ours)
+  "URL did not answer",          // cookie-scan: the caller's target site timed out or dropped the connection
   "returned a server error",     // url-to-markdown browserless path: target-site 5xx
   "could not be loaded (HTTP",   // url-to-markdown browserless path: generic target-site HTTP failure
   "This site exists but blocks", // url-to-markdown: 403 bot protection

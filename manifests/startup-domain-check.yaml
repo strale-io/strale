@@ -36,9 +36,6 @@ output_schema:
       - name: google.dev
         type: domain
         details: Redirects to https://developers.google.com/program
-      - name: "@google"
-        type: twitter/x
-        details: taken
       - name: google
         type: github
         details: taken
@@ -51,7 +48,8 @@ output_schema:
     social:
       - handle: "@google"
         platform: Twitter/X
-        available: false
+        available: null
+        note: Not checked — X's Terms of Service prohibit automated access. Verify the handle manually at x.com.
       - handle: google
         platform: GitHub
         available: false
@@ -84,16 +82,39 @@ output_schema:
         current_owner: Redirects to https://developers.google.com/program
     keyword: google
     available: []
-    taken_count: 9
+    taken_count: 8
     available_count: 0
     best_available_domain: null
   properties:
+    unavailable_sources:
+      type: array
+      items:
+        type: string
+      description: >-
+        Present only when a domain's DNS lookup, GitHub, npm or PyPI did not answer; that domain's or handle's available is null, and it is listed neither as available nor as taken.
     taken:
       type: array
     social:
       type: array
     domains:
       type: array
+      items:
+        type: object
+        properties:
+          domain:
+            type: string
+          extension:
+            type: string
+          available:
+            type:
+              - boolean
+              - "null"
+            description: >-
+              True only on NXDOMAIN; null when the resolver did not answer for this domain.
+          current_owner:
+            type:
+              - string
+              - "null"
     available:
       type: array
 data_source: DNS protocol + WHOIS + HTTP fetch (domain availability analysis)
@@ -144,12 +165,18 @@ output_field_reliability:
   social: guaranteed
   domains: guaranteed
   available: guaranteed
+  unavailable_sources: rare
 limitations:
   - title: Country domains and niche platforms are not checked
     text: Checks .com, .io, .ai, .co and .dev availability and the name on GitHub, npm and PyPI. Country domains and other platforms are not checked
     category: coverage
     severity: info
     workaround: Supplement with whois-lookup for specific TLDs and social-profile-check for additional platform availability
+  - title: Available means DNS said the name does not exist
+    text: >-
+      A domain is reported available only when DNS answers that the name does not exist (NXDOMAIN). A name that exists without an address record is reported taken. If the resolver does not answer for one extension, that domain's available is null, it is listed neither as available nor as taken, and it is named in unavailable_sources; if it answers for none, the call fails unbilled. If GitHub, npm or PyPI does not answer, that handle's available is null, it is listed neither as available nor as taken, and the platform is named in unavailable_sources. DNS is not a registry: a registered domain with no DNS records can still read as available.
+    category: availability
+    severity: info
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

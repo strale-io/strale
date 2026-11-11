@@ -1,0 +1,921 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "0f66b420ee180bd52e03d086074f14ada2ec553c"
+  },
+  "at": "2026-11-11T13:03:28.399Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/fail-before.json"
+  },
+  "summary": {
+    "ok": true,
+    "expected": "fail",
+    "total": 64,
+    "passed": 17,
+    "failed": 47
+  },
+  "topic": "swallowed-failures-wave2b-fail-before",
+  "raw": {
+    "numTotalTestSuites": 15,
+    "numPassedTestSuites": 7,
+    "numFailedTestSuites": 8,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 64,
+    "numPassedTests": 17,
+    "numFailedTests": 47,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794402198000,
+    "success": false,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "cookie-scan failure: the cookie request that fails throws (row 9)"
+            ],
+            "fullName": "cookie-scan failure: the cookie request that fails throws (row 9) throws, unbilled and retryable, when the site's response is HTTP 503",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when the site's response is HTTP 503",
+            "duration": 8.11387400000001,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"url\":\"https://shop.test\",\"cookies\":[],\"total_cookies\":0,\"first_party_count\":0,\"third_party_count\":0,\"tracking_scripts\":[],\"consent_banner_detected\":false,\"consent_banner_text\":null,\"third_party_domains\":[],\"potential_issues\":[]}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:155:19\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cookie-scan failure: the cookie request that fails throws (row 9)"
+            ],
+            "fullName": "cookie-scan failure: the cookie request that fails throws (row 9) throws, unbilled and retryable, when the site's response is a network error",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when the site's response is a network error",
+            "duration": 1.5333530000000337,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"url\":\"https://shop.test\",\"cookies\":[],\"total_cookies\":0,\"first_party_count\":0,\"third_party_count\":0,\"tracking_scripts\":[],\"consent_banner_detected\":false,\"consent_banner_text\":null,\"third_party_domains\":[],\"potential_issues\":[]}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:155:19\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cookie-scan failure: the cookie request that fails throws (row 9)"
+            ],
+            "fullName": "cookie-scan failure: the cookie request that fails throws (row 9) throws, unbilled and retryable, when the site's response is a timeout",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when the site's response is a timeout",
+            "duration": 1.0405320000000984,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"url\":\"https://shop.test\",\"cookies\":[],\"total_cookies\":0,\"first_party_count\":0,\"third_party_count\":0,\"tracking_scripts\":[],\"consent_banner_detected\":false,\"consent_banner_text\":null,\"third_party_domains\":[],\"potential_issues\":[]}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:155:19\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cookie-scan failure: an unusable page analysis is null, not 'no banner' (row 9)"
+            ],
+            "fullName": "cookie-scan failure: an unusable page analysis is null, not 'no banner' (row 9) a model decline keeps the cookies, nulls the analysis and names it",
+            "status": "failed",
+            "title": "a model decline keeps the cookies, nulls the analysis and names it",
+            "duration": 8.081376999999975,
+            "failureMessages": [
+              "AssertionError: expected { url: 'https://shop.test', …(9) } to match object { tracking_scripts: null, …(5) }\n(5 matching properties omitted from actual)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/expect/dist/index.js:1283:10)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/chai/index.js:1700:25)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:172:17\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cookie-scan failure: an unusable page analysis is null, not 'no banner' (row 9)"
+            ],
+            "fullName": "cookie-scan failure: an unusable page analysis is null, not 'no banner' (row 9) a reply that is not JSON keeps the cookies, nulls the analysis and names it",
+            "status": "failed",
+            "title": "a reply that is not JSON keeps the cookies, nulls the analysis and names it",
+            "duration": 1.890937000000008,
+            "failureMessages": [
+              "AssertionError: expected { url: 'https://shop.test', …(9) } to match object { tracking_scripts: null, …(5) }\n(5 matching properties omitted from actual)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/expect/dist/index.js:1283:10)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/chai/index.js:1700:25)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:172:17\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cookie-scan failure: an unusable page analysis is null, not 'no banner' (row 9)"
+            ],
+            "fullName": "cookie-scan failure: an unusable page analysis is null, not 'no banner' (row 9) a reply of the wrong shape keeps the cookies, nulls the analysis and names it",
+            "status": "failed",
+            "title": "a reply of the wrong shape keeps the cookies, nulls the analysis and names it",
+            "duration": 2.0565880000000334,
+            "failureMessages": [
+              "AssertionError: expected { url: 'https://shop.test', …(9) } to match object { tracking_scripts: null, …(5) }\n(5 matching properties omitted from actual)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/expect/dist/index.js:1283:10)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/chai/index.js:1700:25)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:172:17\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cookie-scan negative: a site that sets no cookies keeps its exact output"
+            ],
+            "fullName": "cookie-scan negative: a site that sets no cookies keeps its exact output answers an empty inventory, billed",
+            "status": "passed",
+            "title": "answers an empty inventory, billed",
+            "duration": 1.1398890000000392,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cookie-scan negative: a site that sets no cookies keeps its exact output"
+            ],
+            "fullName": "cookie-scan negative: a site that sets no cookies keeps its exact output still reports tracking cookies without a banner the analysis looked for",
+            "status": "passed",
+            "title": "still reports tracking cookies without a banner the analysis looked for",
+            "duration": 1.1037979999999834,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cookie-scan passthrough: Strale's own Browserless state is not wrapped"
+            ],
+            "fullName": "cookie-scan passthrough: Strale's own Browserless state is not wrapped rethrows VendorUnavailableError unchanged",
+            "status": "passed",
+            "title": "rethrows VendorUnavailableError unchanged",
+            "duration": 1.3434939999999642,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) throws, unbilled and retryable, when UPCitemdb fails with HTTP 503 after OFF has none",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when UPCitemdb fails with HTTP 503 after OFF has none",
+            "duration": 0.8473209999999654,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"barcode\":\"5000112548167\",\"found\":false,\"message\":\"No product found for barcode 5000112548167. The product may not be in the database.\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:234:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) throws, unbilled and retryable, when UPCitemdb fails with HTTP 429 after OFF has none",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when UPCitemdb fails with HTTP 429 after OFF has none",
+            "duration": 0.5101560000000518,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"barcode\":\"5000112548167\",\"found\":false,\"message\":\"No product found for barcode 5000112548167. The product may not be in the database.\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:234:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) throws, unbilled and retryable, when UPCitemdb fails with a network error after OFF has none",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when UPCitemdb fails with a network error after OFF has none",
+            "duration": 0.39575999999999567,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"barcode\":\"5000112548167\",\"found\":false,\"message\":\"No product found for barcode 5000112548167. The product may not be in the database.\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:234:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) throws, unbilled and retryable, when UPCitemdb fails with a timeout after OFF has none",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when UPCitemdb fails with a timeout after OFF has none",
+            "duration": 0.331307000000038,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"barcode\":\"5000112548167\",\"found\":false,\"message\":\"No product found for barcode 5000112548167. The product may not be in the database.\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:234:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) throws, unbilled and retryable, when Open Food Facts fails with HTTP 503 and UPCitemdb has none",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when Open Food Facts fails with HTTP 503 and UPCitemdb has none",
+            "duration": 1.186747999999966,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"barcode\":\"5000112548167\",\"found\":false,\"message\":\"No product found for barcode 5000112548167. The product may not be in the database.\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:241:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) throws, unbilled and retryable, when Open Food Facts fails with HTTP 429 and UPCitemdb has none",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when Open Food Facts fails with HTTP 429 and UPCitemdb has none",
+            "duration": 0.4356960000000072,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"barcode\":\"5000112548167\",\"found\":false,\"message\":\"No product found for barcode 5000112548167. The product may not be in the database.\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:241:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) throws, unbilled and retryable, when Open Food Facts fails with a network error and UPCitemdb has none",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when Open Food Facts fails with a network error and UPCitemdb has none",
+            "duration": 0.48457700000005843,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"barcode\":\"5000112548167\",\"found\":false,\"message\":\"No product found for barcode 5000112548167. The product may not be in the database.\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:241:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) throws, unbilled and retryable, when Open Food Facts fails with a timeout and UPCitemdb has none",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when Open Food Facts fails with a timeout and UPCitemdb has none",
+            "duration": 0.4544420000000855,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"barcode\":\"5000112548167\",\"found\":false,\"message\":\"No product found for barcode 5000112548167. The product may not be in the database.\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:241:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) names both databases when neither answers",
+            "status": "failed",
+            "title": "names both databases when neither answers",
+            "duration": 0.6721080000000939,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"barcode\":\"5000112548167\",\"found\":false,\"message\":\"No product found for barcode 5000112548167. The product may not be in the database.\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:248:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup failure: a database that does not answer is never 'not found' (row 15)"
+            ],
+            "fullName": "barcode-lookup failure: a database that does not answer is never 'not found' (row 15) throws, not retryable, on a 200 reply that carries no product status",
+            "status": "failed",
+            "title": "throws, not retryable, on a 200 reply that carries no product status",
+            "duration": 0.6102220000000216,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"barcode\":\"5000112548167\",\"found\":false,\"message\":\"No product found for barcode 5000112548167. The product may not be in the database.\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:255:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup negative: both databases saying 'none' keeps the exact output"
+            ],
+            "fullName": "barcode-lookup negative: both databases saying 'none' keeps the exact output an unknown product answers found:false, billed",
+            "status": "passed",
+            "title": "an unknown product answers found:false, billed",
+            "duration": 3.4964250000000447,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup negative: both databases saying 'none' keeps the exact output"
+            ],
+            "fullName": "barcode-lookup negative: both databases saying 'none' keeps the exact output a code UPCitemdb rejects as INVALID_UPC answers found:false, billed",
+            "status": "passed",
+            "title": "a code UPCitemdb rejects as INVALID_UPC answers found:false, billed",
+            "duration": 0.5094799999999395,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "barcode-lookup negative: both databases saying 'none' keeps the exact output"
+            ],
+            "fullName": "barcode-lookup negative: both databases saying 'none' keeps the exact output answers from UPCitemdb when Open Food Facts is down",
+            "status": "passed",
+            "title": "answers from UPCitemdb when Open Food Facts is down",
+            "duration": 0.5629559999999856,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) throws, unbilled and retryable, when Common Crawl fails with HTTP 503 and Serper is not set up",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when Common Crawl fails with HTTP 503 and Serper is not set up",
+            "duration": 0.6969199999999773,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"mysite.example\",\"backlinks\":[],\"total_backlinks\":0,\"referring_domains_count\":0,\"unresolved_link_count\":0,\"top_anchors\":[],\"dofollow_estimate\":null,\"nofollow_estimate\":null}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:296:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) throws, unbilled and retryable, when Common Crawl fails with HTTP 429 and Serper is not set up",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when Common Crawl fails with HTTP 429 and Serper is not set up",
+            "duration": 0.34818700000005265,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"mysite.example\",\"backlinks\":[],\"total_backlinks\":0,\"referring_domains_count\":0,\"unresolved_link_count\":0,\"top_anchors\":[],\"dofollow_estimate\":null,\"nofollow_estimate\":null}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:296:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) throws, unbilled and retryable, when Common Crawl fails with a network error and Serper is not set up",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when Common Crawl fails with a network error and Serper is not set up",
+            "duration": 0.265617999999904,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"mysite.example\",\"backlinks\":[],\"total_backlinks\":0,\"referring_domains_count\":0,\"unresolved_link_count\":0,\"top_anchors\":[],\"dofollow_estimate\":null,\"nofollow_estimate\":null}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:296:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) throws, unbilled and retryable, when Common Crawl fails with a timeout and Serper is not set up",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when Common Crawl fails with a timeout and Serper is not set up",
+            "duration": 0.34181500000011056,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"mysite.example\",\"backlinks\":[],\"total_backlinks\":0,\"referring_domains_count\":0,\"unresolved_link_count\":0,\"top_anchors\":[],\"dofollow_estimate\":null,\"nofollow_estimate\":null}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:296:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) throws, unbilled and retryable, when both sources fail (Serper HTTP 503)",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when both sources fail (Serper HTTP 503)",
+            "duration": 0.49247300000001815,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"mysite.example\",\"backlinks\":[],\"total_backlinks\":0,\"referring_domains_count\":0,\"unresolved_link_count\":0,\"top_anchors\":[],\"dofollow_estimate\":null,\"nofollow_estimate\":null}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:304:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) throws, unbilled and retryable, when both sources fail (Serper HTTP 429)",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when both sources fail (Serper HTTP 429)",
+            "duration": 0.23631000000000313,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"mysite.example\",\"backlinks\":[],\"total_backlinks\":0,\"referring_domains_count\":0,\"unresolved_link_count\":0,\"top_anchors\":[],\"dofollow_estimate\":null,\"nofollow_estimate\":null}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:304:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) throws, unbilled and retryable, when both sources fail (Serper a network error)",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when both sources fail (Serper a network error)",
+            "duration": 0.229596000000015,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"mysite.example\",\"backlinks\":[],\"total_backlinks\":0,\"referring_domains_count\":0,\"unresolved_link_count\":0,\"top_anchors\":[],\"dofollow_estimate\":null,\"nofollow_estimate\":null}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:304:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) throws, unbilled and retryable, when both sources fail (Serper a timeout)",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when both sources fail (Serper a timeout)",
+            "duration": 0.21438200000000052,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"mysite.example\",\"backlinks\":[],\"total_backlinks\":0,\"referring_domains_count\":0,\"unresolved_link_count\":0,\"top_anchors\":[],\"dofollow_estimate\":null,\"nofollow_estimate\":null}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:304:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) names Serper when it fails after Common Crawl answered",
+            "status": "failed",
+            "title": "names Serper when it fails after Common Crawl answered",
+            "duration": 4.561575000000062,
+            "failureMessages": [
+              "AssertionError: expected undefined to deeply equal [ 'Serper Google search API' ]\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:314:37\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) names Common Crawl when Serper answers in its place",
+            "status": "failed",
+            "title": "names Common Crawl when Serper answers in its place",
+            "duration": 1.6374799999999823,
+            "failureMessages": [
+              "AssertionError: expected undefined to deeply equal [ 'Common Crawl index API' ]\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:322:37\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check failure: no answering source is never 'no backlinks' (row 16)"
+            ],
+            "fullName": "backlink-check failure: no answering source is never 'no backlinks' (row 16) rethrows Strale's own Serper account state unchanged when Common Crawl is down too",
+            "status": "failed",
+            "title": "rethrows Strale's own Serper account state unchanged when Common Crawl is down too",
+            "duration": 1.2780030000000124,
+            "failureMessages": [
+              "Error: promise resolved \"{ output: { …(8) }, …(1) }\" instead of rejecting\n    at _Assertion.__VITEST_REJECTS__ (file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/expect/dist/index.js:1747:17)\n    at _Assertion.propertyGetter (file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/chai/index.js:1570:27)\n    at Reflect.get (<anonymous>)\n    at Object.proxyGetter [as get] (file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/chai/index.js:1659:22)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:329:71\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check negative: a domain Common Crawl holds nothing for keeps its exact output"
+            ],
+            "fullName": "backlink-check negative: a domain Common Crawl holds nothing for keeps its exact output Common Crawl HTTP 404 answers an empty list, billed",
+            "status": "passed",
+            "title": "Common Crawl HTTP 404 answers an empty list, billed",
+            "duration": 0.4175030000000106,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "backlink-check negative: a domain Common Crawl holds nothing for keeps its exact output"
+            ],
+            "fullName": "backlink-check negative: a domain Common Crawl holds nothing for keeps its exact output Common Crawl an empty 200 answers an empty list, billed",
+            "status": "passed",
+            "title": "Common Crawl an empty 200 answers an empty list, billed",
+            "duration": 0.4381060000000616,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze failure: GitHub that does not answer fails the call (row 21)"
+            ],
+            "fullName": "github-repo-analyze failure: GitHub that does not answer fails the call (row 21) throws, unbilled and retryable, when the commit list is rate limited",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when the commit list is rate limited",
+            "duration": 1.4743199999999206,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"tech_stack\":[\"TypeScript\"],\"activity_level\":\"active\",\"bus_factor_estimate\":2,\"maintenance_health_score\":80,\"repo\":\"o/r\",\"url\":\"https://github.com/o/r\",\"stars\":10,\"forks\":2,\"open_issues\":1,\"license\":\"MIT\",\"languages\":{\"TypeScript\":100},\"top_contributors\":[{\"login\":\"ada\",\"contributions\":40}]}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:385:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze failure: GitHub that does not answer fails the call (row 21)"
+            ],
+            "fullName": "github-repo-analyze failure: GitHub that does not answer fails the call (row 21) throws, unbilled and retryable, when the README host answers 429",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when the README host answers 429",
+            "duration": 0.9263270000000148,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"tech_stack\":[\"TypeScript\"],\"activity_level\":\"active\",\"bus_factor_estimate\":2,\"maintenance_health_score\":80,\"repo\":\"o/r\",\"url\":\"https://github.com/o/r\",\"stars\":10,\"forks\":2,\"open_issues\":1,\"license\":\"MIT\",\"languages\":{\"TypeScript\":100},\"top_contributors\":[{\"login\":\"ada\",\"contributions\":40}]}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:385:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze failure: GitHub that does not answer fails the call (row 21)"
+            ],
+            "fullName": "github-repo-analyze failure: GitHub that does not answer fails the call (row 21) throws, unbilled and retryable, when the repo record answers 503",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when the repo record answers 503",
+            "duration": 1.366892000000007,
+            "failureMessages": [
+              "AssertionError: expected 'Error' to be 'UpstreamUnavailableError' // Object.is equality\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:78:31)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:385:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze failure: GitHub that does not answer fails the call (row 21)"
+            ],
+            "fullName": "github-repo-analyze failure: GitHub that does not answer fails the call (row 21) throws, unbilled and retryable, when the language breakdown times out",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when the language breakdown times out",
+            "duration": 0.6214689999999337,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"tech_stack\":[\"TypeScript\"],\"activity_level\":\"active\",\"bus_factor_estimate\":2,\"maintenance_health_score\":80,\"repo\":\"o/r\",\"url\":\"https://github.com/o/r\",\"stars\":10,\"forks\":2,\"open_issues\":1,\"license\":\"MIT\",\"languages\":null,\"top_contributors\":[{\"login\":\"ada\",\"contributions\":40}]}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:385:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze failure: GitHub that does not answer fails the call (row 21)"
+            ],
+            "fullName": "github-repo-analyze failure: GitHub that does not answer fails the call (row 21) throws, unbilled and retryable, when package.json hits a network error",
+            "status": "failed",
+            "title": "throws, unbilled and retryable, when package.json hits a network error",
+            "duration": 0.5830429999999751,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"tech_stack\":[\"TypeScript\"],\"activity_level\":\"active\",\"bus_factor_estimate\":2,\"maintenance_health_score\":80,\"repo\":\"o/r\",\"url\":\"https://github.com/o/r\",\"stars\":10,\"forks\":2,\"open_issues\":1,\"license\":\"MIT\",\"languages\":{\"TypeScript\":100},\"top_contributors\":[{\"login\":\"ada\",\"contributions\":40}]}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:385:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze failure: GitHub that does not answer fails the call (row 21)"
+            ],
+            "fullName": "github-repo-analyze failure: GitHub that does not answer fails the call (row 21) throws, not retryable, when GitHub refuses the repository (HTTP 451)",
+            "status": "failed",
+            "title": "throws, not retryable, when GitHub refuses the repository (HTTP 451)",
+            "duration": 0.662604999999985,
+            "failureMessages": [
+              "AssertionError: expected 'Error' to be 'UpstreamUnavailableError' // Object.is equality\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:78:31)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:392:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze failure: GitHub that does not answer fails the call (row 21)"
+            ],
+            "fullName": "github-repo-analyze failure: GitHub that does not answer fails the call (row 21) a contributor list GitHub will not produce is null and named, not 'no contributors'",
+            "status": "failed",
+            "title": "a contributor list GitHub will not produce is null and named, not 'no contributors'",
+            "duration": 0.9445440000000644,
+            "failureMessages": [
+              "AssertionError: expected [] to be null\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:399:34\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze negative: what GitHub says is absent keeps its output"
+            ],
+            "fullName": "github-repo-analyze negative: what GitHub says is absent keeps its output a repository without a README, package.json or requirements.txt is analysed as such, billed",
+            "status": "passed",
+            "title": "a repository without a README, package.json or requirements.txt is analysed as such, billed",
+            "duration": 1.0046730000000252,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze negative: what GitHub says is absent keeps its output"
+            ],
+            "fullName": "github-repo-analyze negative: what GitHub says is absent keeps its output an empty repository (commits 409, contributors 204) has no commits and no contributors",
+            "status": "passed",
+            "title": "an empty repository (commits 409, contributors 204) has no commits and no contributors",
+            "duration": 0.9003870000000234,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "github-repo-analyze negative: what GitHub says is absent keeps its output"
+            ],
+            "fullName": "github-repo-analyze negative: what GitHub says is absent keeps its output a repository GitHub does not show stays 'could not access'",
+            "status": "passed",
+            "title": "a repository GitHub does not show stays 'could not access'",
+            "duration": 0.6325040000000399,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "seo-audit failure: an unreadable robots.txt is not 'No robots.txt' (row 23)"
+            ],
+            "fullName": "seo-audit failure: an unreadable robots.txt is not 'No robots.txt' (row 23) robots.txt HTTP 503 nulls the two checks, names robots.txt and leaves them out of the score",
+            "status": "failed",
+            "title": "robots.txt HTTP 503 nulls the two checks, names robots.txt and leaves them out of the score",
+            "duration": 1.7611560000000281,
+            "failureMessages": [
+              "AssertionError: expected { present: false } to deeply equal { present: null }\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:455:35\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "seo-audit failure: an unreadable robots.txt is not 'No robots.txt' (row 23)"
+            ],
+            "fullName": "seo-audit failure: an unreadable robots.txt is not 'No robots.txt' (row 23) robots.txt HTTP 429 nulls the two checks, names robots.txt and leaves them out of the score",
+            "status": "failed",
+            "title": "robots.txt HTTP 429 nulls the two checks, names robots.txt and leaves them out of the score",
+            "duration": 1.1140280000000757,
+            "failureMessages": [
+              "AssertionError: expected { present: false } to deeply equal { present: null }\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:455:35\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "seo-audit failure: an unreadable robots.txt is not 'No robots.txt' (row 23)"
+            ],
+            "fullName": "seo-audit failure: an unreadable robots.txt is not 'No robots.txt' (row 23) robots.txt a network error nulls the two checks, names robots.txt and leaves them out of the score",
+            "status": "failed",
+            "title": "robots.txt a network error nulls the two checks, names robots.txt and leaves them out of the score",
+            "duration": 0.5875770000000102,
+            "failureMessages": [
+              "AssertionError: expected { present: false } to deeply equal { present: null }\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:455:35\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "seo-audit failure: an unreadable robots.txt is not 'No robots.txt' (row 23)"
+            ],
+            "fullName": "seo-audit failure: an unreadable robots.txt is not 'No robots.txt' (row 23) robots.txt a timeout nulls the two checks, names robots.txt and leaves them out of the score",
+            "status": "failed",
+            "title": "robots.txt a timeout nulls the two checks, names robots.txt and leaves them out of the score",
+            "duration": 0.5951770000000352,
+            "failureMessages": [
+              "AssertionError: expected { present: false } to deeply equal { present: null }\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:455:35\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "seo-audit negative: a site without robots.txt keeps its exact output"
+            ],
+            "fullName": "seo-audit negative: a site without robots.txt keeps its exact output robots.txt HTTP 404 is 'No robots.txt', billed",
+            "status": "passed",
+            "title": "robots.txt HTTP 404 is 'No robots.txt', billed",
+            "duration": 0.6476579999999785,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "seo-audit negative: a site without robots.txt keeps its exact output"
+            ],
+            "fullName": "seo-audit negative: a site without robots.txt keeps its exact output robots.txt HTTP 403 is 'No robots.txt', billed",
+            "status": "passed",
+            "title": "robots.txt HTTP 403 is 'No robots.txt', billed",
+            "duration": 0.3494379999999637,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "seo-audit negative: a site without robots.txt keeps its exact output"
+            ],
+            "fullName": "seo-audit negative: a site without robots.txt keeps its exact output robots.txt HTTP 410 is 'No robots.txt', billed",
+            "status": "passed",
+            "title": "robots.txt HTTP 410 is 'No robots.txt', billed",
+            "duration": 0.46944299999995565,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "seo-audit negative: a site without robots.txt keeps its exact output"
+            ],
+            "fullName": "seo-audit negative: a site without robots.txt keeps its exact output a robots.txt with a sitemap scores both",
+            "status": "passed",
+            "title": "a robots.txt with a sitemap scores both",
+            "duration": 0.6126239999999825,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24)"
+            ],
+            "fullName": "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24) DNS ESERVFAIL throws, unbilled and retryable",
+            "status": "failed",
+            "title": "DNS ESERVFAIL throws, unbilled and retryable",
+            "duration": 1.1087110000000848,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"keyword\":\"acme\",\"domains\":[{\"domain\":\"acme.com\",\"extension\":\".com\",\"available\":false,\"current_owner\":\"Redirects to \"},{\"domain\":\"acme.io\",\"extension\":\".io\",\"available\":false,\"current_owner\":\"Redirects to \"},{\"domain\":\"acme.ai\",\"extension\":\".ai\",\"available\":false,\"current_owner\":\"Redirects to \"},{\"domain\":\"acme.co\",\"extension\":\".co\",\"available\":false,\"current_owner\":\"Redirects to \"},{\"domain\":\"acme.dev\",\"extension\":\".dev\",\"available\":false,\"current_owner\":\"Redirects to \"}],\"social\":[{\"platform\":\"Twitter/X\",\"handle\":\"@acme\",\"available\":null,\"note\":\"Not checked — X's Terms of Service prohibit automated access. Verify the handle manually at x.com.\"},{\"platform\":\"GitHub\",\"handle\":\"acme\",\"available\":true},{\"platform\":\"npm\",\"package\":\"acme\",\"available\":true},{\"platform\":\"PyPI\",\"package\":\"acme\",\"available\":true}],\"available_count\":3,\"taken_count\":6,\"available\":[{\"type\":\"github\",\"name\":\"acme\"},{\"type\":\"npm\",\"name\":\"acme\"},{\"type\":\"pypi\",\"name\":\"acme\"}],\"taken\":[{\"type\":\"domain\",\"name\":\"acme.com\",\"details\":\"Redirects to \"},{\"type\":\"domain\",\"name\":\"acme.io\",\"details\":\"Redirects to \"},{\"type\":\"domain\",\"name\":\"acme.ai\",\"details\":\"Redirects to \"},{\"type\":\"domain\",\"name\":\"acme.co\",\"details\":\"Redirects to \"},{\"type\":\"domain\",\"name\":\"acme.dev\",\"details\":\"Redirects to \"},{\"type\":\"twitter/x\",\"name\":\"@acme\",\"details\":\"taken\"}],\"best_available_domain\":null}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:504:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24)"
+            ],
+            "fullName": "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24) DNS ETIMEOUT throws, unbilled and retryable",
+            "status": "failed",
+            "title": "DNS ETIMEOUT throws, unbilled and retryable",
+            "duration": 0.6306660000000193,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"keyword\":\"acme\",\"domains\":[{\"domain\":\"acme.com\",\"extension\":\".com\",\"available\":false,\"current_owner\":\"Redirects to \"},{\"domain\":\"acme.io\",\"extension\":\".io\",\"available\":false,\"current_owner\":\"Redirects to \"},{\"domain\":\"acme.ai\",\"extension\":\".ai\",\"available\":false,\"current_owner\":\"Redirects to \"},{\"domain\":\"acme.co\",\"extension\":\".co\",\"available\":false,\"current_owner\":\"Redirects to \"},{\"domain\":\"acme.dev\",\"extension\":\".dev\",\"available\":false,\"current_owner\":\"Redirects to \"}],\"social\":[{\"platform\":\"Twitter/X\",\"handle\":\"@acme\",\"available\":null,\"note\":\"Not checked — X's Terms of Service prohibit automated access. Verify the handle manually at x.com.\"},{\"platform\":\"GitHub\",\"handle\":\"acme\",\"available\":true},{\"platform\":\"npm\",\"package\":\"acme\",\"available\":true},{\"platform\":\"PyPI\",\"package\":\"acme\",\"available\":true}],\"available_count\":3,\"taken_count\":6,\"available\":[{\"type\":\"github\",\"name\":\"acme\"},{\"type\":\"npm\",\"name\":\"acme\"},{\"type\":\"pypi\",\"name\":\"acme\"}],\"taken\":[{\"type\":\"domain\",\"name\":\"acme.com\",\"details\":\"Redirects to \"},{\"type\":\"domain\",\"name\":\"acme.io\",\"details\":\"Redirects to \"},{\"type\":\"domain\",\"name\":\"acme.ai\",\"details\":\"Redirects to \"},{\"type\":\"domain\",\"name\":\"acme.co\",\"details\":\"Redirects to \"},{\"type\":\"domain\",\"name\":\"acme.dev\",\"details\":\"Redirects to \"},{\"type\":\"twitter/x\",\"name\":\"@acme\",\"details\":\"taken\"}],\"best_available_domain\":null}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:504:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24)"
+            ],
+            "fullName": "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24) DNS ECONNREFUSED throws, unbilled and retryable",
+            "status": "failed",
+            "title": "DNS ECONNREFUSED throws, unbilled and retryable",
+            "duration": 1.7902109999999993,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"keyword\":\"acme\",\"domains\":[{\"domain\":\"acme.com\",\"extension\":\".com\",\"available\":false,\"current_owner\":\"Redirects to \"},{\"domain\":\"acme.io\",\"extension\":\".io\",\"available\":false,\"current_owner\":\"Redirects to \"},{\"domain\":\"acme.ai\",\"extension\":\".ai\",\"available\":false,\"current_owner\":\"Redirects to \"},{\"domain\":\"acme.co\",\"extension\":\".co\",\"available\":false,\"current_owner\":\"Redirects to \"},{\"domain\":\"acme.dev\",\"extension\":\".dev\",\"available\":false,\"current_owner\":\"Redirects to \"}],\"social\":[{\"platform\":\"Twitter/X\",\"handle\":\"@acme\",\"available\":null,\"note\":\"Not checked — X's Terms of Service prohibit automated access. Verify the handle manually at x.com.\"},{\"platform\":\"GitHub\",\"handle\":\"acme\",\"available\":true},{\"platform\":\"npm\",\"package\":\"acme\",\"available\":true},{\"platform\":\"PyPI\",\"package\":\"acme\",\"available\":true}],\"available_count\":3,\"taken_count\":6,\"available\":[{\"type\":\"github\",\"name\":\"acme\"},{\"type\":\"npm\",\"name\":\"acme\"},{\"type\":\"pypi\",\"name\":\"acme\"}],\"taken\":[{\"type\":\"domain\",\"name\":\"acme.com\",\"details\":\"Redirects to \"},{\"type\":\"domain\",\"name\":\"acme.io\",\"details\":\"Redirects to \"},{\"type\":\"domain\",\"name\":\"acme.ai\",\"details\":\"Redirects to \"},{\"type\":\"domain\",\"name\":\"acme.co\",\"details\":\"Redirects to \"},{\"type\":\"domain\",\"name\":\"acme.dev\",\"details\":\"Redirects to \"},{\"type\":\"twitter/x\",\"name\":\"@acme\",\"details\":\"taken\"}],\"best_available_domain\":null}\n    at err (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:74:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:72:15)\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:504:17\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24)"
+            ],
+            "fullName": "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24) a name with no A record (ENODATA) is registered, so taken, not available",
+            "status": "failed",
+            "title": "a name with no A record (ENODATA) is registered, so taken, not available",
+            "duration": 2.1102509999999484,
+            "failureMessages": [
+              "AssertionError: expected false to be true // Object.is equality\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:512:66\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24)"
+            ],
+            "fullName": "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24) a handle check that fails with HTTP 503 is null and named, neither available nor taken",
+            "status": "failed",
+            "title": "a handle check that fails with HTTP 503 is null and named, neither available nor taken",
+            "duration": 0.8640139999999974,
+            "failureMessages": [
+              "AssertionError: expected false to be null\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:523:27\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24)"
+            ],
+            "fullName": "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24) a handle check that fails with HTTP 429 is null and named, neither available nor taken",
+            "status": "failed",
+            "title": "a handle check that fails with HTTP 429 is null and named, neither available nor taken",
+            "duration": 0.5571939999999813,
+            "failureMessages": [
+              "AssertionError: expected false to be null\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:523:27\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24)"
+            ],
+            "fullName": "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24) a handle check that fails with a network error is null and named, neither available nor taken",
+            "status": "failed",
+            "title": "a handle check that fails with a network error is null and named, neither available nor taken",
+            "duration": 0.5445670000000291,
+            "failureMessages": [
+              "AssertionError: expected true to be null\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:523:27\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24)"
+            ],
+            "fullName": "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24) a handle check that fails with a timeout is null and named, neither available nor taken",
+            "status": "failed",
+            "title": "a handle check that fails with a timeout is null and named, neither available nor taken",
+            "duration": 0.6061960000000681,
+            "failureMessages": [
+              "AssertionError: expected true to be null\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:523:27\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24)"
+            ],
+            "fullName": "startup-domain-check failure: a resolver that does not answer is never 'available' (row 24) the unchecked X handle is not listed as taken",
+            "status": "failed",
+            "title": "the unchecked X handle is not listed as taken",
+            "duration": 0.8507549999999355,
+            "failureMessages": [
+              "AssertionError: expected [ { type: 'twitter/x', …(2) } ] to deeply equal []\n    at /home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts:532:23\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check negative: answers that were given keep their output"
+            ],
+            "fullName": "startup-domain-check negative: answers that were given keep their output NXDOMAIN everywhere and 404 on every platform is all available, billed",
+            "status": "passed",
+            "title": "NXDOMAIN everywhere and 404 on every platform is all available, billed",
+            "duration": 0.6101770000000215,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-domain-check negative: answers that were given keep their output"
+            ],
+            "fullName": "startup-domain-check negative: answers that were given keep their output a resolving domain and a 200 handle are taken",
+            "status": "passed",
+            "title": "a resolving domain and a 200 handle are taken",
+            "duration": 0.43406800000002477,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794402198969,
+        "endTime": 1794402199043.434,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-a18d2bd66cca96d30/apps/api/src/capabilities/web-and-lookup.upstream-failures.test.ts"
+      }
+    ]
+  }
+}

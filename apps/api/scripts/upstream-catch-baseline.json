@@ -20,42 +20,6 @@
       "line": 85
     },
     {
-      "file": "apps/api/src/capabilities/backlink-check.ts",
-      "fingerprint": "19d2e86a1bfa53a6693a4cad058f9da94e9268bf39750d949842dfbc354169dd",
-      "count": 1,
-      "line": 92
-    },
-    {
-      "file": "apps/api/src/capabilities/backlink-check.ts",
-      "fingerprint": "4e1726ac392609abafecf7ce18a7f64878f4820bd5088144a4ab35dcbcba1067",
-      "count": 1,
-      "line": 87
-    },
-    {
-      "file": "apps/api/src/capabilities/backlink-check.ts",
-      "fingerprint": "67924d1b4de93d57dd5f79cd0ee83cb17e665c696d96f70a59c11477ad579d87",
-      "count": 1,
-      "line": 207
-    },
-    {
-      "file": "apps/api/src/capabilities/backlink-check.ts",
-      "fingerprint": "7f1077258acd8c75e2db595c7719048a405d27b334bf72a1eec73d3314f1ce23",
-      "count": 1,
-      "line": 160
-    },
-    {
-      "file": "apps/api/src/capabilities/barcode-lookup.ts",
-      "fingerprint": "5908473ec9d1fc1e94b8ddc89f7f50723bb10246976a18b1cd837391076a9405",
-      "count": 1,
-      "line": 53
-    },
-    {
-      "file": "apps/api/src/capabilities/barcode-lookup.ts",
-      "fingerprint": "dc821eb398bc7dc269718108d0264cf88d514802e58d441e3b7dd13f61460e0c",
-      "count": 1,
-      "line": 90
-    },
-    {
       "file": "apps/api/src/capabilities/bitcoin-address-validate.ts",
       "fingerprint": "1f619dbe752f9a435151cf5e044b95f9f9e4891b0c3aaee0a7239d1108a698d1",
       "count": 1,
@@ -84,12 +48,6 @@
       "fingerprint": "a4bb25c662607ca86ec5d9d474191d55e25e207ea43828b02c2117b97c875da6",
       "count": 1,
       "line": 52
-    },
-    {
-      "file": "apps/api/src/capabilities/business-day-check.ts",
-      "fingerprint": "ed1c346acabd2f58a7ec2931a983f8785bacdc5fe85f7dad2ebf4b832f1efa31",
-      "count": 1,
-      "line": 81
     },
     {
       "file": "apps/api/src/capabilities/canadian-company-data.ts",
@@ -152,34 +110,10 @@
       "line": 60
     },
     {
-      "file": "apps/api/src/capabilities/container-track.ts",
-      "fingerprint": "5e54369342b499f3b778fb9d067331edf5b15df739b924c613b7f59604af8241",
-      "count": 1,
-      "line": 344
-    },
-    {
       "file": "apps/api/src/capabilities/contract-verify-check.ts",
       "fingerprint": "0694993dde398d6f788822c7d54f01e647a34d34ac057febedcee44d13ab5508",
       "count": 1,
       "line": 28
-    },
-    {
-      "file": "apps/api/src/capabilities/cookie-scan.ts",
-      "fingerprint": "17a6819bf1c3a5cba1b91c9fa04230e4433cc4aacb254b20b5a3d6b44a857250",
-      "count": 1,
-      "line": 178
-    },
-    {
-      "file": "apps/api/src/capabilities/cookie-scan.ts",
-      "fingerprint": "e632ec8deeb2b5c8dc310199f2ace1076fb416b66c5ab67a8b8fdf44a662fa53",
-      "count": 1,
-      "line": 241
-    },
-    {
-      "file": "apps/api/src/capabilities/cookie-scan.ts",
-      "fingerprint": "eefc6e18e48a0acef65ae37f4dba9eb3b9c7527041744a6fd937c8e538340775",
-      "count": 1,
-      "line": 265
     },
     {
       "file": "apps/api/src/capabilities/country-trade-data.ts",
@@ -218,24 +152,6 @@
       "line": 167
     },
     {
-      "file": "apps/api/src/capabilities/dependency-audit.ts",
-      "fingerprint": "8ce60eaa61cfde2d8553522efdeafaba6d45172f7ef2008132830bfe818af60d",
-      "count": 1,
-      "line": 216
-    },
-    {
-      "file": "apps/api/src/capabilities/dependency-audit.ts",
-      "fingerprint": "e76384ce446dca4ad0b0e17c38bfdbf13c57be83c2bb463a63690714b8c3b440",
-      "count": 1,
-      "line": 68
-    },
-    {
-      "file": "apps/api/src/capabilities/dependency-audit.ts",
-      "fingerprint": "fccc1899a9c6be9acca00d498fff14832c78200bf560e35bd4119a989c48755c",
-      "count": 1,
-      "line": 122
-    },
-    {
       "file": "apps/api/src/capabilities/docker-hub-info.ts",
       "fingerprint": "ccbf9f23dcb872ae7b33a8f355a72d9c6722dd13fa6b545b2ca43435f9e72aee",
       "count": 1,
@@ -252,18 +168,6 @@
       "fingerprint": "9a00c3edc8d0d8d7daf9420e5464659838e4fb19a2a41438e5ccd7741e85adfb",
       "count": 1,
       "line": 30
-    },
-    {
-      "file": "apps/api/src/capabilities/domain-age-check.ts",
-      "fingerprint": "861d5f575e932c64acfd4ecd727c9053ce701829b9eabec9cec7c48e664b0d07",
-      "count": 1,
-      "line": 136
-    },
-    {
-      "file": "apps/api/src/capabilities/domain-age-check.ts",
-      "fingerprint": "b88ddaed7f0c5b4ac5c337247fc4ce8fa7a09e067000f9c83652c978a357c756",
-      "count": 1,
-      "line": 150
     },
     {
       "file": "apps/api/src/capabilities/domain-contact-extract.ts",
@@ -380,12 +284,6 @@
       "line": 67
     },
     {
-      "file": "apps/api/src/capabilities/eori-validate.ts",
-      "fingerprint": "fef9b6b9ae9d9d64073ed6bcc43e214d302317afc7003e5341f4e0d0aafbeb52",
-      "count": 1,
-      "line": 65
-    },
-    {
       "file": "apps/api/src/capabilities/estonian-company-data.ts",
       "fingerprint": "d748023648afadbdf127084c8bce2ffa1d4cbef588259b986e91dd00f5fa6c48",
       "count": 1,
@@ -438,18 +336,6 @@
       "fingerprint": "0754652176d685a019b6ab2d9fe421d169478d1379463b04d1db894e69bffc9f",
       "count": 2,
       "line": 155
-    },
-    {
-      "file": "apps/api/src/capabilities/github-repo-analyze.ts",
-      "fingerprint": "876fdb8040d0c9db0ac09c56e66c618627479e4e2ef9294976dcdb2b785f144b",
-      "count": 1,
-      "line": 131
-    },
-    {
-      "file": "apps/api/src/capabilities/github-repo-analyze.ts",
-      "fingerprint": "b752cd1e405052d3dc9a662ec8a4295c5f3f3a75e957ade1b6a4f06d457708e7",
-      "count": 1,
-      "line": 144
     },
     {
       "file": "apps/api/src/capabilities/github-user-profile.ts",
@@ -806,30 +692,6 @@
       "line": 207
     },
     {
-      "file": "apps/api/src/capabilities/package-security-audit.ts",
-      "fingerprint": "4206085927e5e2dde509ca9c32b79ffcd409c922b9dcfcb00a988b1d1e06f29b",
-      "count": 1,
-      "line": 277
-    },
-    {
-      "file": "apps/api/src/capabilities/package-security-audit.ts",
-      "fingerprint": "558c20b471c18b16fd4de6f0624ab86c23be2bb87959bed7961fa30310bafa09",
-      "count": 1,
-      "line": 59
-    },
-    {
-      "file": "apps/api/src/capabilities/package-security-audit.ts",
-      "fingerprint": "aa94dcc9e369c70092032f31d2ac06b2a5d8392d78668748195939e729e867e7",
-      "count": 1,
-      "line": 417
-    },
-    {
-      "file": "apps/api/src/capabilities/package-security-audit.ts",
-      "fingerprint": "e232e022004232cf9fc126202ad161dab35c73bbce444e23bbc2fd819860a552",
-      "count": 1,
-      "line": 285
-    },
-    {
       "file": "apps/api/src/capabilities/page-exists.ts",
       "fingerprint": "47145c827305c35c13c35531270bdbc66a011307f9acbb47cfeb1cfa0bcc27b6",
       "count": 1,
@@ -938,18 +800,6 @@
       "line": 40
     },
     {
-      "file": "apps/api/src/capabilities/seo-audit.ts",
-      "fingerprint": "6e2de8144f2f838d56ac4c05ebb4ee28cb9f933eb0f7d7abb10cec8598b0adc8",
-      "count": 1,
-      "line": 101
-    },
-    {
-      "file": "apps/api/src/capabilities/seo-audit.ts",
-      "fingerprint": "d19501fdb47ab74f0c21abc0b0ab2c0d80372c54ff65959d970b1e90bfb475a3",
-      "count": 1,
-      "line": 84
-    },
-    {
       "file": "apps/api/src/capabilities/serp-analyze.ts",
       "fingerprint": "71e3e20b2bc270d1a0fb936a7c05fe3aead892f125b7c2a0cb17f592e260864e",
       "count": 1,
@@ -984,24 +834,6 @@
       "fingerprint": "fb9b685accfaa46c9412b04d3d88c07481e2eda53c048f38bfa3ecc1924a0953",
       "count": 1,
       "line": 21
-    },
-    {
-      "file": "apps/api/src/capabilities/startup-domain-check.ts",
-      "fingerprint": "090404590c1759348ba9237b2174fd11c8248326c0334dd1e98c237fb4069964",
-      "count": 1,
-      "line": 25
-    },
-    {
-      "file": "apps/api/src/capabilities/startup-domain-check.ts",
-      "fingerprint": "107165d8797aaa249d39dfbae470be6230a5af79913089839d188fbdc2a29097",
-      "count": 1,
-      "line": 85
-    },
-    {
-      "file": "apps/api/src/capabilities/startup-domain-check.ts",
-      "fingerprint": "5f45c604bb2e1e093d26bdc7d27bc4d03d2e1e57b3e13571067f652ac0dd4d97",
-      "count": 1,
-      "line": 100
     },
     {
       "file": "apps/api/src/capabilities/swedish-company-data.ts",

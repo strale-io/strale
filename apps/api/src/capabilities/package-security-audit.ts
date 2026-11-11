@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, MAX_PACKUMENT_BYTES, readJsonPickWithLimit, readJsonWithLimit } from "../lib/resource-limits.js";
 import type { Pick } from "../lib/json-pick.js";
+import { UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 const NPM_AUDIT_PICK: Pick = {
   "dist-tags": true, time: true, maintainers: true,
@@ -47,16 +48,31 @@ registerCapability("package-security-audit", async (input: CapabilityInput) => {
       : Promise.resolve(null),
   ]);
 
-  const vulns = osvResult.status === "fulfilled" ? osvResult.value : null;
+  // OSV decides the verdict. Without it the score skipped every vulnerability
+  // penalty and read "low" for a package nobody had checked, a billed clean
+  // answer (2026-11-06 swallowed-failures audit, row 7). It is a required leg,
+  // not one of several sources for the same fact, so its failure is the call's.
+  if (osvResult.status === "rejected") throw transportFailure(OSV, osvResult.reason);
+  const vulns = osvResult.value;
+
+  // deps.dev and the Scorecard are secondary signals. When one fails the
+  // answer stands, the failed leg is named in `unavailable_sources`, and the
+  // fields it feeds read null (unknown), never a clean value.
+  const unavailableSources: string[] = [];
   const deps = depsResult.status === "fulfilled" ? depsResult.value : null;
+  if (depsResult.status === "rejected") unavailableSources.push(DEPS_DEV);
   const prevDeps = prevDepsResult.status === "fulfilled" ? prevDepsResult.value : null;
+  if (prevDepsResult.status === "rejected") unavailableSources.push(`${DEPS_DEV} (previous version)`);
 
   // Fetch scorecard if deps.dev returned a project link
   let scorecard: ScorecardResult | null = null;
   if (deps?.projectId) {
     try {
       scorecard = await fetchScorecard(deps.projectId);
-    } catch { /* ignore */ }
+    } catch {
+      // degraded-ok: the Scorecard is an optional signal that only ever adds a penalty; its failure is named in unavailable_sources, so a null scorecard is not read as "none published".
+      unavailableSources.push(SCORECARD);
+    }
   }
 
   // ── Supply chain analysis ───────────────────────────────────────────
@@ -68,7 +84,11 @@ registerCapability("package-security-audit", async (input: CapabilityInput) => {
 
   const currentHasAttestation = deps?.hasAttestation ?? null;
   const previousHadAttestation = prevDeps?.hasAttestation ?? null;
-  const attestationMissing = previousHadAttestation === true && currentHasAttestation === false;
+  // Unknown, not false, when either deps.dev read failed: a dropped
+  // attestation is exactly the signal a failed leg would otherwise hide.
+  const attestationMissing = depsResult.status === "rejected" || prevDepsResult.status === "rejected"
+    ? null
+    : previousHadAttestation === true && currentHasAttestation === false;
 
   const installScripts = ecosystem === "npm"
     ? detectInstallScripts(registry.versionScripts, version)
@@ -96,7 +116,10 @@ registerCapability("package-security-audit", async (input: CapabilityInput) => {
   const license = deps?.license ?? null;
   if (license) {
     if (COPYLEFT_LICENSES.has(license)) riskScore -= 5;
-  } else {
+  } else if (depsResult.status === "fulfilled") {
+    // "No license" only when deps.dev answered and declared none. When deps.dev
+    // failed the license is unknown, not absent; penalising it would sell a
+    // missing source as an unlicensed package.
     riskScore -= 15;
   }
 
@@ -119,6 +142,10 @@ registerCapability("package-security-audit", async (input: CapabilityInput) => {
       ecosystem,
       risk_score: riskScore,
       risk_level: riskLevel,
+      // False when a source that feeds the score (deps.dev's license and
+      // attestation, the previous version's attestation, the Scorecard) could
+      // not be read: its penalty was skipped, so the score may read too high.
+      risk_score_complete: unavailableSources.length === 0,
       vulnerabilities: vulns
         ? {
             total: vulns.total,
@@ -165,6 +192,8 @@ registerCapability("package-security-audit", async (input: CapabilityInput) => {
       },
       maintainers: registry.maintainerCount,
       dependency_count: deps?.dependencyCount ?? null,
+      // Present only when a secondary leg failed, so a complete answer is unchanged.
+      ...(unavailableSources.length > 0 ? { unavailable_sources: unavailableSources } : {}),
     },
     provenance: {
       source: "osv.dev + deps.dev + registry",
@@ -172,6 +201,62 @@ registerCapability("package-security-audit", async (input: CapabilityInput) => {
     },
   };
 });
+
+// ── Upstream failures ─────────────────────────────────────────────────────────
+
+const OSV = "OSV vulnerability database";
+const DEPS_DEV = "deps.dev";
+const SCORECARD = "OpenSSF Scorecard (deps.dev)";
+
+/**
+ * An HTTP status that is no answer. 429 and 5xx are the upstream being
+ * unavailable, worth a retry; 404 or 410 on a fixed endpoint means it is gone,
+ * which a retry will not fix. Callers handle a 404 that IS an answer first.
+ * Any other status is a rejection of our request, left as a plain error.
+ */
+function httpFailure(upstream: string, status: number): Error {
+  if (status === 429 || status >= 500) {
+    return new UpstreamUnavailableError(upstream, `HTTP ${status}; retry shortly.`, { code: `HTTP ${status}` });
+  }
+  if (status === 404 || status === 410) {
+    return new UpstreamUnavailableError(upstream, `HTTP ${status}; the endpoint is gone.`, { code: `HTTP ${status}`, retryable: false });
+  }
+  return new Error(`${upstream} returned HTTP ${status}`);
+}
+
+/**
+ * A request that produced no usable HTTP answer: a timeout, a network error or
+ * a body that does not parse. Anything else (our own code breaking) is
+ * returned unchanged, so a defect is never relabelled as the provider's fault.
+ */
+function transportFailure(upstream: string, err: unknown): Error {
+  if (err instanceof UpstreamUnavailableError) return err;
+  const name = err instanceof Error ? err.name : "";
+  if (name === "TimeoutError" || name === "AbortError") {
+    return new UpstreamUnavailableError(upstream, "timeout; retry shortly.", { code: "timeout", cause: err });
+  }
+  if (err instanceof TypeError && (err.message === "fetch failed" || err.message === "terminated")) {
+    const cause = (err as { cause?: { code?: unknown } }).cause;
+    const code = typeof cause?.code === "string" ? cause.code : null;
+    return new UpstreamUnavailableError(upstream, `network error${code ? ` (${code})` : ""}; retry shortly.`, { code, cause: err });
+  }
+  if (err instanceof SyntaxError) {
+    return new UpstreamUnavailableError(upstream, "the response did not parse.", { code: "unparseable", cause: err });
+  }
+  return err instanceof Error ? err : new Error(String(err));
+}
+
+/**
+ * `fetch` whose transport failures are upstream failures. A call without its
+ * own signal still gets a 10s timeout, so no upstream can hang a billed call.
+ */
+async function upstreamFetch(upstream: string, url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, { ...init, signal: init.signal ?? AbortSignal.timeout(10_000) });
+  } catch (err) {
+    throw transportFailure(upstream, err);
+  }
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -268,29 +353,25 @@ function detectInstallScripts(
 // ── Ecosystem detection ───────────────────────────────────────────────────────
 
 async function detectEcosystem(name: string): Promise<string> {
-  try {
-    const resp = await fetch(`https://registry.npmjs.org/${encodeURIComponent(name)}`, {
-      method: "HEAD",
-      signal: AbortSignal.timeout(5000),
-    });
-    if (resp.ok) return "npm";
-  } catch { /* ignore */ }
-
-  try {
-    const resp = await fetch(`https://pypi.org/pypi/${encodeURIComponent(name)}/json`, {
-      method: "HEAD",
-      signal: AbortSignal.timeout(5000),
-    });
-    if (resp.ok) return "pypi";
-  } catch { /* ignore */ }
-
+  // Only a 404 says the package is not in a registry. Any other failure says
+  // nothing, and falling through to the other registry on it could audit a
+  // different package that shares the name, so it throws instead.
+  if (await registryHas("npm registry", `https://registry.npmjs.org/${encodeURIComponent(name)}`)) return "npm";
+  if (await registryHas("PyPI", `https://pypi.org/pypi/${encodeURIComponent(name)}/json`)) return "pypi";
   throw new Error(`Package '${name}' not found in npm or PyPI registries.`);
+}
+
+async function registryHas(upstream: string, url: string): Promise<boolean> {
+  const resp = await upstreamFetch(upstream, url, { method: "HEAD", signal: AbortSignal.timeout(5000) });
+  if (resp.ok) return true;
+  if (resp.status === 404) return false;
+  throw httpFailure(upstream, resp.status);
 }
 
 // ── OSV.dev ───────────────────────────────────────────────────────────────────
 
 async function fetchOsv(name: string, version: string, ecosystem: string): Promise<VulnResult> {
-  const resp = await fetch("https://api.osv.dev/v1/query", {
+  const resp = await upstreamFetch(OSV, "https://api.osv.dev/v1/query", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -300,9 +381,15 @@ async function fetchOsv(name: string, version: string, ecosystem: string): Promi
     signal: AbortSignal.timeout(10000),
   });
 
-  if (!resp.ok) throw new Error(`OSV API returned HTTP ${resp.status}`);
-  const data = (await resp.json()) as { vulns?: Array<Record<string, unknown>> };
-  const vulns = data.vulns ?? [];
+  if (!resp.ok) throw httpFailure(OSV, resp.status);
+  // OSV answers a package it knows no vulnerability for with `{}`: that is the
+  // real negative. A body that is not an object, or whose `vulns` is not a
+  // list, is no answer at all.
+  const data = (await resp.json()) as { vulns?: unknown } | null;
+  if (data === null || typeof data !== "object" || (data.vulns !== undefined && !Array.isArray(data.vulns))) {
+    throw new UpstreamUnavailableError(OSV, "the response was not a vulnerability list.", { code: "unparseable" });
+  }
+  const vulns = (data.vulns ?? []) as Array<Record<string, unknown>>;
 
   let critical = 0, high = 0, medium = 0, low = 0;
   const details: VulnResult["details"] = [];
@@ -361,12 +448,16 @@ async function fetchDepsdev(name: string, version: string, ecosystem: string): P
   const encodedName = encodeURIComponent(name);
   const encodedVersion = encodeURIComponent(version);
 
-  const resp = await fetch(
+  const resp = await upstreamFetch(
+    DEPS_DEV,
     `https://api.deps.dev/v3alpha/systems/${system}/packages/${encodedName}/versions/${encodedVersion}`,
     { signal: AbortSignal.timeout(10000) },
   );
 
-  if (!resp.ok) return { license: null, dependencyCount: 0, projectId: null, hasAttestation: null };
+  // 404: deps.dev has not indexed this version, a real answer (and the output
+  // it always gave). Any other failure rejects, and the caller names the leg.
+  if (resp.status === 404) return { license: null, dependencyCount: 0, projectId: null, hasAttestation: null };
+  if (!resp.ok) throw httpFailure(DEPS_DEV, resp.status);
 
   const data = (await resp.json()) as Record<string, unknown>;
   const links = (data.links as Array<{ label: string; url: string }>) ?? [];
@@ -403,31 +494,33 @@ async function fetchDepsdevProvenance(
   const encodedName = encodeURIComponent(name);
   const encodedVersion = encodeURIComponent(version);
 
-  try {
-    const resp = await fetch(
-      `https://api.deps.dev/v3alpha/systems/${system}/packages/${encodedName}/versions/${encodedVersion}`,
-      { signal: AbortSignal.timeout(5000) },
-    );
+  const resp = await upstreamFetch(
+    DEPS_DEV,
+    `https://api.deps.dev/v3alpha/systems/${system}/packages/${encodedName}/versions/${encodedVersion}`,
+    { signal: AbortSignal.timeout(5000) },
+  );
 
-    if (!resp.ok) return null;
-    const data = (await resp.json()) as Record<string, unknown>;
-    const slsaProvenances = (data.slsaProvenances as unknown[]) ?? [];
-    const attestations = (data.attestations as unknown[]) ?? [];
-    return { hasAttestation: slsaProvenances.length > 0 || attestations.length > 0 };
-  } catch {
-    return null;
-  }
+  // 404: the previous version is not indexed, a real answer. Any other
+  // failure rejects; the caller names the leg and reports the comparison unknown.
+  if (resp.status === 404) return null;
+  if (!resp.ok) throw httpFailure(DEPS_DEV, resp.status);
+  const data = (await resp.json()) as Record<string, unknown>;
+  const slsaProvenances = (data.slsaProvenances as unknown[]) ?? [];
+  const attestations = (data.attestations as unknown[]) ?? [];
+  return { hasAttestation: slsaProvenances.length > 0 || attestations.length > 0 };
 }
 
 // ── OpenSSF Scorecard ─────────────────────────────────────────────────────────
 
 async function fetchScorecard(projectId: string): Promise<ScorecardResult | null> {
   const encoded = encodeURIComponent(projectId);
-  const resp = await fetch(`https://api.deps.dev/v3alpha/projects/${encoded}`, {
+  const resp = await upstreamFetch(SCORECARD, `https://api.deps.dev/v3alpha/projects/${encoded}`, {
     signal: AbortSignal.timeout(10000),
   });
 
-  if (!resp.ok) return null;
+  // 404: no project record, so no Scorecard; a real answer.
+  if (resp.status === 404) return null;
+  if (!resp.ok) throw httpFailure(SCORECARD, resp.status);
 
   const data = (await resp.json()) as {
     scorecardV2?: { overallScore?: number; check?: Array<{ name: string; score: number }> };

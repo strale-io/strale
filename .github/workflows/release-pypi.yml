@@ -30,6 +30,7 @@ on:
           - packages/langchain-strale
           - packages/sdk-python
           - packages/crewai-strale
+          - packages/composio-strale
       dry_run:
         description: Build and test only — do not publish
         type: boolean

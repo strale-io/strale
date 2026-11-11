@@ -66,7 +66,11 @@ limitations:
     category: accuracy
     severity: info
   - title: Holiday data from Nager.Date
-    text: Depends on Nager.Date API for holiday data — if the API is unreachable, only weekends are checked
+    text: >-
+      Depends on the Nager.Date API for holiday data. If the API is unreachable, rate-limited or returns an
+      unreadable answer, the call fails and is not charged. For a country Nager.Date holds no holiday calendar for,
+      only weekends are checked. Nager.Date covers about 50 years either side of the current year; a date outside that window is
+      refused and not charged.
     category: dependency
     severity: info
 

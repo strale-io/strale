@@ -3,7 +3,7 @@
 
 slug: backlink-check
 name: "Backlink Check"
-description: "Find possible backlinks to a domain from search results and web archives. Returns linking pages and available link details."
+description: "Find possible backlinks to a domain from Google search results. Returns linking pages and available link details."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
@@ -21,11 +21,13 @@ output_schema:
   example:
     domain: google.com
     backlinks:
-      - first_seen: "20240223074906"
-        source_url: http://www.google.com.
-        anchor_text: null
-        source_domain: google.com.
-    top_anchors: []
+      - first_seen: null
+        source_url: https://en.wikipedia.org/wiki/Google
+        anchor_text: Google - Wikipedia
+        source_domain: en.wikipedia.org
+    top_anchors:
+      - text: google - wikipedia
+        count: 1
     total_backlinks: 1
     dofollow_estimate: null
     nofollow_estimate: null
@@ -41,7 +43,7 @@ output_schema:
       type: number
     unresolved_link_count:
       type: number
-data_source: CommonCrawl index (public backlink database)
+data_source: Serper.dev API (Google Search results)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
@@ -104,8 +106,9 @@ output_field_reliability:
   unresolved_link_count: guaranteed
 
 limitations:
-  - title: Recent or niche backlinks can be missing
-    text: Uses CommonCrawl index data — covers a subset of the web and may miss recently created or niche backlinks
+  - title: Only pages Google search returns are found
+    text: >-
+      Backlinks come from one Google search (through Serper) for pages that mention the domain, up to 10 results. This is not a link index: pages that link without naming the domain, and recently created or niche backlinks, can be missing, and a listed page may mention the domain without linking to it.
     category: coverage
     severity: info
     workaround: Check referring pages directly for recently created or missing backlinks.
@@ -114,11 +117,21 @@ limitations:
       API response bodies above 4 MiB are refused during download rather than parsed.
     category: coverage
     severity: info
+  - title: A failed search is never read as no backlinks
+    text: >-
+      If the Google search through Serper fails, times out or is not configured, the call fails unbilled rather than returning an empty list. An empty list means the search answered and found no page other than the domain's own (its subdomains are never counted as backlinks), or none it could open; unresolved_link_count tells the two apart.
+    category: availability
+    severity: info
+  - title: Unopened Google redirect links are counted, not listed
+    text: >-
+      Google returns most results past the first three as redirect links, which are opened through Serper. A link that could not be opened is left out of backlinks and counted in unresolved_link_count, so when every result was such a link the backlinks list is empty and the call is billed; read unresolved_link_count before treating an empty list as no backlinks.
+    category: coverage
+    severity: info
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:
   lane: allowed_with_checks
   acquisition_method: vendor_api
-  upstream_vendor: commoncrawl
-  checks: pending
-  checks_note: "Pending: CommonCrawl index terms not recorded; the fallback is Serper, whose per-call value-added use is permitted in writing (DQ-39, accepted 2026-10-28)."
+  upstream_vendor: serper
+  checks: recorded
+  checks_note: "Serper.dev (google.serper.dev) per-call search API, the only source since the Common Crawl leg was removed (PR #1017). Serper confirmed in writing on 2026-10-27 that use as an upstream source within a value-added per-call API is permitted under its standard terms (DQ-39, accepted 2026-10-28; recorded in apps/api/src/lib/vendor-terms.ts). Results are processed into Strale's own schema, one search per request, never passed through as-is; Google's own rights are not granted by Serper."

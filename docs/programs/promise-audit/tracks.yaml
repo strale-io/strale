@@ -11,20 +11,59 @@ tracks:
     owner: session
     next_action: "Owner: orchestrator/Claude for billing-path implementation;
       Codex may build non-sensitive supporting scaffolding under rule 5. Wave 1
-      landed in PRs 938/939. The catch-handler CI guard and shrinking baseline
-      are now implemented; see the resume file and receipt. Its conservative
-      candidates are not a count of confirmed billing defects, and logging is
-      not proof of an unbillable result. Next: reconcile the remaining audit rows
-      against later repairs (including domain-age PR975 and customs PR999), then
-      finish wave 2 and wave 3 (rows 26, 27, 29, 34) on Claude. Do not assume the
-      proposed degraded billing marker shipped. Remove each fixed catch from
-      the baseline. Add perturbation replays (http_503, http_429, network_error,
-      blocked_200, DNS ETIMEOUT) for every network executor with fail-before
-      evidence. Then measure past billed calls from affected paths since their
-      earliest releases, decide refunds per policy with a DEC-20260504-B drain
-      plan, and sweep wallet debits versus listed and dry-run prices (P-011,
-      P-008). Keep receipts per result. No production financial run or refund
-      was performed by the static-guard batch."
+      landed in PRs 938/939 and the catch-handler CI guard with its shrinking
+      baseline in the resume file's batch; wave 2a (rows 7, 8, 17, 19, 27, 34)
+      merged in PR 1014. Wave 2b (rows 9 cookie-scan, 15 barcode-lookup, 16
+      backlink-check, 21 github-repo-analyze, 23 seo-audit, 24
+      startup-domain-check) merged in PR 1015. Its delta-review tail, branch
+      fix/swallowed-failures-wave2b-tail (PR 1017), is done once merged:
+      combined messages quote no 401/403 code when a leg is retryable and
+      every code when none is; seo-audit logs robots.txt failures by error
+      name, degrades on a TypeError from the robots.txt fetch itself (an
+      unparseable redirect Location included), rethrows a ReferenceError or
+      SyntaxError from it, and after the fetch rethrows its own TypeError
+      (ERR_INVALID_URL included), ReferenceError or SyntaxError; cookie-scan reads a
+      redirect loop as the caller's site not answering; startup-domain-check
+      keeps the caller's name out of error messages; backlink-check is
+      Serper-only (the Common Crawl leg only ever returned the domain's own
+      hosts), normalises the domain (trailing dot, port, case, IDN) before
+      dropping its own hosts, and an unset SERPER_API_KEY throws naming the
+      key; github-repo-analyze names a 403 as a rate limit only when GitHub's
+      body says so, and its known_answer no longer asserts top_contributors.
+      Its fail-before and after receipts, and those of both review rounds,
+      are in evidence; both delta reviews of e1ab64bd returned GO, and the
+      tail3 round's small fixes need their tier-2 check before merge.
+      Deferred from that review: github-repo-analyze's deterministic 403
+      (Repository access blocked) still counts toward the breaker as
+      retryable; safe-fetch's ssrf-too-many-redirects warning logs the start
+      URL with its query string (older than PR 1017). Next: wave 2c, rows 5, 6, 20, 26, 28 and
+      29; then wave 2d, rows 30, 31, 32, 33 and 35; each reconciled first
+      against later repairs such as customs PR999. Then wave 3; the Nager.Date
+      no-calendar path (a weekends-only answer for countries such as TH, still
+      billed) as a follow-up candidate; the perturbation replays (http_503,
+      http_429, network_error, blocked_200, DNS ETIMEOUT) for every network
+      executor with fail-before evidence; then measuring past billed calls from
+      the affected paths since their earliest releases, deciding refunds per
+      policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against
+      listed and dry-run prices (P-011, P-008). Do not assume the proposed
+      degraded billing marker shipped. No production financial run or refund was
+      performed by any wave. Pre-existing defects found in the wave 2a review,
+      not fixed there: dependency-audit severity is always low because OSV
+      querybatch returns only id and modified (critical CVEs billed as low;
+      summary and aliases empty); unpinned PyPI requirements and registry-404
+      dependencies never reach OSV, and malicious-removed npm packages with MAL-
+      advisories are billed as 0 vulnerabilities; dependency-audit with only
+      404s and unavailable sources and nothing queryable bills an empty audit
+      (requireSomeAnswer edge); business-day-check next and previous business
+      day use only the current year's holidays (wrong on 31 Dec), and a 404 for
+      an unknown country code such as ZZ is billed as weekends-only;
+      eori-validate bills valid false for GB EORI numbers (the EU service says
+      Not valid); package-security-audit with a nonexistent explicit npm version
+      gets an empty OSV answer and is billed low; holiday-calendar getHolidays
+      caches a non-list 200 body for 24h. Found in wave 2b, not fixed there:
+      github-repo-analyze reads only README.md (a readme.md or README.rst reads
+      as No README); startup-domain-check uses DNS, not RDAP, so a registered
+      domain with no DNS records still reads available."
     resume_file: handoff/_general/from-code/2026-11-11-upstream-catch-guard.md
     exit:
       - Every network executor under apps/api/src/capabilities either throws or
@@ -37,6 +76,22 @@ tracks:
         the next inventory revision.
     evidence:
       - archive/receipts/2026-11-10-check-upstream-catch-guard.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-fail-before.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-after.json
+      - archive/receipts/2026-11-11-check-upstream-catch-guard-wave2a.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-review-fixes-fail-before.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-review-fixes-after.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-fail-before.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-after.json
+      - archive/receipts/2026-11-11-check-upstream-catch-guard-wave2b.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-review-fail-before.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-review-after.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-tail-fail-before.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-tail-after.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-tail-round2-fail-before.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-tail-round2-after.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-tail-round3-fail-before.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-tail-round3-after.json
   - id: T2
     title: "T2: Compliance-answer correctness (reference answers)"
     status: queued

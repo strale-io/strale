@@ -113,15 +113,20 @@ describe("github-repo-analyze reads repository files as a bounded prefix", () =>
     expect(extractJsonWithLlm).toHaveBeenCalled();
   });
 
-  it("an API JSON answer past 4 MiB is refused as 'could not access', not buffered", async () => {
+  it("an API JSON answer past 4 MiB is refused, not buffered", async () => {
     fetchMock.mockImplementation(async (url: string) => {
       const u = String(url);
       if (u.startsWith("https://raw.githubusercontent.com/")) return new Response("", { status: 404 });
       return u.endsWith("/repos/o/r") ? huge() : json([]);
     });
-    await expect(getExecutor("github-repo-analyze")!({ url: "https://github.com/o/r" })).rejects.toThrow(
-      /Could not access repo o\/r/,
+    // Since 2026-11-11 the size refusal reaches the caller as itself, not as
+    // "could not access" (which now means only GitHub's 404).
+    const err = await getExecutor("github-repo-analyze")!({ url: "https://github.com/o/r" }).then(
+      () => null,
+      (e: unknown) => e,
     );
+    expect((err as Error).message).toMatch(/'url' must be .*4\.0MB or less/);
+    expect(isCapabilityRefusal(err)).toBe(true);
     expect(totalPulls(), "the repo record was read past the cap").toBeLessThanOrEqual(pullsFor(4 * MIB));
   });
 });

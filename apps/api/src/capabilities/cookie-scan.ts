@@ -13,6 +13,43 @@ import {
 } from "./lib/browserless-extract.js";
 import type Anthropic from "@anthropic-ai/sdk";
 import { messageText } from "../lib/llm-response.js";
+import { fetchUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
+
+/** Named in unavailable_sources when the model's page analysis is unusable. */
+const PAGE_ANALYSIS = "page analysis";
+
+/**
+ * The caller's own site failed: its 5xx, a timeout, a network error or a
+ * redirect loop (not retryable). Still unbilled, but worded as the target's failure ("URL returned
+ * HTTP 5", "URL did not answer"), which the breaker's USER_INPUT_ERROR_PATTERNS
+ * in lib/circuit-breaker.ts recognise, as for url-to-markdown: one caller's
+ * broken site retried three times must not suspend cookie-scan for everyone
+ * (PR #1015 review). Anything else passes through as fetchUnavailable leaves it.
+ */
+function targetUnavailable(site: string, failure: number | unknown): Error {
+  if (typeof failure === "number") {
+    return new UpstreamUnavailableError(site, `URL returned HTTP ${failure}, a server error on the site itself; retry later.`, {
+      code: `HTTP ${failure}`,
+      retryable: true,
+    });
+  }
+  // safe-fetch reports a redirect loop as a plain Error. It is the caller's
+  // site, not ours and not an upstream we depend on (PR #1015 delta review).
+  if (failure instanceof Error && failure.message.startsWith("Too many redirects")) {
+    return new UpstreamUnavailableError(site, "URL did not answer (it kept redirecting).", {
+      code: "redirect loop",
+      retryable: false,
+      cause: failure,
+    });
+  }
+  const err = fetchUnavailable(site, failure);
+  if (!(err instanceof UpstreamUnavailableError) || !err.retryable) return err;
+  return new UpstreamUnavailableError(site, `URL did not answer (${err.code ?? "network error"}); retry later.`, {
+    code: err.code,
+    retryable: true,
+    cause: failure,
+  });
+}
 
 // ─── Cookie scan — Browserless + HTTP fetch + Claude ─────────────────────────
 
@@ -150,10 +187,15 @@ registerCapability("cookie-scan", async (input: CapabilityInput) => {
   const parsedUrl = new URL(url);
   const domain = parsedUrl.hostname;
 
-  // Step 1: HTTP fetch to capture Set-Cookie headers
+  // Step 1: HTTP fetch to capture Set-Cookie headers. This request is the
+  // only source of the cookie inventory, so when it fails (timeout, network
+  // error, 5xx) the call fails unbilled: an empty list would claim the site
+  // sets no cookies (2026-11-06 swallowed-upstream-failures audit, row 9).
+  const site = `website ${domain}`;
   const cookies: CookieInfo[] = [];
+  let httpResponse: Response;
   try {
-    const httpResponse = await safeFetch(url, {
+    httpResponse = await safeFetch(url, {
       method: "GET",
       // safeFetch follows up to 3 hops with per-hop re-validation
       signal: AbortSignal.timeout(15000),
@@ -164,20 +206,21 @@ registerCapability("cookie-scan", async (input: CapabilityInput) => {
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       },
     });
-    // Only the headers are read here; release the body (#428).
-    await discardBody(httpResponse, "cookie-scan: header-only fetch");
-    // A block ends the scan: the render below would be the same request
-    // through another route, which the data-access rule forbids.
-    assertNotBlockStatus(url, httpResponse.status);
-
-    // Parse Set-Cookie headers
-    const setCookieHeaders = httpResponse.headers.getSetCookie?.() ?? [];
-    for (const header of setCookieHeaders) {
-      cookies.push(parseSetCookieHeader(header));
-    }
   } catch (err) {
-    if (isCapabilityRefusal(err)) throw err;
-    // HTTP fetch failed (transport error, timeout) — we'll still try Browserless
+    // Refusals, URL validation and Strale's own states pass through unchanged.
+    throw targetUnavailable(site, err);
+  }
+  // Only the headers are read here; release the body (#428).
+  await discardBody(httpResponse, "cookie-scan: header-only fetch");
+  // A block ends the scan: the render below would be the same request
+  // through another route, which the data-access rule forbids.
+  assertNotBlockStatus(url, httpResponse.status);
+  if (httpResponse.status >= 500) throw targetUnavailable(site, httpResponse.status);
+
+  // Parse Set-Cookie headers
+  const setCookieHeaders = httpResponse.headers.getSetCookie?.() ?? [];
+  for (const header of setCookieHeaders) {
+    cookies.push(parseSetCookieHeader(header));
   }
 
   // Step 2: Render with Browserless and analyze with Claude
@@ -232,40 +275,21 @@ Only include tracking scripts where detected is true. For potential_issues, cons
     ],
   });
 
-  // An empty response, or a model safety decline on this third-party page,
-  // must fall into the non-fatal default path below, not throw and discard
-  // the cookies already collected. messageText logs the decline.
+  // An empty response, a model safety decline on this third-party page, or a
+  // reply that is not the requested JSON leaves the analysis unknown. The
+  // cookie inventory above still stands, so the analysis fields read null and
+  // "page analysis" is named in unavailable_sources; they never default to
+  // "no tracking scripts" and "no consent banner" (audit row 9).
   let responseText = "";
   try {
     responseText = messageText(r).trim();
   } catch (err) {
+    // degraded-ok: a model decline leaves the analysis fields null and names the page analysis in unavailable_sources; the cookie inventory is unaffected.
     if (!isCapabilityRefusal(err)) throw err;
   }
-  // Real brace-matching, not the greedy object-capture regex — an unbalanced
-  // (truncated) response yields null and we continue with defaults, which is
-  // this capability's intended non-fatal degrade.
-  const analysisRaw = extractJsonObject(responseText);
-
-  let trackingScripts: Array<{ name: string; detected: boolean }> = [];
-  let consentBannerDetected = false;
-  let consentBannerText: string | null = null;
-  let thirdPartyDomains: string[] = [];
-  let potentialIssues: string[] = [];
-
-  if (analysisRaw) {
-    try {
-      const analysis = analysisRaw as Record<string, any>;
-      trackingScripts = (analysis.tracking_scripts ?? []).filter(
-        (s: { detected: boolean }) => s.detected,
-      );
-      consentBannerDetected = analysis.consent_banner_detected ?? false;
-      consentBannerText = analysis.consent_banner_text ?? null;
-      thirdPartyDomains = analysis.third_party_domains_detected ?? [];
-      potentialIssues = analysis.potential_issues ?? [];
-    } catch {
-      // Parsing failed — continue with defaults
-    }
-  }
+  // Real brace-matching, not the greedy object-capture regex: an unbalanced
+  // (truncated) response yields null.
+  const analysis = readAnalysis(extractJsonObject(responseText));
 
   // Count first-party vs third-party cookies
   const firstPartyCookies = cookies.filter(
@@ -279,7 +303,13 @@ Only include tracking scripts where detected is true. For potential_issues, cons
   const hasTrackingCookies = cookies.some(
     (c) => c.category === "analytics" || c.category === "marketing",
   );
-  if (hasTrackingCookies && !consentBannerDetected && !potentialIssues.some((i) => i.toLowerCase().includes("consent"))) {
+  // Only a banner the analysis looked for and did not find is reported
+  // missing; an analysis that did not say (null) adds nothing.
+  const potentialIssues = analysis ? [...analysis.potential_issues] : null;
+  if (
+    analysis && potentialIssues && hasTrackingCookies && analysis.consent_banner_detected === false &&
+    !potentialIssues.some((i) => i.toLowerCase().includes("consent"))
+  ) {
     potentialIssues.push("Tracking cookies detected but no cookie consent banner found.");
   }
 
@@ -290,12 +320,58 @@ Only include tracking scripts where detected is true. For potential_issues, cons
       total_cookies: cookies.length,
       first_party_count: firstPartyCookies.length,
       third_party_count: thirdPartyCookies.length,
-      tracking_scripts: trackingScripts,
-      consent_banner_detected: consentBannerDetected,
-      consent_banner_text: consentBannerText,
-      third_party_domains: thirdPartyDomains,
+      tracking_scripts: analysis?.tracking_scripts ?? null,
+      consent_banner_detected: analysis?.consent_banner_detected ?? null,
+      consent_banner_text: analysis?.consent_banner_text ?? null,
+      third_party_domains: analysis?.third_party_domains ?? null,
       potential_issues: potentialIssues,
+      ...(analysis ? {} : { unavailable_sources: [PAGE_ANALYSIS] }),
     },
     provenance: { source: domain, fetched_at: new Date().toISOString() },
   };
 });
+
+interface PageAnalysis {
+  tracking_scripts: Array<{ name: string; detected: boolean }>;
+  /** Null when the analysis did not say: unknown, never "no banner". */
+  consent_banner_detected: boolean | null;
+  consent_banner_text: string | null;
+  third_party_domains: string[];
+  potential_issues: string[];
+}
+
+/** A model's yes/no: a boolean or its string form; undefined when it is neither. */
+function readFlag(v: unknown): boolean | undefined {
+  if (v === true || v === "true") return true;
+  if (v === false || v === "false") return false;
+  return undefined;
+}
+
+/**
+ * The model's analysis, or null when the reply does not carry one in the
+ * requested shape. A missing list reads as empty, as before; a missing
+ * consent_banner_detected reads null (unknown); a field of the wrong type
+ * means the reply is not the analysis that was asked for.
+ */
+function readAnalysis(raw: unknown): PageAnalysis | null {
+  if (!raw || typeof raw !== "object") return null;
+  const a = raw as Record<string, unknown>;
+  const list = (v: unknown): unknown[] | null => (v === undefined || v === null ? [] : Array.isArray(v) ? v : null);
+  const scripts = list(a.tracking_scripts);
+  const domains = list(a.third_party_domains_detected);
+  const issues = list(a.potential_issues);
+  const bannerRaw = a.consent_banner_detected;
+  const banner = bannerRaw === undefined || bannerRaw === null ? null : readFlag(bannerRaw);
+  const bannerText = a.consent_banner_text ?? null;
+  if (!scripts || !domains || !issues || banner === undefined) return null;
+  if (bannerText !== null && typeof bannerText !== "string") return null;
+  return {
+    tracking_scripts: scripts
+      .filter((x): x is Record<string, unknown> => !!x && typeof x === "object" && readFlag((x as { detected?: unknown }).detected) === true)
+      .map((x) => ({ ...x, detected: true }) as { name: string; detected: boolean }),
+    consent_banner_detected: banner,
+    consent_banner_text: bannerText,
+    third_party_domains: domains.filter((d): d is string => typeof d === "string"),
+    potential_issues: issues.filter((i): i is string => typeof i === "string"),
+  };
+}

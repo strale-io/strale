@@ -90,6 +90,12 @@ output_schema:
         issue: No structured data
         priority: low
   properties:
+    unavailable_sources:
+      type: array
+      items:
+        type: string
+      description: >-
+        Present only when robots.txt could not be read; the robots and sitemap checks are then null and left out of the score.
     checks:
       type: object
     issues:
@@ -121,6 +127,7 @@ output_field_reliability:
   issues: guaranteed
   overall_score: guaranteed
   prioritized_fixes: guaranteed
+  unavailable_sources: rare
 limitations:
   - title: Backlinks and domain authority are not assessed
     text: Analyses on-page SEO factors only — does not assess backlink profile, domain authority, or content quality
@@ -132,6 +139,11 @@ limitations:
       Only the first 500 KiB of robots.txt is parsed. Directives beyond that limit do not appear in
       the result.
     category: coverage
+    severity: info
+  - title: An unreadable robots.txt is not a missing one
+    text: >-
+      If robots.txt cannot be read (timeout, network error, rate limit, server error, or a redirect that cannot be followed), checks.robots_txt.present and checks.sitemap.referenced_in_robots are null, robots.txt is named in unavailable_sources, and overall_score is scaled over the 90 points that were checked. A 4xx answer (other than 429) is reported as no robots.txt.
+    category: availability
     severity: info
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).

@@ -36,6 +36,12 @@ output_schema:
       type: integer
     risk_level:
       type: string
+    risk_score_complete:
+      type: boolean
+      description: >-
+        False when a source that feeds risk_score (deps.dev, the previous-version deps.dev read, or the OpenSSF
+        Scorecard) could not be read. Its penalty was skipped, so risk_score may read higher than a complete
+        check would; the failed source is named in unavailable_sources.
     vulnerabilities:
       type: object
     license:
@@ -45,6 +51,13 @@ output_schema:
     supply_chain:
       type: object
       description: Supply chain anomaly signals
+    unavailable_sources:
+      type: array
+      items:
+        type: string
+      description: >-
+        Present only when a secondary source (deps.dev, the previous-version deps.dev read, or the OpenSSF
+        Scorecard) failed; the fields it feeds are null, not clean.
 maintenance_class: free-stable-api
 # SA.2b: per-capability PII classification (F-A-003, F-A-009)
 processes_personal_data: false
@@ -96,11 +109,13 @@ test_fixtures:
     name: lodash
     ecosystem: npm
 output_field_reliability:
+  unavailable_sources: rare
   name: guaranteed
   version: guaranteed
   ecosystem: guaranteed
   risk_score: guaranteed
   risk_level: guaranteed
+  risk_score_complete: guaranteed
   vulnerabilities: common
   license: common
   freshness: guaranteed
@@ -110,7 +125,9 @@ output_field_reliability:
   dependency_count: common
 limitations:
   - title: Vulnerability data depends on OSV.dev availability
-    text: If OSV.dev is down, vulnerability data returns null but other signals still produce a risk score.
+    text: >-
+      OSV.dev decides the vulnerability verdict. If it is down, rate-limited or returns an unreadable answer, the
+      call fails and is not charged, rather than scoring a package nobody checked.
     category: availability
     severity: info
   - title: Publisher change detection is npm-only
@@ -118,7 +135,11 @@ limitations:
     category: coverage
     severity: info
   - title: Provenance check requires deps.dev data
-    text: If deps.dev is unavailable or the package is not indexed, provenance attestation fields return null.
+    text: >-
+      If deps.dev has not indexed the package, provenance attestation fields return null. If deps.dev or the
+      OpenSSF Scorecard read fails, the fields they feed return null, the failed source is named in
+      unavailable_sources, its penalty (including the no-license penalty) is skipped rather than guessed, and
+      risk_score_complete is false.
     category: availability
     severity: info
 
