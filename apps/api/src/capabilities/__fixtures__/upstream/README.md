@@ -48,6 +48,12 @@ Each of those means re-capture (and, for a live contract failure, a fix in the
 executor). After changing a manifest's `known_answer` input, re-capture that
 slug; the test refuses a recording made on a different input.
 
+A recording that passes through a redirect keeps the hop as recorded: the
+replay test perturbs only the answer the redirect leads to, because a hop
+carries no content the contract reads. When the target is Strale's own site,
+the recorder refuses the file while `FRONTEND_URL` is set (its value appears
+in the Location header and the destination page); capture with it unset (`env -u FRONTEND_URL`).
+
 ## First batch (2026-10-28)
 
 12 executors, chosen from the keyless, free, fetch-only network executors by

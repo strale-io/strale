@@ -61,3 +61,10 @@ Cloudflare project and the domain are below.
 Check every old URL in today's sitemap ends, after following redirects, in a 200 (14 retired tools may end in a 404 by design), run a free tool call from the site's
 docs, compare Umami visits and sign-ups for two weeks against the fortnight before, then retire
 `strale-frontend` to maintenance.
+
+Upstream recordings that fetch strale.dev (base64-encode-url, og-image-check,
+page-exists) were re-captured through the 301 on 2026-11-11 so weekly-drift
+stays green. The six fixture-bound manifests still on strale.dev (those three,
+plus cert-transparency-search, meta-extract and url-to-text) move to strale.io
+together with an `onboard.ts --backfill` against the DB and a re-capture of
+any recorded slug among them; a manifest edit alone desyncs the DB test rows.
