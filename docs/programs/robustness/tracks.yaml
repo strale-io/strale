@@ -98,28 +98,21 @@ tracks:
       draft until 2026-11-11 (state drift, F7). Remaining for the exit: a
       receipt from its first production week with no false page, due from
       2026-11-14 (Railway logs for the settlement watch, and any alert sent).
-      (3) production-watch: done by #1002 (merged 2026-11-11).
-      scripts/production-watch/known-failures.json acknowledges #856
-      (ingest-ee-directors) until 2026-12-11; an acknowledged failure is still
-      reported on its issue but no longer turns the run red, and any other
-      failure or an expired acknowledgement does. A manual run after the
-      deploy (run 42937874567) was green, the first in weeks. Remaining for
-      the exit: a green scheduled run, and a forced-mismatch receipt. (4) weekly-drift. The usgs date-keyed recording was fixed by #974 (fixed
-      window). The 2026-11-09 run (42662225022) failed only on upstream
-      recordings: base64-encode-url, og-image-check and page-exists fetch
-      strale.dev, which began redirecting at the switch-over. The sweep reported
-      a true status change, so this is not F1. The fix-upstream-recordings PR
-      re-captures them through the permanent 301 and keeps redirect hops
-      unperturbed in the replay test. Remaining: a green scheduled run on
-      2026-11-16. The six fixture-bound manifests still on strale.dev move to
-      strale.io with a DB backfill and re-capture (needs the PC; readiness
-      item 11). Still open: the 2026-11-06 check-in said every sweep was
-      clean except the robots sweep (report-only, outside the aggregate
-      exit), while the logs show manifest-drift failing run 40334936804
-      (clean again by run 42662225022, MD=0) and upstream recordings failing
-      run 41485423344. Record that misreading in LESSONS (F1 as first
-      assigned, or F7 next to incident 12 if that fits better), with the
-      count it changes."
+      (3) production-watch: exit part met on 2026-11-11. #1002
+      acknowledges #856 (ingest-ee-directors) until 2026-12-11; scheduled run
+      42976490573 (08:01 Swedish time, main d3bff941) was green, and
+      demonstrate-alerts fired all four watches on forced mismatches
+      (archive/receipts/2026-11-11-check-r3-production-watch-forced-mismatch.json).
+      The same run reported ingest-ee-directors healthy again: remove its
+      acknowledgement once a second scheduled run agrees, and close #856.
+      (4) weekly-drift. #1008 re-captured the three strale.dev recordings
+      through the 301. Remaining: a green scheduled run on Mon 2026-11-16 about
+      08:00 Swedish time. The six fixture-bound manifests still on strale.dev
+      move to strale.io with a DB backfill and re-capture (needs the PC;
+      readiness item 11). The 2026-11-06 check-in's misreading of the
+      weekly-drift causes is recorded as LESSONS F7 incident 15 (count 14 to
+      15), confirmed from the job logs (MD=1 on 40334936804, UR=1 on
+      41485423344)."
     resume_file: handoff/_general/from-code/2026-11-06-checkin-morning.md
     exit:
       - "A vendor:status receipt after the block 0147 deploy shows no false
@@ -130,7 +123,8 @@ tracks:
       - "production-watch and weekly-drift each have a green scheduled run on
         healthy production, and a known failure no longer hides a new one,
         demonstrated by a forced-mismatch receipt."
-    evidence: []
+    evidence:
+      - archive/receipts/2026-11-11-check-r3-production-watch-forced-mismatch.json
   - id: T4
     title: "R4: Listed tools that can only refuse, and dark tools that cannot be promoted"
     status: queued
