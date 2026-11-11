@@ -1,5 +1,42 @@
 import { readFileSync } from "node:fs";
 const EXPECTED_JOBS = JSON.parse(readFileSync(new URL("../../apps/api/src/lib/job-watch-contract.json", import.meta.url), "utf8"));
+const KNOWN_FAILURES_URL = new URL("./known-failures.json", import.meta.url);
+const JOB_ID = /^[a-z][a-z0-9-]+$/;
+
+export function validateKnownFailures(entries, now = new Date()) {
+  if (!Array.isArray(entries)) throw new Error('Invalid known failures: expected a list');
+  const today = new Date(now);
+  if (Number.isNaN(today.getTime())) throw new Error('Invalid known failures check date');
+  today.setUTCHours(0, 0, 0, 0);
+  const latest = new Date(today);
+  latest.setUTCDate(latest.getUTCDate() + 45);
+  const ids = new Set();
+  for (const [index, entry] of entries.entries()) {
+    const prefix = `Invalid known failure at index ${index}`;
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) throw new Error(`${prefix}: expected an object`);
+    if (typeof entry.id !== 'string' || !JOB_ID.test(entry.id)) throw new Error(`${prefix}: invalid id`);
+    if (entry.id === 'http-health' || entry.id === 'job-inventory') throw new Error(`${prefix}: ${entry.id} cannot be acknowledged`);
+    if (ids.has(entry.id)) throw new Error(`${prefix}: duplicate id ${entry.id}`);
+    if (!Number.isInteger(entry.issue) || entry.issue <= 0) throw new Error(`${prefix}: issue must be a positive integer`);
+    if (typeof entry.reason !== 'string' || !entry.reason.trim() || entry.reason.length > 200) throw new Error(`${prefix}: reason must contain 1-200 characters`);
+    if (typeof entry.expires !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(entry.expires)) throw new Error(`${prefix}: expires must be YYYY-MM-DD`);
+    const expires = new Date(`${entry.expires}T00:00:00Z`);
+    if (Number.isNaN(expires.getTime()) || expires.toISOString().slice(0, 10) !== entry.expires) throw new Error(`${prefix}: invalid expires date`);
+    if (expires > latest) throw new Error(`${prefix}: expires more than 45 days after the check date`);
+    ids.add(entry.id);
+  }
+  return entries;
+}
+
+export function loadKnownFailures(now = new Date()) {
+  let entries;
+  try { entries = JSON.parse(readFileSync(KNOWN_FAILURES_URL, 'utf8')); }
+  catch (error) {
+    if (error.code === 'ENOENT') return [];
+    throw new Error(`Invalid known failures file: ${error.message}`);
+  }
+  return validateKnownFailures(entries, now);
+}
 /** Credential-free public probes; GitHub client supplied by actions/github-script. */
 export async function json(url, fetcher = fetch, timeout = 10_000) {
   const response = await fetcher(url, { signal: AbortSignal.timeout(timeout), headers: { 'User-Agent': 'Strale/1.0 (+https://strale.dev)', 'Cache-Control': 'no-cache' } });
@@ -59,7 +96,7 @@ export async function report(github, repo, input) {
   const match = /<!-- watch-state:(.*?) -->/.exec(stateIssue?.body ?? '');
   const state = match ? JSON.parse(match[1]) : {};
   let changed = false, red = false;
-  for (const { label, id, ok, body, run, threshold = 1 } of signals) {
+  for (const { label, id, ok, body, run, threshold = 1, blocksRun = true } of signals) {
     const title = `[${label}] ${id}`;
     const issue = issues.find((i) => !i.pull_request && i.title === title);
     let count = ok ? 0 : 1;
@@ -76,7 +113,7 @@ export async function report(github, repo, input) {
     const data = { ...repo, title, body: `<!-- watch:${count}:${run} -->\n${ok ? 'Recovered' : 'Confirmed failure'}\n\n${body}`, labels: [label] };
     if (issue) await github.rest.issues.update({ ...data, issue_number: issue.number, state: ok ? 'closed' : 'open' });
     else await github.rest.issues.create(data);
-    red ||= !ok && alert;
+    red ||= !ok && alert && blocksRun;
   }
   if (changed) {
     const data = { ...repo, title: stateTitle, body: `<!-- watch-state:${JSON.stringify(state)} -->\nRolling pending failure counters. Per-job issues open only after confirmation.` };
@@ -128,7 +165,12 @@ export function failingJobs(data) {
   return data.jobs;
 }
 
-export async function production(github, context, read = json) {
+export async function production(github, context, read = json, options = {}) {
+  const now = options.now ?? new Date();
+  const knownFailures = validateKnownFailures(options.knownFailures ?? loadKnownFailures(now), now);
+  const acknowledgements = new Map(knownFailures.map((entry) => [entry.id, entry]));
+  const today = new Date(now);
+  today.setUTCHours(0, 0, 0, 0);
   const signals = [];
   try {
     const health = await read('https://api.strale.io/health');
@@ -144,9 +186,27 @@ export async function production(github, context, read = json) {
       if (issue.state === 'open' && id && !signals.some((s) => s.id === id)) signals.push({ id, ok: false });
     }
   } catch { signals.push({ id: 'job-inventory', ok: false }); }
-  const red = await report(github, context.repo, signals.map((signal) => ({
-    ...signal, label: 'production-watch', run: context.runId, threshold: 2,
-    body: `${signal.id}: ${signal.ok ? 'fresh' : 'unavailable or stale'}. Check /health and /health/jobs.`,
-  })));
-  if (red) throw new Error('Production probe failed twice consecutively');
+  const expired = [];
+  const unacknowledged = [];
+  const reported = signals.map((signal) => {
+    const acknowledgement = acknowledgements.get(signal.id);
+    const expires = acknowledgement && new Date(`${acknowledgement.expires}T00:00:00Z`);
+    const active = acknowledgement && expires >= today;
+    if (signal.ok && acknowledgement) {
+      const message = `Known failure ${signal.id} is now healthy; acknowledgement for issue #${acknowledgement.issue} can be removed.`;
+      if (options.core) options.core.warning(message);
+      else console.warn(message);
+    }
+    if (!signal.ok && acknowledgement && !active) expired.push(`${signal.id} (${acknowledgement.expires})`);
+    if (!signal.ok && !active) unacknowledged.push(signal.id);
+    return {
+      ...signal, blocksRun: !active, label: 'production-watch', run: context.runId, threshold: 2,
+      body: `${signal.id}: ${signal.ok ? 'fresh' : 'unavailable or stale'}. Check /health and /health/jobs.`,
+    };
+  });
+  const red = await report(github, context.repo, reported);
+  if (red) {
+    const detail = expired.length ? ` Expired acknowledgement: ${expired.join(', ')}.` : '';
+    throw new Error(`Production probe failed twice consecutively: ${unacknowledged.join(', ')}.${detail}`);
+  }
 }
