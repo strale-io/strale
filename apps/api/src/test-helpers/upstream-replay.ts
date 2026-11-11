@@ -211,8 +211,18 @@ function perturbed(recorded: RecordedResponse, mode: Perturbation): string {
   return "";
 }
 
+/** A 3xx answer that names where to go next. */
+export function isRedirect(recorded: RecordedResponse): boolean {
+  return recorded.status >= 300 && recorded.status < 400 && typeof recorded.headers.location === "string";
+}
+
 /** A Response carrying a recorded answer, as fetch would have returned it for `url`. */
 export function recordedResponse(url: string, recorded: RecordedResponse, perturb?: Perturbation): Response {
+  // A redirect hop is transport, not content: perturbing it would drop its
+  // Location header, the executor would throw on the hop, and the content the
+  // contract reads would never be reached. The hop replays as recorded; the
+  // answer it leads to is perturbed.
+  if (perturb && isRedirect(recorded)) perturb = undefined;
   const body = NULL_BODY_STATUSES.has(recorded.status)
     ? null
     : perturb

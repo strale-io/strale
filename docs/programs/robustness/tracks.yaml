@@ -103,14 +103,16 @@ tracks:
       reported on its issue but no longer turns the run red, and any other
       failure or an expired acknowledgement does. A manual run after the
       deploy (run 42937874567) was green, the first in weeks. Remaining for
-      the exit: a green scheduled run, and a forced-mismatch receipt. (4) weekly-drift has failed two
-      scheduled runs. Its own logs show different causes from the 2026-11-06
-      check-in. Run 40334936804 (2026-10-26) failed on the manifest-drift sweep.
-      Run 41485423344 (2026-11-02) failed on the upstream-recordings sweep,
-      because usgs-earthquake-search's recording is keyed by a URL that carries a
-      start date and so goes stale. The robots sweep is report-only and outside
-      the aggregate exit. Fix the recording key, rerun, and record the
-      misattribution under LESSONS F1."
+      the exit: a green scheduled run, and a forced-mismatch receipt. (4) weekly-drift. The usgs date-keyed recording was fixed by #974 (fixed
+      window). The 2026-11-09 run (42662225022) failed only on upstream
+      recordings: base64-encode-url, og-image-check and page-exists fetch
+      strale.dev, which began redirecting at the switch-over. The sweep reported
+      a true status change, so this is not F1. The fix-upstream-recordings PR
+      re-captures them through the permanent 301 and keeps redirect hops
+      unperturbed in the replay test. Remaining: a green scheduled run on
+      2026-11-16. The six fixture-bound manifests still on strale.dev move to
+      strale.io with a DB backfill and re-capture (needs the PC; readiness
+      item 11)."
     resume_file: handoff/_general/from-code/2026-11-06-checkin-morning.md
     exit:
       - "A vendor:status receipt after the block 0147 deploy shows no false
