@@ -20,11 +20,18 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Worker } from "node:worker_threads";
 import { logWarn } from "../../lib/log.js";
+import { currentCallerKey } from "../../lib/caller-scope.js";
 import { ResourceLimitError } from "../../lib/resource-limits.js";
 import { HtmlTooComplexError } from "./html-parse-bound.js";
-import type { MarkdownOptions, ReadabilityResult } from "./readability-convert-sync.js";
+import type {
+  MarkdownOptions,
+  ReadabilityResult,
+} from "./readability-convert-sync.js";
 
-export type { MarkdownOptions, ReadabilityResult } from "./readability-convert-sync.js";
+export type {
+  MarkdownOptions,
+  ReadabilityResult,
+} from "./readability-convert-sync.js";
 
 export const CONVERSION_LIMITS = {
   /**
@@ -64,13 +71,35 @@ export const CONVERSION_LIMITS = {
   maxQueueWaitMs: 13_000,
   /** How long a stopped worker may take to exit before its slot is freed anyway. */
   exitWatchdogMs: 5_000,
+  /** Refusal period after this caller makes the converter hit a resource limit. */
+  callerCooldownMs: 30_000,
+  /** Suggested delay before retrying a converter-busy refusal. */
+  busyRetryAfterMs: 5_000,
 };
 
 /** Refused because every converter is busy; non-billable, worth retrying. */
 export class ConversionBusyError extends ResourceLimitError {
+  readonly retryAfterSeconds = CONVERSION_LIMITS.busyRetryAfterMs / 1000;
+
   constructor() {
-    super("The page converter is busy with other pages. Please retry in a few seconds.");
+    super(
+      "The page converter is busy with other pages. Please retry in a few seconds."
+    );
     this.name = "ConversionBusyError";
+  }
+}
+
+/** Refused because this caller recently exhausted a converter resource limit. */
+export class ConversionCallerCooldownError extends ResourceLimitError {
+  readonly retryAfterSeconds = CONVERSION_LIMITS.callerCooldownMs / 1000;
+
+  constructor() {
+    super(
+      `Pages you sent recently took too long or too much memory to convert. Please retry in ${
+        CONVERSION_LIMITS.callerCooldownMs / 1000
+      } seconds.`
+    );
+    this.name = "ConversionCallerCooldownError";
   }
 }
 
@@ -87,28 +116,79 @@ interface Job {
   resolve: (r: ReadabilityResult) => void;
   reject: (e: unknown) => void;
   queueTimer?: NodeJS.Timeout;
+  callerKey: string | null;
+}
+
+const MAX_CALLER_COOLDOWNS = 10_000;
+const callerCooldowns = new Map<string, number>();
+
+function pruneCooldowns(now = Date.now()): void {
+  for (const [key, until] of callerCooldowns)
+    if (until <= now) callerCooldowns.delete(key);
+}
+function coolDown(key: string): void {
+  pruneCooldowns();
+  callerCooldowns.delete(key);
+  callerCooldowns.set(key, Date.now() + CONVERSION_LIMITS.callerCooldownMs);
+  while (callerCooldowns.size > MAX_CALLER_COOLDOWNS)
+    callerCooldowns.delete(callerCooldowns.keys().next().value!);
+}
+function releaseCaller(job: Job, limited = false): void {
+  if (!job.callerKey) return;
+  if (limited) coolDown(job.callerKey);
+}
+/** Refuse before fetching when this caller is still cooling down. */
+export function assertConverterAvailableForCaller(): void {
+  const key = currentCallerKey();
+  if (!key) return;
+  const now = Date.now();
+  pruneCooldowns(now);
+  if ((callerCooldowns.get(key) ?? 0) > now)
+    throw new ConversionCallerCooldownError();
+}
+
+/** Tests only: observe the bounded cooldown collection. */
+export function __callerCooldownCountForTests(): number {
+  pruneCooldowns();
+  return callerCooldowns.size;
+}
+/** Tests only: exercise the production insertion/eviction path without 10,001 timeouts. */
+export function __coolDownCallerForTests(key: string): void {
+  coolDown(key);
 }
 
 // In production this module and the worker are compiled .js. Under tsx (dev,
 // tests) both are TypeScript, and a worker thread does not inherit tsx's
 // loader, so the worker starts from a bootstrap that registers it first.
-function createWorker(options: { resourceLimits: { maxOldGenerationSizeMb: number; maxYoungGenerationSizeMb: number } }): Worker {
+function createWorker(options: {
+  resourceLimits: {
+    maxOldGenerationSizeMb: number;
+    maxYoungGenerationSizeMb: number;
+  };
+}): Worker {
   const self = fileURLToPath(import.meta.url);
   if (self.endsWith(".ts")) {
     const tsxApi = import.meta.resolve("tsx/esm/api");
     const entry = new URL("./readability-worker.ts", import.meta.url).href;
-    const bootstrap = `import(${JSON.stringify(tsxApi)}).then((m) => { m.register(); return import(${JSON.stringify(entry)}); });`;
+    const bootstrap = `import(${JSON.stringify(
+      tsxApi
+    )}).then((m) => { m.register(); return import(${JSON.stringify(
+      entry
+    )}); });`;
     return new Worker(bootstrap, { ...options, eval: true });
   }
   const url = new URL("./readability-worker.js", import.meta.url);
-  if (!existsSync(fileURLToPath(url))) throw new Error(`readability worker missing at ${fileURLToPath(url)}`);
+  if (!existsSync(fileURLToPath(url)))
+    throw new Error(`readability worker missing at ${fileURLToPath(url)}`);
   return new Worker(url, options);
 }
 
 type WorkerFactory = typeof createWorker;
 let workerFactory: WorkerFactory = createWorker;
 /** Tests only: replace how workers are created (null restores the real one). */
-export function __setWorkerFactoryForTests(factory: WorkerFactory | null): void {
+export function __setWorkerFactoryForTests(
+  factory: WorkerFactory | null
+): void {
   workerFactory = factory ?? createWorker;
 }
 
@@ -149,8 +229,14 @@ class Slot {
       const job = this.job;
       if (this.worker !== w || !job || reply.id !== job.id) return;
       this.answered();
+      releaseCaller(job);
       if (reply.ok) job.resolve(reply.result);
-      else job.reject(reply.tooComplex ? tooComplex(reply.message) : new Error(reply.message));
+      else
+        job.reject(
+          reply.tooComplex
+            ? tooComplex(reply.message)
+            : new Error(reply.message)
+        );
       this.onFree();
     });
     // A worker error (heap limit, crash) fails its job at once; the slot
@@ -162,12 +248,27 @@ class Slot {
       const job = this.job;
       if (!job) return;
       this.answered();
-      const oom = err instanceof Error && /ERR_WORKER_OUT_OF_MEMORY|heap/i.test(`${(err as { code?: string }).code ?? ""} ${err.message}`);
+      const oom =
+        err instanceof Error &&
+        /ERR_WORKER_OUT_OF_MEMORY|heap/i.test(
+          `${(err as { code?: string }).code ?? ""} ${err.message}`
+        );
       if (oom) {
-        job.reject(tooComplex(new HtmlTooComplexError("it needs more memory than the converter allows").message));
+        releaseCaller(job, true);
+        job.reject(
+          tooComplex(
+            new HtmlTooComplexError(
+              "it needs more memory than the converter allows"
+            ).message
+          )
+        );
       } else {
+        releaseCaller(job);
         // The log keeps the detail; the caller gets a plain message.
-        logWarn("readability-worker-error", err instanceof Error ? err.message : String(err));
+        logWarn(
+          "readability-worker-error",
+          err instanceof Error ? err.message : String(err)
+        );
         job.reject(new Error("The page converter failed. Please retry."));
       }
     });
@@ -178,7 +279,12 @@ class Slot {
       const job = this.job;
       if (job) {
         this.answered();
-        job.reject(new Error(`The page converter stopped unexpectedly (code ${code}). Please retry.`));
+        releaseCaller(job);
+        job.reject(
+          new Error(
+            `The page converter stopped unexpectedly (code ${code}). Please retry.`
+          )
+        );
       }
       this.onFree();
     });
@@ -193,8 +299,14 @@ class Slot {
       } catch (err) {
         // The log keeps the detail (a file path, in production); the caller
         // gets a plain message.
-        logWarn("readability-worker-spawn-failed", err instanceof Error ? err.message : String(err));
-        job.reject(new Error("The page converter could not start. Please retry later."));
+        logWarn(
+          "readability-worker-spawn-failed",
+          err instanceof Error ? err.message : String(err)
+        );
+        releaseCaller(job);
+        job.reject(
+          new Error("The page converter could not start. Please retry later.")
+        );
         this.onFree();
         return;
       }
@@ -206,15 +318,25 @@ class Slot {
       this.closing = true;
       const j = this.job;
       this.answered();
+      if (j) releaseCaller(j, true);
       j?.reject(
         tooComplex(
-          new HtmlTooComplexError(`conversion did not finish within ${CONVERSION_LIMITS.timeoutMs / 1000} s`).message,
-        ),
+          new HtmlTooComplexError(
+            `conversion did not finish within ${
+              CONVERSION_LIMITS.timeoutMs / 1000
+            } s`
+          ).message
+        )
       );
       void w.terminate();
       this.watchExit(w);
     }, CONVERSION_LIMITS.timeoutMs);
-    w.postMessage({ id: job.id, html: job.html, url: job.url, options: job.options });
+    w.postMessage({
+      id: job.id,
+      html: job.html,
+      url: job.url,
+      options: job.options,
+    });
   }
 
   /**
@@ -225,7 +347,10 @@ class Slot {
   private watchExit(w: Worker): void {
     const timer = setTimeout(() => {
       if (this.worker !== w || !this.closing) return;
-      logWarn("readability-worker-exit-timeout", `worker did not exit within ${CONVERSION_LIMITS.exitWatchdogMs} ms; freeing its slot`);
+      logWarn(
+        "readability-worker-exit-timeout",
+        `worker did not exit within ${CONVERSION_LIMITS.exitWatchdogMs} ms; freeing its slot`
+      );
       this.worker = null;
       this.closing = false;
       this.onFree();
@@ -246,12 +371,15 @@ class Slot {
     this.answered();
     this.worker = null;
     this.closing = false;
+    if (job) releaseCaller(job);
     job?.reject(new ConversionBusyError());
     // Bounded: a worker that never exits must not hang shutdown.
     if (w) {
       await Promise.race([
         w.terminate(),
-        new Promise((resolve) => setTimeout(resolve, CONVERSION_LIMITS.exitWatchdogMs).unref()),
+        new Promise((resolve) =>
+          setTimeout(resolve, CONVERSION_LIMITS.exitWatchdogMs).unref()
+        ),
       ]);
     }
   }
@@ -261,19 +389,46 @@ let nextId = 1;
 let slots: Slot[] = [];
 const queue: Job[] = [];
 
-/** Hands queued pages to free workers, in order. */
+/** Last dispatch time by caller bucket; insertion order makes oldest eviction O(1). */
+const lastServed = new Map<string, number>();
+const MAX_LAST_SERVED = 10_000;
+let serveSequence = 0;
+
+function callerBucket(job: Job): string {
+  return job.callerKey ?? "__unkeyed__";
+}
+function rememberServed(bucket: string): void {
+  lastServed.delete(bucket);
+  lastServed.set(bucket, ++serveSequence);
+  while (lastServed.size > MAX_LAST_SERVED)
+    lastServed.delete(lastServed.keys().next().value!);
+}
+
+/** Hands queued pages to free workers, round-robin by least recently served caller. */
 function dispatch(): void {
   for (const slot of slots) {
     if (slot.busy) continue;
-    const job = queue.shift();
+    let selected = 0;
+    let least = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < queue.length; i++) {
+      const served =
+        lastServed.get(callerBucket(queue[i]!)) ?? Number.NEGATIVE_INFINITY;
+      if (served < least) {
+        least = served;
+        selected = i;
+      }
+    }
+    const [job] = queue.splice(selected, 1);
     if (!job) return;
     if (job.queueTimer) clearTimeout(job.queueTimer);
+    rememberServed(callerBucket(job));
     slot.run(job);
   }
 }
 
 function ensureSlots(): void {
-  while (slots.length < CONVERSION_LIMITS.workers) slots.push(new Slot(() => setImmediate(dispatch)));
+  while (slots.length < CONVERSION_LIMITS.workers)
+    slots.push(new Slot(() => setImmediate(dispatch)));
 }
 
 /**
@@ -281,12 +436,45 @@ function ensureSlots(): void {
  * Rejects with HtmlTooComplexError past a limit, ConversionBusyError when the
  * queue is full; both are non-billable refusals.
  */
-export function htmlToCleanMarkdown(html: string, url: string, options?: MarkdownOptions): Promise<ReadabilityResult> {
-  ensureSlots();
+export async function htmlToCleanMarkdown(
+  html: string,
+  url: string,
+  options?: MarkdownOptions
+): Promise<ReadabilityResult> {
   const queuedAt = Date.now();
-  // Every refusal is logged with its reason and how long it took, so real
-  // pages that hit the limits show up (second R1 review of #964, F8).
-  const refused = (err: unknown) => {
+  // Everything before the first await runs synchronously, so a page is queued
+  // (or refused) before this call returns, as when this was not async.
+  try {
+    ensureSlots();
+    assertConverterAvailableForCaller();
+    const callerKey = currentCallerKey();
+    if (queue.length >= CONVERSION_LIMITS.maxQueued) admitOrRefuse(callerKey);
+    const input = boundInput(html);
+    return await new Promise<ReadabilityResult>((resolve, reject) => {
+      const job: Job = {
+        id: nextId++,
+        html: input,
+        url,
+        options,
+        queuedAt,
+        resolve,
+        reject,
+        callerKey,
+      };
+      job.queueTimer = setTimeout(() => {
+        const i = queue.indexOf(job);
+        if (i >= 0) {
+          queue.splice(i, 1);
+          releaseCaller(job);
+          reject(new ConversionBusyError());
+        }
+      }, CONVERSION_LIMITS.maxQueueWaitMs);
+      queue.push(job);
+      dispatch();
+    });
+  } catch (err) {
+    // Every refusal is logged with its reason and how long it took, so real
+    // pages that hit the limits show up (second R1 review of #964, F8).
     if (err instanceof ResourceLimitError) {
       logWarn("readability-convert-refused", err.message, {
         reason: err.name,
@@ -295,21 +483,46 @@ export function htmlToCleanMarkdown(html: string, url: string, options?: Markdow
       });
     }
     throw err;
-  };
-  if (queue.length >= CONVERSION_LIMITS.maxQueued) return Promise.reject(new ConversionBusyError()).catch(refused);
-  const input = boundInput(html);
-  return new Promise<ReadabilityResult>((resolve, reject) => {
-    const job: Job = { id: nextId++, html: input, url, options, queuedAt, resolve, reject };
-    job.queueTimer = setTimeout(() => {
-      const i = queue.indexOf(job);
-      if (i >= 0) {
-        queue.splice(i, 1);
-        reject(new ConversionBusyError());
-      }
-    }, CONVERSION_LIMITS.maxQueueWaitMs);
-    queue.push(job);
-    dispatch();
-  }).catch(refused);
+  }
+}
+
+/**
+ * The queue is full. A keyed caller may take the place of the newest queued
+ * page of a caller holding at least 2 more queued pages than it; that page is
+ * refused as busy. Otherwise the new page is refused. Unkeyed pages neither
+ * evict nor are evicted. Throws ConversionBusyError when the page is refused.
+ */
+function admitOrRefuse(callerKey: string | null): void {
+  if (!callerKey) throw new ConversionBusyError();
+  const counts = new Map<string, { count: number; newestIndex: number }>();
+  for (let i = 0; i < queue.length; i++) {
+    const key = queue[i]!.callerKey;
+    if (!key) continue; // unkeyed pages neither evict nor are evicted
+    const current = counts.get(key);
+    counts.set(key, { count: (current?.count ?? 0) + 1, newestIndex: i });
+  }
+  const incomingCount = counts.get(callerKey)?.count ?? 0;
+  let candidate: { key: string; count: number; newestIndex: number } | null =
+    null;
+  for (const [key, value] of counts) {
+    if (
+      !candidate ||
+      value.count > candidate.count ||
+      (value.count === candidate.count &&
+        value.newestIndex > candidate.newestIndex)
+    ) {
+      candidate = { key, ...value };
+    }
+  }
+  if (!candidate || candidate.count < incomingCount + 2) {
+    throw new ConversionBusyError();
+  }
+  const [evicted] = queue.splice(candidate.newestIndex, 1);
+  if (evicted?.queueTimer) clearTimeout(evicted.queueTimer);
+  if (evicted) {
+    releaseCaller(evicted);
+    evicted.reject(new ConversionBusyError());
+  }
 }
 
 /**
@@ -333,6 +546,7 @@ export function boundInput(html: string): string {
 export async function stopConversionWorkers(): Promise<void> {
   for (const job of queue.splice(0)) {
     if (job.queueTimer) clearTimeout(job.queueTimer);
+    releaseCaller(job);
     job.reject(new ConversionBusyError());
   }
   const old = slots;

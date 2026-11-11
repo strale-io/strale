@@ -16,6 +16,7 @@ import { persistCallCost } from "../lib/persist-call-cost.js";
  */
 
 import { refusalDetails } from "../lib/capability-refusal.js";
+import { runAsCaller } from "../lib/caller-scope.js";
 
 import { Hono } from "hono";
 import { deployCommitOrNull } from "../lib/receipt/deploy-identity.js";
@@ -337,9 +338,9 @@ solutionExecuteRoute.post(
     // ── 5. Execute solution steps ─────────────────────────────────────
     let execResult;
     try {
-      execResult = await executeSolution(sol.id, inputs as Record<string, unknown>, {
+      execResult = await runAsCaller(`acct:${user!.id}`, () => executeSolution(sol.id, inputs as Record<string, unknown>, {
         userId: user?.id ?? null,
-      });
+      }));
     } catch (err) {
       const latencyMs = Date.now() - startTime;
       const errorMessage = err instanceof Error ? err.message : String(err);

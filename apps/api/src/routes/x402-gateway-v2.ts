@@ -16,6 +16,7 @@ import { persistCallCost } from "../lib/persist-call-cost.js";
  */
 
 import { refusalDetails } from "../lib/capability-refusal.js";
+import { callerKeyForRequest, runAsCaller } from "../lib/caller-scope.js";
 
 import { Hono } from "hono";
 import { deployCommitOrNull } from "../lib/receipt/deploy-identity.js";
@@ -1353,12 +1354,14 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
   // Execute solution steps via shared orchestration module
   if (claimId && paymentHash) await beginX402Execution(claimId, paymentHash);
   executionStarted = true;
-  const result = await executeSolution(sol.id, inputs, {
+  const solutionPayer = verified ? extractPayerAddress(verified) : null;
+  const solutionIp = clientIpOrNull(c);
+  const result = await runAsCaller(callerKeyForRequest(solutionIp, solutionPayer), () => executeSolution(sol.id, inputs, {
     // x402 callers have no account — payment IS the auth. Null here is the
     // honest value, and it matches how x402 transaction rows already record
     // the payer (2,592 paid rows in a 30-day window carry a NULL user_id).
     userId: null,
-  });
+  }));
 
   if (!result) {
     executionStarted = false; // No configured step reached an executor.
@@ -1777,11 +1780,13 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     // Same transient-retry policy as POST /v1/do (lib/retry.ts). Inside the
     // try and before settle, so a retry that still fails takes the unpaid
     // failure path below; the 300 s authorization window absorbs the ~1 s wait.
-    result = await executeWithTransientRetry(async input => {
+    const payer = verified ? extractPayerAddress(verified) : null;
+    const callerIp = clientIpOrNull(c);
+    result = await runAsCaller(callerKeyForRequest(callerIp, payer), async () => await executeWithTransientRetry(async input => {
       if (claimId && paymentHash) await beginX402Execution(claimId, paymentHash);
       executionStarted = true;
       return executor(input);
-    }, inputs, cap);
+    }, inputs, cap));
     await recordPaidInvocation({
       capabilitySlug: cap.slug,
       rail: "x402_gateway",

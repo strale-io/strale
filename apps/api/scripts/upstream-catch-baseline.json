@@ -578,18 +578,6 @@
       "line": 74
     },
     {
-      "file": "apps/api/src/capabilities/lib/readability-convert.ts",
-      "fingerprint": "df0b71ad7a16efb4e6f8832bc05d78cdb5f1c7762fec9b385d687adf06ea3119",
-      "count": 1,
-      "line": 299
-    },
-    {
-      "file": "apps/api/src/capabilities/lib/readability-convert.ts",
-      "fingerprint": "f96a5bd25f8102aae4e89822262b199b386c772dc4b308b9095026fc8d358ccb",
-      "count": 1,
-      "line": 312
-    },
-    {
       "file": "apps/api/src/capabilities/lib/readability-worker.ts",
       "fingerprint": "692b1a14357d61069279ab78f8081789751b3317a8379af030b44715f892c37b",
       "count": 1,

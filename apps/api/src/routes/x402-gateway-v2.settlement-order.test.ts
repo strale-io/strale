@@ -246,7 +246,7 @@ describe("x402-gateway-v2 — DEC-14 settlement ordering", () => {
     });
 
     it("settleX402Execution is called only after executeSolution() returns", () => {
-      const execIdx = body.indexOf("await executeSolution(");
+      const execIdx = body.indexOf("() => executeSolution(sol.id");
       expect(execIdx, "executeSolution() call must exist").toBeGreaterThan(-1);
 
       const settles = settleIndices(body);
@@ -263,7 +263,7 @@ describe("x402-gateway-v2 — DEC-14 settlement ordering", () => {
       const liveReadIdx = body.indexOf("isActive: solutions.isActive");
       const refusalIdx = body.indexOf("Solution is no longer available via x402");
       const verifyIdx = body.indexOf("await verifyX402PaymentOnly(");
-      const executeIdx = body.indexOf("await executeSolution(");
+      const executeIdx = body.indexOf("executeSolution(");
 
       expect(liveReadIdx, "live solution read must exist").toBeGreaterThan(-1);
       expect(refusalIdx, "stale-cache refusal must exist").toBeGreaterThan(liveReadIdx);
