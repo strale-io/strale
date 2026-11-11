@@ -4,15 +4,15 @@ Master-owned: only the master edits it, in a state PR; a lane PR never does.
 Rules and lint: wow-core `templates/STATE_FILES.md` "Project plan". The founder reads this file, not the task queue.
 Moved from `docs/plan/BASELINE-2026-11-11.md`, which keeps the full evidence, the struck list (section 3) and the stale register lines (section 6). No revenue figures in this file: the repository is public.
 
-Outcome: M1 in `docs/company/GOALS.md`: two weeks in a row with at least 5 distinct external payers and no single payer above 60%, the target of the 2026-11-06 revenue plan; confidence is low.
+Outcome: the first revenue bar in `docs/company/GOALS.md` (named M1 there; it is not this plan's milestone M1): two weeks in a row with at least 5 distinct external payers and no single payer above 60%, the target of the 2026-11-06 revenue plan; confidence is low.
 Outcome date: 2026-12-06
 As of: 2026-11-11   Last checked against code and production: 2026-11-11
-Moat: not found yet; the candidate is official-source company and compliance data where every call carries its provenance and an audit record, which is not yet shown to be hard to copy.
+Moat: not found yet; the candidate is the flagship of DEC-20261023-B, official-source company and compliance data where every call carries its provenance and an audit record. Nothing yet shows it is hard to copy.
 Distribution: agent-tool listings (MCP registries, framework packages, directories) plus pay-per-call over x402 with no signup; which of them brings payers is unmeasured until M3.
 
 ## Milestones
 
-Dates follow the growth-readiness triage proposal (strale-io/strale#1011), which still waits on the founder's yes (bus ask 6791877369); if he changes it, these dates change with it. The revenue plan's kill-or-continue checkpoints stay on 22 Nov and 6 Dec.
+Dates follow the growth-readiness triage proposal (strale-io/strale#1011), which still waits on the founder's yes (bus ask 6791877369); if he changes it, these dates change with it. The revenue plan's kill-or-continue checkpoints stay on 22 Nov and 6 Dec. M1 to M3 here are this plan's milestones, not the revenue bars of the same names in GOALS.md.
 
 | Id | Date | Milestone |
 |---|---|---|
@@ -34,7 +34,7 @@ Ids follow the baseline's section 4 (A launch blocker, B soon after, C nice to h
 | A-6 | launch-blocker | M1 | fleet | Promise-audit T2: no reference answers for sanctions-check, pep-check or the registries | one reference-answer receipt per family, paid run inside the EUR 25 sweep cap | open |
 | A-7 | launch-blocker | M1 | founder | Promise-audit P-008/P-011: debits checked against the listed and dry-run price (needs the database at the PC; the fleet writes the query) | sweep receipt | open |
 | A-8 | launch-blocker | M2 | founder | PyPI: straleio, langchain-strale, crewai-strale and composio-strale stuck at 0.1.4 with strale.dev links; release path for composio added (#1013); needs the trusted publishers (bus 6506170239) | new versions live and smoke-tested from a clean install | open |
-| A-9 | launch-blocker | M2 | founder | npm: strale-cli and strale-ai-sdk unpublished; trusted publishers missing for straleio and straleio-langchain; n8n-nodes-strale not repointed (bus 6503452948, 6791877924) | both on npm with smoke receipts; trusted publishers set | open |
+| A-9 | launch-blocker | M2 | founder | npm: strale-cli and strale-ai-sdk unpublished; trusted publishers missing for straleio and straleio-langchain; n8n-nodes-strale not repointed (bus 6503452948, 6791877924; the strale-ai-sdk ask is not filed yet) | both on npm with smoke receipts; trusted publishers set | open |
 | A-10 | launch-blocker | M2 | founder | Smithery listings say "270+ quality-scored" and "verified data" and link strale.dev | registry.smithery.ai shows current text | open |
 | A-11 | launch-blocker | M2 | founder | Directory submissions awesome-remote, Docker #2202, Cline, Cursor are prepared, not submitted (bus 6503454276) | PR or form URLs recorded | open |
 | B-1 | soon-after | M3 | fleet | x402 settlement-drop alert's first production week (#950) | receipt from Sat 14 Nov: Railway logs, no false page | open |
@@ -46,7 +46,7 @@ Ids follow the baseline's section 4 (A launch blocker, B soon after, C nice to h
 | B-7 | soon-after | M3 | fleet | Upstream-replay perturbations 503, 429, network error, blocked 200, DNS timeout (`upstream-replay.ts` has only empty, hollow, skew) | zero-failure replay receipt | open |
 | B-8 | soon-after | M3 | fleet | DQ-41: eurostat-data, entity-resolve, company-status-check, invoice-counterparty-check built but dark (#881-884) | listed in `/v1/capabilities`; promotion rule recorded for the paid-upstream case | open |
 | B-9 | soon-after | M3 | fleet | Serper tools google-news-search and serp-related-questions dark (#246, #247) | validated and listed | open |
-| B-10 | soon-after | M3 | fleet | Payer-by-source rollup (`signup_src`, x402 source tag); bare `?src=` not forwarded | signup test with `?src=x`; weekly rollup receipt | in-progress #985 |
+| B-10 | soon-after | M3 | fleet | Payer-by-source rollup (`signup_src`, x402 source tag); utm forwarding merged in #985, bare `?src=` forwarding and the rollup still open | signup test with `?src=x`; weekly rollup receipt | open |
 | B-11 | soon-after | M2 | founder | Claude connector submission; `/mcp/connector` and OAuth metadata answer 200 (bus 6492179099) | submission record | open |
 | B-12 | soon-after | M3 | founder | x402scan registration with a zero-balance wallet (bus 6492178598) | listing URL | open |
 | B-13 | soon-after | M3 | founder | Coinbase CDP Bazaar email has no address (bus 6493139521) | the founder gives the address; the inbox routine sends; `sent` filled | open |
@@ -100,3 +100,4 @@ Ordered by what moves revenue first. Each line: the item, what only he can do, a
 7. B-27, B-30, B-23: go on DQ-48, approve the 24 compliance texts, sign off the Dilisense DPA and Privacy text.
 8. B-19, B-20, C-6: Better Stack sign-up, the enforce variable after seven clean days, BUS_GITHUB_TOKEN.
 9. C-11, C-10: DEC-20261024-A items 2 and 5, and the stale-branch word.
+10. Lower priority, no revenue effect: C-3 (HSTS, brand kit, wordmark), C-5 (Railway config), C-6 (NTA, audio, Clay), C-7 (DQ-27), D-8 (drop "archive wow-core").
