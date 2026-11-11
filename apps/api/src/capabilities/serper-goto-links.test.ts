@@ -242,11 +242,10 @@ describe("Google /goto links never become a google.com answer", () => {
   describe("backlink-check", () => {
     const run = () => getDirectExecutor("backlink-check")!;
 
-    /** CommonCrawl answers empty so the Serper fallback is the path under test. */
-    function stubCommonCrawlEmptyThen(search: unknown, resolved: string[] | "fail") {
+    /** Serper's search answers `search`, and `/resolve` answers `resolved`. */
+    function stubSearchThenResolveLinks(search: unknown, resolved: string[] | "fail") {
       fetchMock.mockImplementation((url: string | URL) => {
         const target = String(url);
-        if (target.includes("commoncrawl.org")) return Promise.resolve(new Response("", { status: 200 }));
         if (target.includes("/resolve")) {
           if (resolved === "fail") return Promise.resolve(new Response("down", { status: 503 }));
           return Promise.resolve(okJson({ organic: resolved.map((link) => ({ link })), credits: 0 }));
@@ -256,7 +255,7 @@ describe("Google /goto links never become a google.com answer", () => {
     }
 
     it("never counts google.com as a referring domain", async () => {
-      stubCommonCrawlEmptyThen(serpWithGotoTail(["blogger.example"]), [REAL(4), REAL(5), REAL(6)]);
+      stubSearchThenResolveLinks(serpWithGotoTail(["blogger.example"]), [REAL(4), REAL(5), REAL(6)]);
 
       const out = (await run()({ domain: "mysite.example" })).output as any;
 
@@ -268,7 +267,7 @@ describe("Google /goto links never become a google.com answer", () => {
     });
 
     it("drops an unresolvable link and reports the absence rather than pushing google.com", async () => {
-      stubCommonCrawlEmptyThen(serpWithGotoTail(["blogger.example"]), "fail");
+      stubSearchThenResolveLinks(serpWithGotoTail(["blogger.example"]), "fail");
 
       const out = (await run()({ domain: "mysite.example" })).output as any;
 
@@ -490,7 +489,6 @@ describe("Google /goto links never become a google.com answer", () => {
       // referring_domains_count with an address nobody can open.
       fetchMock.mockImplementation((url: string | URL) => {
         const target = String(url);
-        if (target.includes("commoncrawl.org")) return Promise.resolve(new Response("", { status: 200 }));
         if (target.includes("/resolve")) return Promise.resolve(new Response("down", { status: 503 }));
         return Promise.resolve(
           okJson({

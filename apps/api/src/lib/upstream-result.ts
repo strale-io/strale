@@ -170,15 +170,18 @@ export function httpUnavailable(upstream: string, status: number): UpstreamUnava
  * in lib/trust-helpers.ts files any "401" or "403" as auth_expired, which
  * opens the breaker at once for 30 minutes). So a combined error that is
  * retryable because one leg is transient quotes only the retryable legs'
- * codes, and a 401 or 403 is never quoted at all: a retryable leg can carry
- * one too (GitHub's rate limit answers HTTP 403), and either way it would
- * turn a retry-shortly outage into a half-hour suspension for every caller
- * (PR #1015 delta review). The status stays on each leg's own `code`.
+ * codes, and no 401 or 403 among them: a retryable leg can carry one too
+ * (GitHub's rate limit answers HTTP 403), and quoting it would turn a
+ * retry-shortly outage into a half-hour suspension for every caller (PR #1015
+ * delta review). When no leg is retryable every code is quoted, 401 and 403
+ * included, so the message reads as non-retryable as the error is (PR #1017
+ * review). The status stays on each leg's own `code`.
  */
 export function quotedLegCodes(failures: UpstreamUnavailableError[]): string {
   const retryable = failures.filter((f) => f.retryable);
   const legs = retryable.length > 0 ? retryable : failures;
-  const codes = [...new Set(legs.map((f) => f.code ?? "error"))].filter((c) => !AUTH_STATUS.test(c));
+  let codes = [...new Set(legs.map((f) => f.code ?? "error"))];
+  if (retryable.length > 0) codes = codes.filter((c) => !AUTH_STATUS.test(c));
   return codes.length > 0 ? codes.join(", ") : "declined";
 }
 

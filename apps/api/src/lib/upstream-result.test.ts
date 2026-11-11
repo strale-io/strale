@@ -188,7 +188,7 @@ describe("the breaker reads a helper error the way its retryable flag says", () 
   });
 });
 
-describe("tail: quotedLegCodes never quotes a 401 or 403", () => {
+describe("tail: quotedLegCodes quotes no 401 or 403 when a leg is retryable", () => {
   // A retryable GitHub rate-limit leg carries code "HTTP 403"; quoted, it
   // would make the combined message read auth_expired (PR #1015 delta review).
   const rateLimited403 = () =>

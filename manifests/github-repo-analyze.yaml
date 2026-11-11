@@ -205,7 +205,7 @@ limitations:
     workaround: Combine with dependency-audit for security insights and code-review for quality assessment of specific files
   - title: GitHub must answer for the analysis to run
     text: >-
-      If GitHub rate-limits or does not answer a request the analysis depends on (repository record, commits, languages, README, package.json or requirements.txt), the call fails unbilled rather than analysing a repository with missing data. A file GitHub reports absent (404) is analysed as absent. If GitHub declines to list the contributors because the list is too large (very large repositories), top_contributors and bus_factor_estimate are null and the contributor list is named in unavailable_sources.
+      If GitHub rate-limits, declines (HTTP 403) or does not answer a request the analysis depends on (repository record, commits, languages, README, package.json or requirements.txt), the call fails unbilled rather than analysing a repository with missing data. Rate-limited and declined requests are treated as temporary: retry shortly. A file GitHub reports absent (404) is analysed as absent. If GitHub declines to list the contributors because the list is too large (very large repositories), top_contributors and bus_factor_estimate are null and the contributor list is named in unavailable_sources.
     category: availability
     severity: info
 

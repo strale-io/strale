@@ -3,7 +3,7 @@
 
 slug: backlink-check
 name: "Backlink Check"
-description: "Find possible backlinks to a domain from search results and web archives. Returns linking pages and available link details."
+description: "Find possible backlinks to a domain from Google search results. Returns linking pages and available link details."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
@@ -33,12 +33,6 @@ output_schema:
     nofollow_estimate: null
     referring_domains_count: 1
   properties:
-    unavailable_sources:
-      type: array
-      items:
-        type: string
-      description: >-
-        Present only when Common Crawl or Serper failed while the other answered; the list comes from the source that answered.
     backlinks:
       type: array
     top_anchors:
@@ -49,7 +43,7 @@ output_schema:
       type: number
     unresolved_link_count:
       type: number
-data_source: CommonCrawl index (public backlink database)
+data_source: Serper.dev API (Google Search results)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
@@ -110,11 +104,11 @@ output_field_reliability:
   # `/resolve`. These say what resolution could not open, so a caller
   # never has to read an absent link as an absent result.
   unresolved_link_count: guaranteed
-  unavailable_sources: rare
 
 limitations:
-  - title: Recent or niche backlinks can be missing
-    text: Uses CommonCrawl index data — covers a subset of the web and may miss recently created or niche backlinks
+  - title: Only pages Google search returns are found
+    text: >-
+      Backlinks come from one Google search (through Serper) for pages that mention the domain, up to 10 results. This is not a link index: pages that link without naming the domain, and recently created or niche backlinks, can be missing, and a listed page may mention the domain without linking to it.
     category: coverage
     severity: info
     workaround: Check referring pages directly for recently created or missing backlinks.
@@ -123,9 +117,9 @@ limitations:
       API response bodies above 4 MiB are refused during download rather than parsed.
     category: coverage
     severity: info
-  - title: A failed source is named, never read as no backlinks
+  - title: A failed search is never read as no backlinks
     text: >-
-      If Common Crawl and Serper both fail, the call fails unbilled rather than returning an empty list. Common Crawl mostly returns the domain's own pages, which (with its subdomains) are never counted as backlinks, so when Serper is needed (fewer than 5 backlinks found) and fails or is not configured, and no backlink was found, the call also fails unbilled. If one fails and the other answers with backlinks, the list comes from the one that answered and the failed source is named in unavailable_sources.
+      If the Google search through Serper fails, times out or is not configured, the call fails unbilled rather than returning an empty list. An empty list means the search answered and found no page other than the domain's own (its subdomains are never counted as backlinks).
     category: availability
     severity: info
 
@@ -133,6 +127,6 @@ limitations:
 data_access:
   lane: allowed_with_checks
   acquisition_method: vendor_api
-  upstream_vendor: commoncrawl
-  checks: pending
-  checks_note: "Pending: CommonCrawl index terms not recorded; the fallback is Serper, whose per-call value-added use is permitted in writing (DQ-39, accepted 2026-10-28)."
+  upstream_vendor: serper
+  checks: recorded
+  checks_note: "Serper.dev (google.serper.dev) per-call search API, the only source since the Common Crawl leg was removed (PR #1017). Serper confirmed in writing on 2026-10-27 that use as an upstream source within a value-added per-call API is permitted under its standard terms (DQ-39, accepted 2026-10-28; recorded in apps/api/src/lib/vendor-terms.ts). Results are processed into Strale's own schema, one search per request, never passed through as-is; Google's own rights are not granted by Serper."
