@@ -16,17 +16,25 @@ tracks:
       merged in PR 1014. Wave 2b (rows 9 cookie-scan, 15 barcode-lookup, 16
       backlink-check, 21 github-repo-analyze, 23 seo-audit, 24
       startup-domain-check) merged in PR 1015. Its delta-review tail, branch
-      fix/swallowed-failures-wave2b-tail, is done once merged: combined
-      messages never quote a 401/403 code; seo-audit logs robots.txt failures
-      by error name and rethrows its own TypeError, ReferenceError or
-      SyntaxError; cookie-scan reads a redirect loop as the caller's site not
-      answering; startup-domain-check keeps the caller's name out of error
-      messages; backlink-check drops the domain's own subdomains and treats an
-      unset SERPER_API_KEY as an unavailable Serper; github-repo-analyze names
-      a 403 as a rate limit only when GitHub's body says so, and its
-      known_answer no longer asserts top_contributors. Its fail-before and
-      after receipts are in evidence; it is tier 2 and needs its independent
-      review before merge. Next: wave 2c, rows 5, 6, 20, 26, 28 and
+      fix/swallowed-failures-wave2b-tail (PR 1017), is done once merged:
+      combined messages quote no 401/403 code when a leg is retryable and
+      every code when none is; seo-audit logs robots.txt failures by error
+      name, degrades on every error the robots.txt fetch itself throws (an
+      unparseable redirect Location included) and rethrows its own TypeError,
+      ReferenceError or SyntaxError only after the fetch; cookie-scan reads a
+      redirect loop as the caller's site not answering; startup-domain-check
+      keeps the caller's name out of error messages; backlink-check is
+      Serper-only (the Common Crawl leg only ever returned the domain's own
+      hosts), normalises the domain (trailing dot, port, case, IDN) before
+      dropping its own hosts, and an unset SERPER_API_KEY throws naming the
+      key; github-repo-analyze names a 403 as a rate limit only when GitHub's
+      body says so, and its known_answer no longer asserts top_contributors.
+      Its fail-before and after receipts, and the review round's, are in
+      evidence; it is tier 2 and needs its independent re-review before merge.
+      Deferred from that review: github-repo-analyze's deterministic 403
+      (Repository access blocked) still counts toward the breaker as
+      retryable; safe-fetch's ssrf-too-many-redirects warning logs the start
+      URL with its query string (older than PR 1017). Next: wave 2c, rows 5, 6, 20, 26, 28 and
       29; then wave 2d, rows 30, 31, 32, 33 and 35; each reconciled first
       against later repairs such as customs PR999. Then wave 3; the Nager.Date
       no-calendar path (a weekends-only answer for countries such as TH, still
@@ -78,6 +86,8 @@ tracks:
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-review-after.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-tail-fail-before.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-tail-after.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-tail-round2-fail-before.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-tail-round2-after.json
   - id: T2
     title: "T2: Compliance-answer correctness (reference answers)"
     status: queued
