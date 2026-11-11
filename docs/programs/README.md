@@ -9,12 +9,17 @@ decided. Project truth lives in `docs/project/` (candidate until M4) and
 | Program | Register | Status |
 |---|---|---|
 | [CTO-readiness](cto-readiness/PROGRAM.md) | `cto-readiness/tracks.yaml` | active from 2026-09-02 |
-| [Brand and website](brand-website/PROGRAM.md) | `brand-website/tracks.yaml` | positioning adopted; T4 active: retain Quiet Material and complete its system/asset governance |
+| [Brand and website](brand-website/PROGRAM.md) | `brand-website/tracks.yaml` | site live on strale.io since 2026-11-05 (DEC-20261105-A); T4 active: the Open Flow design system |
 | [Platform hardening](platform-hardening/PROGRAM.md) | `platform-hardening/tracks.yaml` | active from 2026-10-27; H1 watch production |
 | [Distribution](distribution/PROGRAM.md) | `distribution/tracks.yaml` | active from 2026-10-27; D1 active, D0 in the same unmerged PR |
-| [Promise audit](promise-audit/PROGRAM.md) | `promise-audit/tracks.yaml` | active from 2026-11-06; T1 money promises active, wave 1 of the swallowed-failure fix in flight |
+| [Promise audit](promise-audit/PROGRAM.md) | `promise-audit/tracks.yaml` | active from 2026-11-06; T1 money promises active, waves 2a and 2b merged, wave 2c in review |
 | [Robustness](robustness/PROGRAM.md) | `robustness/tracks.yaml` | active from 2026-11-06; R1 untrusted-input bounds done 2026-11-11; R3 alert and signal correctness active |
 | [Remediation](../remediation/REMEDIATION-LEDGER.md) | legacy program; per-package YAML under `../remediation/packages/`, not a track register | closure tracked by CTO-readiness track T4 |
+
+**Growth readiness:** [GROWTH-READINESS.md](GROWTH-READINESS.md) is the single list of what
+must close before a growth push (A), what is fixed along the way (B) and what is parked (C),
+with the roadmap dates and the bar for new list-A items. Petter approved it on 2026-11-11.
+It points at the tracks above; it does not replace them.
 
 Rules:
 
