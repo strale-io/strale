@@ -19,9 +19,14 @@ tracks:
       After timings in docs/lanes/codex/nta-xml-shape-bound-report.md: 1 MiB of
       unclosed nesting went from 20.4 s to under 5 ms, and a 1 MiB attribute
       flood that took 49 s is refused in under 200 ms, pinned by tests. Every
-      jsdom call site the sweep named now has a stated bound or a fix. Next:
-      per-caller fairness in the single converter (one free account can keep
-      it busy; needs caller identity in executors)."
+      jsdom call site the sweep named now has a stated bound or a fix.
+      Per-caller fairness in the single converter (caller scope on every rail,
+      IPv6 counted by /64, fair queuing with eviction of an over-represented
+      caller's newest page, round-robin dispatch, a 30 s cool-down after a
+      time or memory limit, refused before any fetch) is in the PR from
+      codex/converter-caller-fairness-3, reviewed GO by an independent Claude
+      agent. Next: after it merges, confirm /health serves its commit, then
+      close T1 against its exit lines."
     resume_file: handoff/_general/from-code/2026-11-06-orchestrator-state.md
     exit:
       - "A receipt shows every adversarial input in the brief (nested div 16, 32
