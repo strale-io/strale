@@ -53,6 +53,9 @@ vi.mock("node:dns/promises", async (importOriginal) => {
 import { getDirectExecutor } from "./index.js";
 import { __resetRobotsCacheForTests } from "../lib/robots-txt.js";
 import { outcomeFromError, assertBillableOutput } from "../lib/execution-outcome.js";
+import { categorizeFailureReason, isRetryableFailure } from "../lib/trust-helpers.js";
+import { isUserInputError } from "../lib/circuit-breaker.js";
+import { CapabilityRefusalError } from "../lib/capability-refusal.js";
 import "./cookie-scan.js";
 import "./barcode-lookup.js";
 import "./backlink-check.js";
@@ -550,5 +553,167 @@ describe("startup-domain-check negative: answers that were given keep their outp
     const out = await billed("startup-domain-check", exec("startup-domain-check")({ company_name: "Acme" }));
     expect(out.domains.every((d: Out) => d.available === false)).toBe(true);
     expect(out.taken.map((t: Out) => t.type)).toEqual(expect.arrayContaining(["github", "npm", "pypi"]));
+  });
+});
+
+// ─── Review fixes on PR #1015 ───────────────────────────────────────────────
+//
+// Tagged "review fix:". Each failure case fails against the wave 2b head
+// before these fixes (ae5488ae) and passes after.
+
+describe("review fix: github-repo-analyze 403s classify as transient, not auth_expired", () => {
+  it("a rate-limited 403 is retryable and transient for the breaker", async () => {
+    github((u) => (u.includes("/commits") ? rateLimited : undefined));
+    const err = await expectUnbilledUpstreamFailure(exec("github-repo-analyze")({ url: "https://github.com/o/r" }));
+    expect(err.retryable).toBe(true);
+    expect(err.message).not.toMatch(/\b40[13]\b/);
+    expect(categorizeFailureReason(err.message)).toBe("transient");
+  });
+
+  it("a 403 on the repository record that is not a rate limit is retryable and transient", async () => {
+    github((u) => (u.endsWith("/repos/o/r") ? () => status(403, '{"message":"You have exceeded a secondary rate limit."}') : undefined));
+    const err = await expectUnbilledUpstreamFailure(exec("github-repo-analyze")({ url: "https://github.com/o/r" }));
+    expect(err.retryable).toBe(true);
+    expect(err.message).not.toMatch(/\b40[13]\b/);
+    expect(categorizeFailureReason(err.message)).toBe("transient");
+  });
+
+  it("a contributors 403 whose body does not say 'too large' throws, retryable and transient", async () => {
+    github((u) => (u.includes("/contributors") ? () => status(403, '{"message":"You have exceeded a secondary rate limit."}') : undefined));
+    const err = await expectUnbilledUpstreamFailure(exec("github-repo-analyze")({ url: "https://github.com/o/r" }));
+    expect(err.retryable).toBe(true);
+    expect(categorizeFailureReason(err.message)).toBe("transient");
+  });
+
+  it("GitHub's real 'too large to list contributors' 403 still nulls the contributors", async () => {
+    github((u) =>
+      u.includes("/contributors")
+        ? () => status(403, '{"message":"The history or contributor list is too large to list contributors for this repository via the API."}')
+        : undefined,
+    );
+    const out = await billed("github-repo-analyze", exec("github-repo-analyze")({ url: "https://github.com/o/r" }));
+    expect(out.top_contributors).toBeNull();
+    expect(out.unavailable_sources).toEqual(["GitHub contributors list"]);
+  });
+});
+
+describe("review fix: backlink-check throws a failed Serper leg when nothing was found", () => {
+  it.each([
+    ["HTTP 429", () => status(429)],
+    ["HTTP 503", () => status(503)],
+    ["a timeout", () => { throw timeout(); }],
+  ] as Array<[string, () => Response]>)("Common Crawl 404 and Serper %s throws, unbilled and retryable", async (_l, serper) => {
+    process.env.SERPER_API_KEY = "test";
+    backlinks(() => status(404), serper);
+    const err = await expectUnbilledUpstreamFailure(exec("backlink-check")({ domain: "mysite.example" }));
+    expect(err.message).toContain("Serper Google search API");
+    expect(err.retryable).toBe(true);
+  });
+
+  it("Common Crawl 404 and Strale's own Serper account state rethrows it unchanged", async () => {
+    process.env.SERPER_API_KEY = "test";
+    const down = vendorDown();
+    backlinks(() => status(404), () => { throw down; });
+    await expect(exec("backlink-check")({ domain: "mysite.example" })).rejects.toBe(down);
+  });
+
+  it("Common Crawl 404 and a blocked paid call rethrows PaidCallBlockedError unchanged", async () => {
+    process.env.SERPER_API_KEY = "test";
+    const blocked = Object.assign(new Error("Paid call to 'serper' blocked in a test context."), { name: "PaidCallBlockedError" });
+    backlinks(() => status(404), () => { throw blocked; });
+    await expect(exec("backlink-check")({ domain: "mysite.example" })).rejects.toBe(blocked);
+  });
+});
+
+describe("review fix: cookie-scan failures of the caller's own site do not open the breaker", () => {
+  it.each(transient.filter(([label]) => label !== "HTTP 429"))(
+    "the site's %s stays unbilled and reads as the target's failure",
+    async (_label, answer) => {
+      site(answer);
+      const err = await expectUnbilledUpstreamFailure(exec("cookie-scan")({ url: "https://shop.test" }));
+      expect(err.retryable).toBe(true);
+      expect(isUserInputError(err.message)).toBe(true);
+    },
+  );
+});
+
+describe("review fix: startup-domain-check keeps the report when one extension's DNS fails", () => {
+  const failOnly = (failing: string, code: string) =>
+    (async (name: string) => {
+      throw dnsError(name === failing ? code : "ENOTFOUND");
+    }) as unknown as () => Promise<string[]>;
+
+  it.each(["ESERVFAIL", "ETIMEOUT"])("DNS %s for acme.io only nulls acme.io and names it", async (code) => {
+    domains(failOnly("acme.io", code));
+    const out = await billed("startup-domain-check", exec("startup-domain-check")({ company_name: "Acme" }));
+    const io = out.domains.find((d: Out) => d.domain === "acme.io");
+    expect(io).toMatchObject({ available: null, current_owner: null });
+    expect(out.unavailable_sources).toEqual(["DNS for acme.io"]);
+    expect(out.available.map((a: Out) => a.name)).not.toContain("acme.io");
+    expect(out.taken.map((t: Out) => t.name)).not.toContain("acme.io");
+    expect(out.best_available_domain).toBe("acme.com");
+  });
+
+  it("a failed .com lookup is never the best available domain", async () => {
+    domains(failOnly("acme.com", "ESERVFAIL"));
+    const out = await billed("startup-domain-check", exec("startup-domain-check")({ company_name: "Acme" }));
+    expect(out.best_available_domain).toBe("acme.io");
+  });
+});
+
+describe("review fix: seo-audit treats any non-refusal robots.txt error as unavailable", () => {
+  it.each([
+    ["too many redirects", () => new Error("Too many redirects (>3) — refusing to follow further. Starting URL: https://site.test/robots.txt.")],
+    ["a redirect to a restricted address", () => Object.assign(new Error("This URL resolves to a restricted address."), { name: "UrlValidationError" })],
+  ])("robots.txt %s nulls the two checks and names robots.txt", async (_l, makeErr) => {
+    seo(async () => { throw makeErr(); });
+    const out = await billed("seo-audit", exec("seo-audit")({ url: "https://site.test" }));
+    expect(out.checks.robots_txt).toEqual({ present: null });
+    expect(out.unavailable_sources).toEqual(["robots.txt"]);
+    expect(out.overall_score).toBe(39);
+  });
+
+  it("a refusal on the page URL itself still refuses", async () => {
+    const refusal = new CapabilityRefusalError("'url' must be a page whose HTML is 16.0MB or less.", { field: "url", fix: "Send a smaller page." });
+    fetchRenderedHtml.mockRejectedValue(refusal);
+    safeFetchMock.mockImplementation(async () => status(404));
+    await expect(exec("seo-audit")({ url: "https://site.test" })).rejects.toBe(refusal);
+  });
+});
+
+describe("review fix: a retryable combined failure never quotes another leg's 401/403", () => {
+  it("barcode-lookup: Open Food Facts 503 and UPCitemdb 403 is retryable for the breaker too", async () => {
+    barcode(() => status(503), () => status(403));
+    const err = await expectUnbilledUpstreamFailure(exec("barcode-lookup")({ barcode: CODE }));
+    expect(err.retryable).toBe(true);
+    expect(isRetryableFailure(categorizeFailureReason(err.message))).toBe(true);
+  });
+
+  it("backlink-check: Common Crawl 403 and Serper 503 is retryable for the breaker too", async () => {
+    process.env.SERPER_API_KEY = "test";
+    backlinks(() => status(403), () => status(503));
+    const err = await expectUnbilledUpstreamFailure(exec("backlink-check")({ domain: "mysite.example" }));
+    expect(err.retryable).toBe(true);
+    expect(isRetryableFailure(categorizeFailureReason(err.message))).toBe(true);
+  });
+});
+
+describe("review fix: cookie-scan reads an unstated consent banner as unknown", () => {
+  it("a missing consent_banner_detected is null and adds no 'no banner' issue", async () => {
+    site(async () => status(200, "", { "set-cookie": "_ga=GA1.1.1; Path=/" }));
+    const { consent_banner_detected: _omitted, ...withoutBanner } = NO_TRACKING;
+    llmCreate.mockResolvedValue(llmReply(JSON.stringify(withoutBanner)));
+    const out = await billed("cookie-scan", exec("cookie-scan")({ url: "https://shop.test" }));
+    expect(out.consent_banner_detected).toBeNull();
+    expect(out.potential_issues).toEqual([]);
+    expect(out.tracking_scripts).toEqual([]);
+  });
+
+  it('a consent_banner_detected of the string "true" reads as true', async () => {
+    site(async () => status(200, "", { "set-cookie": "_ga=GA1.1.1; Path=/" }));
+    llmCreate.mockResolvedValue(llmReply(JSON.stringify({ ...NO_TRACKING, consent_banner_detected: "true" })));
+    const out = await billed("cookie-scan", exec("cookie-scan")({ url: "https://shop.test" }));
+    expect(out.consent_banner_detected).toBe(true);
+    expect(out.potential_issues).toEqual([]);
   });
 });
