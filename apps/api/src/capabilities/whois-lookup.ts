@@ -77,7 +77,7 @@ registerCapability("whois-lookup", async (input: CapabilityInput) => {
     throw inputRefusal(
       `'domain' must be under a TLD Strale has a WHOIS registry server for; .${tld} is not one of them, so this domain cannot be looked up.`,
       "domain",
-      `Send 'domain' under one of these TLDs: ${Object.keys(TLD_SERVERS).map((t) => `.${t}`).join(", ")}.`,
+      "Send 'domain' under a TLD with a known registry server, such as .com, .net, .org, .io, .se, .de, .uk or .eu.",
     );
   }
 

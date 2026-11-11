@@ -36,15 +36,15 @@ output_schema:
     url:
       type: string
     exists:
-      type: [boolean, "null"]
+      type: boolean
       description: >-
-        Three-state. true = page appears to exist; false = page appears gone (hard or soft 404);
-        null = indeterminate (blocked by bot detection, server error, or network failure) — treat as
-        "unknown", not as either answer.
+        true = page appears to exist; false = page appears gone (hard or soft 404). When the site
+        blocks the check, errors or does not answer, the call fails and is not billed, so there is no
+        "unknown" answer.
     confidence:
-      type: [string, "null"]
-      enum: [high, medium, low, null]
-      description: null whenever exists is null. Do not act on "low" alone.
+      type: string
+      enum: [high, medium, low]
+      description: Do not act on "low" alone.
     reason:
       type: string
       enum:
@@ -56,13 +56,6 @@ output_schema:
         - soft_404_body_and_redirect
         - redirected_to_generic
         - thin_content
-        - access_blocked
-        - server_error
-        - unexpected_status
-        - timeout
-        - redirect_loop
-        - dns_error
-        - network_error
     signals:
       type: array
       description: Every heuristic that fired, independent of the final verdict.
@@ -85,9 +78,6 @@ output_schema:
         larger ones. Not the Content-Length header.
     checked_at:
       type: string
-    error:
-      type: string
-      description: Present only on network/timeout failures.
 data_source: HTTP fetch + content heuristics
 data_source_type: api
 transparency_tag: algorithmic
@@ -134,13 +124,12 @@ output_field_reliability:
   signals: guaranteed
   redirected: guaranteed
   checked_at: guaranteed
-  exists: common
-  confidence: common
+  exists: guaranteed
+  confidence: guaranteed
   status_code: common
   final_url: common
   title: common
   content_length: common
-  error: rare
 limitations:
   - title: Single-page apps can hide missing pages
     text: >-
@@ -157,14 +146,14 @@ limitations:
     category: coverage
     severity: info
     workaround: For non-English sites, verify the returned title and final_url yourself rather than trusting exists alone.
-  - title: Blocked pages return unknown and are still billed
+  - title: Blocked or failing sites cannot be checked
     text: >-
-      Pages returning HTTP 401 or 403 produce `exists` null with reason access_blocked, rather than a
-      determination that the page exists. This completed check is billed, and unknown results can be
-      common on sites that block automated requests.
+      When the site refuses automated requests (HTTP 401, 403, 407 or 429), answers with a server
+      error or another error status besides 404 and 410, times out or keeps redirecting, the call
+      fails with an error and is not billed. Sites that block automated requests cannot be checked.
     category: coverage
     severity: info
-    workaround: Treat exists:null as "unknown" and fall back to a manual check or a different data source for these domains.
+    workaround: For these domains, fall back to a manual check or a different data source.
   - title: Low-confidence negatives can misread live pages
     text: >-
       Redirects to generic pages and thin-content checks can classify legitimate pages as missing with

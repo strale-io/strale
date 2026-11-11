@@ -15,7 +15,7 @@
     "capabilities/charity-lookup-uk.ts": 3,
     "capabilities/company-news.ts": 1,
     "capabilities/country-economic-indicators.ts": 1,
-    "capabilities/country-trade-data.ts": 2,
+    "capabilities/country-trade-data.ts": 1,
     "capabilities/croatian-company-data.ts": 3,
     "capabilities/crypto-price.ts": 1,
     "capabilities/cve-lookup.ts": 2,

@@ -92,18 +92,6 @@
       "line": 325
     },
     {
-      "file": "apps/api/src/capabilities/company-fundamentals.ts",
-      "fingerprint": "4b8673637cae3489e7626300f711bce54e66dd92cbe79f11616fcd1b8801b779",
-      "count": 1,
-      "line": 192
-    },
-    {
-      "file": "apps/api/src/capabilities/company-fundamentals.ts",
-      "fingerprint": "b38219bd2753d5f88948b9c9c309ce37fd442ac5e0796cb509d1f8761053c018",
-      "count": 1,
-      "line": 202
-    },
-    {
       "file": "apps/api/src/capabilities/company-tech-stack.ts",
       "fingerprint": "92d285f50753488e732067fa65cb7407d6759b79ee9da2875be2e5c46f10cf69",
       "count": 1,
@@ -114,18 +102,6 @@
       "fingerprint": "0694993dde398d6f788822c7d54f01e647a34d34ac057febedcee44d13ab5508",
       "count": 1,
       "line": 28
-    },
-    {
-      "file": "apps/api/src/capabilities/country-trade-data.ts",
-      "fingerprint": "3be2dd4dea44d519e1fadbea5a027568dc988b0492f7625f1ec805774e68d328",
-      "count": 1,
-      "line": 974
-    },
-    {
-      "file": "apps/api/src/capabilities/country-trade-data.ts",
-      "fingerprint": "e3abd5601af4386e074b4f4d5eb5220b7eaffbe0c2c3fd769d3b9d889861709b",
-      "count": 1,
-      "line": 943
     },
     {
       "file": "apps/api/src/capabilities/croatian-company-data.ts",
@@ -704,12 +680,6 @@
       "line": 244
     },
     {
-      "file": "apps/api/src/capabilities/page-exists.ts",
-      "fingerprint": "f101d47276a2626b6e2bc0107b3f5a1b9ff099b9090603eb0ddc1d5fa3af03cb",
-      "count": 1,
-      "line": 316
-    },
-    {
       "file": "apps/api/src/capabilities/paid-api-preflight.ts",
       "fingerprint": "4678305da11fbba82b8be02f99d8a575784dc58e8af124ed135e91b4b4cf76b0",
       "count": 1,
@@ -978,12 +948,6 @@
       "fingerprint": "ed2893230adac2b5073d7d9fb664a1d4785c5e5a6301c110ca50f3b12acba8a8",
       "count": 1,
       "line": 123
-    },
-    {
-      "file": "apps/api/src/capabilities/whois-lookup.ts",
-      "fingerprint": "dafd3d21801c30b0fc5d2b01e2577c59ded10f0d0fd21ef2cdf118d1a8681490",
-      "count": 1,
-      "line": 66
     },
     {
       "file": "apps/api/src/capabilities/xrp-address-validate.ts",

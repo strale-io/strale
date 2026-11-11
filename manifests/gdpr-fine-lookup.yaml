@@ -19,6 +19,7 @@ input_schema:
 output_schema:
   type: object
   example:
+    page_status: results
     fines:
       - date: null
         company: Meta Platforms Ireland Limited
@@ -30,6 +31,12 @@ output_schema:
     total_fines: 1
     total_amount_eur: 1200000000
   properties:
+    page_status:
+      type: string
+      enum: [results, no_results]
+      description: >-
+        results = the tracker listed fines; no_results = the tracker's table showed no fine matching
+        the search (fines is then empty).
     fines:
       type: array
     total_fines:
@@ -56,6 +63,7 @@ test_fixtures:
     company: Google
     country_code: US
 output_field_reliability:
+  page_status: common
   fines: guaranteed
   total_fines: guaranteed
   total_amount_eur: guaranteed
@@ -65,6 +73,14 @@ limitations:
     category: freshness
     severity: info
     workaround: Check the relevant data protection authority’s press releases for recently announced fines.
+  - title: Tracker outages fail without a charge
+    text: >-
+      When enforcementtracker.com shows no fine table (an error, maintenance or consent page, or an
+      empty render), the call fails with an error and is not billed. An empty `fines` list means the
+      tracker's table showed no fine matching the search.
+    category: availability
+    severity: info
+    workaround: Retry after a short wait.
   - title: Unpublished fines are not covered
     text: Covers publicly reported fines only — some national DPAs delay publication
     category: coverage

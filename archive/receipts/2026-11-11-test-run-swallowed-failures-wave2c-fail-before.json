@@ -1,0 +1,701 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "3857496f420b22755465ff3939451f6492584a0a"
+  },
+  "at": "2026-11-11T22:24:02.053Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/w2c-fail-before.json"
+  },
+  "summary": {
+    "ok": true,
+    "expected": "fail",
+    "total": 48,
+    "passed": 17,
+    "failed": 31,
+    "files": "apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts",
+    "executors_at": "3ac41f16",
+    "tests_at": "3857496f",
+    "note": "all 31 failure tests fail against the old executors; the 17 negative and passthrough tests pass before and after"
+  },
+  "topic": "swallowed-failures-wave2c-fail-before",
+  "raw": {
+    "numTotalTestSuites": 15,
+    "numPassedTestSuites": 8,
+    "numFailedTestSuites": 7,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 48,
+    "numPassedTests": 17,
+    "numFailedTests": 31,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794435463336,
+    "success": false,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "failure: pricing-page-extract does not bill a page that is not a pricing page"
+            ],
+            "fullName": "failure: pricing-page-extract does not bill a page that is not a pricing page throws when the model reports a cookie or login wall (page_error)",
+            "status": "failed",
+            "title": "throws when the model reports a cookie or login wall (page_error)",
+            "duration": 7.62170500000002,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"page_status\":\"page_error\",\"plans\":[],\"enterprise_cta\":false,\"url\":\"https://saas.test/pricing\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:138:17\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: pricing-page-extract does not bill a page that is not a pricing page"
+            ],
+            "fullName": "failure: pricing-page-extract does not bill a page that is not a pricing page throws on an empty app shell without asking the model",
+            "status": "failed",
+            "title": "throws on an empty app shell without asking the model",
+            "duration": 1.1814860000000635,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"plans\":[],\"enterprise_cta\":false,\"url\":\"https://saas.test/pricing\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:148:17\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: pricing-page-extract bills a real page"
+            ],
+            "fullName": "negative: pricing-page-extract bills a real page bills a real product page that publishes no prices",
+            "status": "passed",
+            "title": "bills a real product page that publishes no prices",
+            "duration": 3.2672019999999975,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: pricing-page-extract bills a real page"
+            ],
+            "fullName": "negative: pricing-page-extract bills a real page bills extracted plans",
+            "status": "passed",
+            "title": "bills extracted plans",
+            "duration": 1.4947859999999764,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "passthrough: pricing-page-extract keeps the fetch layer's own errors"
+            ],
+            "fullName": "passthrough: pricing-page-extract keeps the fetch layer's own errors rethrows a fetch error unchanged",
+            "status": "passed",
+            "title": "rethrows a fetch error unchanged",
+            "duration": 0.836496000000011,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: gdpr-fine-lookup does not bill a tracker page without its fine table"
+            ],
+            "fullName": "failure: gdpr-fine-lookup does not bill a tracker page without its fine table throws, counted against the source, when the model reports page_error",
+            "status": "failed",
+            "title": "throws, counted against the source, when the model reports page_error",
+            "duration": 1.472203000000036,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"page_status\":\"page_error\",\"fines\":[],\"total_fines\":0,\"total_amount_eur\":0}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:185:17\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: gdpr-fine-lookup does not bill a tracker page without its fine table"
+            ],
+            "fullName": "failure: gdpr-fine-lookup does not bill a tracker page without its fine table throws UpstreamUnavailableError, not a plain error, on a near-empty render",
+            "status": "failed",
+            "title": "throws UpstreamUnavailableError, not a plain error, on a near-empty render",
+            "duration": 2.0202689999999848,
+            "failureMessages": [
+              "AssertionError: expected 'Error' to be 'UpstreamUnavailableError' // Object.is equality\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:80:20)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:195:17\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: gdpr-fine-lookup bills the tracker's answers"
+            ],
+            "fullName": "negative: gdpr-fine-lookup bills the tracker's answers bills a search with no matching fine",
+            "status": "passed",
+            "title": "bills a search with no matching fine",
+            "duration": 0.8802650000000085,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: gdpr-fine-lookup bills the tracker's answers"
+            ],
+            "fullName": "negative: gdpr-fine-lookup bills the tracker's answers bills listed fines",
+            "status": "passed",
+            "title": "bills listed fines",
+            "duration": 0.8498730000000023,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported"
+            ],
+            "fullName": "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported throws when one concept request fails with HTTP 503",
+            "status": "failed",
+            "title": "throws when one concept request fails with HTTP 503",
+            "duration": 1091.177776,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"cik\":\"0000320193\",\"ticker\":null,\"entity_name\":\"Apple Inc.\",\"latest_period_end\":\"2025-09-27\",\"fundamentals\":{\"revenue\":{\"label\":\"Revenue\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"RevenueFromContractWithCustomerExcludingAssessedTax\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"operating_income\":{\"label\":\"Operating income\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"OperatingIncomeLoss\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"net_income\":null,\"assets\":{\"label\":\"Total assets\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"Assets\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"liabilities\":{\"label\":\"Total liabilities\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"Liabilities\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"equity\":{\"label\":\"Shareholders' equity\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"StockholdersEquity\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"cash\":{\"label\":\"Cash and equivalents\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"CashAndCashEquivalentsAtCarryingValue\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"eps_diluted\":{\"label\":\"Diluted EPS\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"EarningsPerShareDiluted\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"shares_diluted\":{\"label\":\"Diluted shares outstanding\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"WeightedAverageNumberOfDilutedSharesOutstanding\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"}},\"metrics_unavailable\":[\"net_income\"],\"source_url\":\"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000320193&type=10-K\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:249:19\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported"
+            ],
+            "fullName": "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported throws when one concept request fails with HTTP 403",
+            "status": "failed",
+            "title": "throws when one concept request fails with HTTP 403",
+            "duration": 1086.079029,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"cik\":\"0000320193\",\"ticker\":null,\"entity_name\":\"Apple Inc.\",\"latest_period_end\":\"2025-09-27\",\"fundamentals\":{\"revenue\":{\"label\":\"Revenue\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"RevenueFromContractWithCustomerExcludingAssessedTax\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"operating_income\":{\"label\":\"Operating income\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"OperatingIncomeLoss\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"net_income\":null,\"assets\":{\"label\":\"Total assets\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"Assets\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"liabilities\":{\"label\":\"Total liabilities\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"Liabilities\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"equity\":{\"label\":\"Shareholders' equity\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"StockholdersEquity\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"cash\":{\"label\":\"Cash and equivalents\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"CashAndCashEquivalentsAtCarryingValue\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"eps_diluted\":{\"label\":\"Diluted EPS\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"EarningsPerShareDiluted\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"shares_diluted\":{\"label\":\"Diluted shares outstanding\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"WeightedAverageNumberOfDilutedSharesOutstanding\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"}},\"metrics_unavailable\":[\"net_income\"],\"source_url\":\"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000320193&type=10-K\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:249:19\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported"
+            ],
+            "fullName": "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported throws when one concept request fails with a network error",
+            "status": "failed",
+            "title": "throws when one concept request fails with a network error",
+            "duration": 1084.5553369999998,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"cik\":\"0000320193\",\"ticker\":null,\"entity_name\":\"Apple Inc.\",\"latest_period_end\":\"2025-09-27\",\"fundamentals\":{\"revenue\":{\"label\":\"Revenue\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"RevenueFromContractWithCustomerExcludingAssessedTax\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"operating_income\":{\"label\":\"Operating income\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"OperatingIncomeLoss\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"net_income\":null,\"assets\":{\"label\":\"Total assets\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"Assets\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"liabilities\":{\"label\":\"Total liabilities\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"Liabilities\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"equity\":{\"label\":\"Shareholders' equity\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"StockholdersEquity\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"cash\":{\"label\":\"Cash and equivalents\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"CashAndCashEquivalentsAtCarryingValue\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"eps_diluted\":{\"label\":\"Diluted EPS\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"EarningsPerShareDiluted\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"shares_diluted\":{\"label\":\"Diluted shares outstanding\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"WeightedAverageNumberOfDilutedSharesOutstanding\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"}},\"metrics_unavailable\":[\"net_income\"],\"source_url\":\"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000320193&type=10-K\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:249:19\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported"
+            ],
+            "fullName": "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported throws when one concept request fails with a timeout",
+            "status": "failed",
+            "title": "throws when one concept request fails with a timeout",
+            "duration": 1086.3781319999998,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"cik\":\"0000320193\",\"ticker\":null,\"entity_name\":\"Apple Inc.\",\"latest_period_end\":\"2025-09-27\",\"fundamentals\":{\"revenue\":{\"label\":\"Revenue\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"RevenueFromContractWithCustomerExcludingAssessedTax\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"operating_income\":{\"label\":\"Operating income\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"OperatingIncomeLoss\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"net_income\":null,\"assets\":{\"label\":\"Total assets\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"Assets\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"liabilities\":{\"label\":\"Total liabilities\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"Liabilities\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"equity\":{\"label\":\"Shareholders' equity\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"StockholdersEquity\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"cash\":{\"label\":\"Cash and equivalents\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"CashAndCashEquivalentsAtCarryingValue\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"eps_diluted\":{\"label\":\"Diluted EPS\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"EarningsPerShareDiluted\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"shares_diluted\":{\"label\":\"Diluted shares outstanding\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"WeightedAverageNumberOfDilutedSharesOutstanding\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"}},\"metrics_unavailable\":[\"net_income\"],\"source_url\":\"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000320193&type=10-K\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:249:19\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported"
+            ],
+            "fullName": "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported throws when one concept request fails with an unparseable body",
+            "status": "failed",
+            "title": "throws when one concept request fails with an unparseable body",
+            "duration": 1085.647492,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"cik\":\"0000320193\",\"ticker\":null,\"entity_name\":\"Apple Inc.\",\"latest_period_end\":\"2025-09-27\",\"fundamentals\":{\"revenue\":{\"label\":\"Revenue\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"RevenueFromContractWithCustomerExcludingAssessedTax\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"operating_income\":{\"label\":\"Operating income\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"OperatingIncomeLoss\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"net_income\":null,\"assets\":{\"label\":\"Total assets\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"Assets\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"liabilities\":{\"label\":\"Total liabilities\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"Liabilities\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"equity\":{\"label\":\"Shareholders' equity\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"StockholdersEquity\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"cash\":{\"label\":\"Cash and equivalents\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"CashAndCashEquivalentsAtCarryingValue\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"eps_diluted\":{\"label\":\"Diluted EPS\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"EarningsPerShareDiluted\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"},\"shares_diluted\":{\"label\":\"Diluted shares outstanding\",\"value\":1000000,\"unit\":\"USD\",\"concept\":\"WeightedAverageNumberOfDilutedSharesOutstanding\",\"fiscal_year\":2025,\"period_start\":\"2024-09-29\",\"period_end\":\"2025-09-27\",\"form\":\"10-K\",\"filed\":\"2025-10-31\",\"accession\":\"0000320193-25-000079\"}},\"metrics_unavailable\":[\"net_income\"],\"source_url\":\"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000320193&type=10-K\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:249:19\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported"
+            ],
+            "fullName": "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported throws an outage, not the caller-input refusal, when every concept request fails",
+            "status": "failed",
+            "title": "throws an outage, not the caller-input refusal, when every concept request fails",
+            "duration": 1444.3127749999994,
+            "failureMessages": [
+              "AssertionError: expected 'Error' to be 'UpstreamUnavailableError' // Object.is equality\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:80:20)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:257:17\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: company-fundamentals keeps the SEC's real answers"
+            ],
+            "fullName": "negative: company-fundamentals keeps the SEC's real answers bills, naming the metric unreported, when the SEC has no such concept (404)",
+            "status": "passed",
+            "title": "bills, naming the metric unreported, when the SEC has no such concept (404)",
+            "duration": 1084.8198419999999,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: company-fundamentals keeps the SEC's real answers"
+            ],
+            "fullName": "negative: company-fundamentals keeps the SEC's real answers refuses the input when the registrant has no concept at all (every request 404)",
+            "status": "passed",
+            "title": "refuses the input when the registrant has no concept at all (every request 404)",
+            "duration": 1444.9964369999998,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: country-trade-data does not answer from embedded estimates when the World Bank fails"
+            ],
+            "fullName": "failure: country-trade-data does not answer from embedded estimates when the World Bank fails throws on HTTP 503 for a country with embedded data",
+            "status": "failed",
+            "title": "throws on HTTP 503 for a country with embedded data",
+            "duration": 0.8853170000002137,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"country_code\":\"SE\",\"country_name\":\"Sweden\",\"year\":2023,\"total_exports_usd\":195000000000,\"total_imports_usd\":195000000000,\"trade_balance_usd\":0,\"top_exports\":[{\"product\":\"Refined petroleum\",\"value_usd\":14000000000,\"share_percent\":7.2},{\"product\":\"Automobiles (Volvo)\",\"value_usd\":12000000000,\"share_percent\":6.2},{\"product\":\"Pharmaceuticals\",\"value_usd\":11000000000,\"share_percent\":5.6},{\"product\":\"Iron and steel\",\"value_usd\":8000000000,\"share_percent\":4.1},{\"product\":\"Telecommunications equipment (Ericsson)\",\"value_usd\":8000000000,\"share_percent\":4.1}],\"top_imports\":[{\"product\":\"Crude petroleum\",\"value_usd\":12000000000,\"share_percent\":6.2},{\"product\":\"Automobiles\",\"value_usd\":11000000000,\"share_percent\":5.6},{\"product\":\"Pharmaceuticals\",\"value_usd\":5500000000,\"share_percent\":2.8},{\"product\":\"Broadcasting equipment\",\"value_usd\":5000000000,\"share_percent\":2.6},{\"product\":\"Computers\",\"value_usd\":4500000000,\"share_percent\":2.3}],\"top_partners\":[{\"country\":\"Germany\",\"trade_value_usd\":20000000000,\"type\":\"export\"},{\"country\":\"Norway\",\"trade_value_usd\":18000000000,\"type\":\"export\"},{\"country\":\"Germany\",\"trade_value_usd\":30000000000,\"type\":\"import\"},{\"country\":\"Netherlands\",\"trade_value_usd\":15000000000,\"type\":\"import\"},{\"country\":\"China\",\"trade_value_usd\":12000000000,\"type\":\"import\"}],\"data_source\":\"embedded-trade-data\",\"note\":\"Product breakdown and partner data are estimates based on 2023 published trade statistics.\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:296:19\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: country-trade-data does not answer from embedded estimates when the World Bank fails"
+            ],
+            "fullName": "failure: country-trade-data does not answer from embedded estimates when the World Bank fails throws on HTTP 429 for a country with embedded data",
+            "status": "failed",
+            "title": "throws on HTTP 429 for a country with embedded data",
+            "duration": 0.4023059999999532,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"country_code\":\"SE\",\"country_name\":\"Sweden\",\"year\":2023,\"total_exports_usd\":195000000000,\"total_imports_usd\":195000000000,\"trade_balance_usd\":0,\"top_exports\":[{\"product\":\"Refined petroleum\",\"value_usd\":14000000000,\"share_percent\":7.2},{\"product\":\"Automobiles (Volvo)\",\"value_usd\":12000000000,\"share_percent\":6.2},{\"product\":\"Pharmaceuticals\",\"value_usd\":11000000000,\"share_percent\":5.6},{\"product\":\"Iron and steel\",\"value_usd\":8000000000,\"share_percent\":4.1},{\"product\":\"Telecommunications equipment (Ericsson)\",\"value_usd\":8000000000,\"share_percent\":4.1}],\"top_imports\":[{\"product\":\"Crude petroleum\",\"value_usd\":12000000000,\"share_percent\":6.2},{\"product\":\"Automobiles\",\"value_usd\":11000000000,\"share_percent\":5.6},{\"product\":\"Pharmaceuticals\",\"value_usd\":5500000000,\"share_percent\":2.8},{\"product\":\"Broadcasting equipment\",\"value_usd\":5000000000,\"share_percent\":2.6},{\"product\":\"Computers\",\"value_usd\":4500000000,\"share_percent\":2.3}],\"top_partners\":[{\"country\":\"Germany\",\"trade_value_usd\":20000000000,\"type\":\"export\"},{\"country\":\"Norway\",\"trade_value_usd\":18000000000,\"type\":\"export\"},{\"country\":\"Germany\",\"trade_value_usd\":30000000000,\"type\":\"import\"},{\"country\":\"Netherlands\",\"trade_value_usd\":15000000000,\"type\":\"import\"},{\"country\":\"China\",\"trade_value_usd\":12000000000,\"type\":\"import\"}],\"data_source\":\"embedded-trade-data\",\"note\":\"Product breakdown and partner data are estimates based on 2023 published trade statistics.\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:296:19\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: country-trade-data does not answer from embedded estimates when the World Bank fails"
+            ],
+            "fullName": "failure: country-trade-data does not answer from embedded estimates when the World Bank fails throws on a network error for a country with embedded data",
+            "status": "failed",
+            "title": "throws on a network error for a country with embedded data",
+            "duration": 0.2711230000004434,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"country_code\":\"SE\",\"country_name\":\"Sweden\",\"year\":2023,\"total_exports_usd\":195000000000,\"total_imports_usd\":195000000000,\"trade_balance_usd\":0,\"top_exports\":[{\"product\":\"Refined petroleum\",\"value_usd\":14000000000,\"share_percent\":7.2},{\"product\":\"Automobiles (Volvo)\",\"value_usd\":12000000000,\"share_percent\":6.2},{\"product\":\"Pharmaceuticals\",\"value_usd\":11000000000,\"share_percent\":5.6},{\"product\":\"Iron and steel\",\"value_usd\":8000000000,\"share_percent\":4.1},{\"product\":\"Telecommunications equipment (Ericsson)\",\"value_usd\":8000000000,\"share_percent\":4.1}],\"top_imports\":[{\"product\":\"Crude petroleum\",\"value_usd\":12000000000,\"share_percent\":6.2},{\"product\":\"Automobiles\",\"value_usd\":11000000000,\"share_percent\":5.6},{\"product\":\"Pharmaceuticals\",\"value_usd\":5500000000,\"share_percent\":2.8},{\"product\":\"Broadcasting equipment\",\"value_usd\":5000000000,\"share_percent\":2.6},{\"product\":\"Computers\",\"value_usd\":4500000000,\"share_percent\":2.3}],\"top_partners\":[{\"country\":\"Germany\",\"trade_value_usd\":20000000000,\"type\":\"export\"},{\"country\":\"Norway\",\"trade_value_usd\":18000000000,\"type\":\"export\"},{\"country\":\"Germany\",\"trade_value_usd\":30000000000,\"type\":\"import\"},{\"country\":\"Netherlands\",\"trade_value_usd\":15000000000,\"type\":\"import\"},{\"country\":\"China\",\"trade_value_usd\":12000000000,\"type\":\"import\"}],\"data_source\":\"embedded-trade-data\",\"note\":\"Product breakdown and partner data are estimates based on 2023 published trade statistics.\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:296:19\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: country-trade-data does not answer from embedded estimates when the World Bank fails"
+            ],
+            "fullName": "failure: country-trade-data does not answer from embedded estimates when the World Bank fails throws on a timeout for a country with embedded data",
+            "status": "failed",
+            "title": "throws on a timeout for a country with embedded data",
+            "duration": 0.21537999999964086,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"country_code\":\"SE\",\"country_name\":\"Sweden\",\"year\":2023,\"total_exports_usd\":195000000000,\"total_imports_usd\":195000000000,\"trade_balance_usd\":0,\"top_exports\":[{\"product\":\"Refined petroleum\",\"value_usd\":14000000000,\"share_percent\":7.2},{\"product\":\"Automobiles (Volvo)\",\"value_usd\":12000000000,\"share_percent\":6.2},{\"product\":\"Pharmaceuticals\",\"value_usd\":11000000000,\"share_percent\":5.6},{\"product\":\"Iron and steel\",\"value_usd\":8000000000,\"share_percent\":4.1},{\"product\":\"Telecommunications equipment (Ericsson)\",\"value_usd\":8000000000,\"share_percent\":4.1}],\"top_imports\":[{\"product\":\"Crude petroleum\",\"value_usd\":12000000000,\"share_percent\":6.2},{\"product\":\"Automobiles\",\"value_usd\":11000000000,\"share_percent\":5.6},{\"product\":\"Pharmaceuticals\",\"value_usd\":5500000000,\"share_percent\":2.8},{\"product\":\"Broadcasting equipment\",\"value_usd\":5000000000,\"share_percent\":2.6},{\"product\":\"Computers\",\"value_usd\":4500000000,\"share_percent\":2.3}],\"top_partners\":[{\"country\":\"Germany\",\"trade_value_usd\":20000000000,\"type\":\"export\"},{\"country\":\"Norway\",\"trade_value_usd\":18000000000,\"type\":\"export\"},{\"country\":\"Germany\",\"trade_value_usd\":30000000000,\"type\":\"import\"},{\"country\":\"Netherlands\",\"trade_value_usd\":15000000000,\"type\":\"import\"},{\"country\":\"China\",\"trade_value_usd\":12000000000,\"type\":\"import\"}],\"data_source\":\"embedded-trade-data\",\"note\":\"Product breakdown and partner data are estimates based on 2023 published trade statistics.\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:296:19\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: country-trade-data does not answer from embedded estimates when the World Bank fails"
+            ],
+            "fullName": "failure: country-trade-data does not answer from embedded estimates when the World Bank fails throws on an unparseable body for a country with embedded data",
+            "status": "failed",
+            "title": "throws on an unparseable body for a country with embedded data",
+            "duration": 0.5899549999994633,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"country_code\":\"SE\",\"country_name\":\"Sweden\",\"year\":2023,\"total_exports_usd\":195000000000,\"total_imports_usd\":195000000000,\"trade_balance_usd\":0,\"top_exports\":[{\"product\":\"Refined petroleum\",\"value_usd\":14000000000,\"share_percent\":7.2},{\"product\":\"Automobiles (Volvo)\",\"value_usd\":12000000000,\"share_percent\":6.2},{\"product\":\"Pharmaceuticals\",\"value_usd\":11000000000,\"share_percent\":5.6},{\"product\":\"Iron and steel\",\"value_usd\":8000000000,\"share_percent\":4.1},{\"product\":\"Telecommunications equipment (Ericsson)\",\"value_usd\":8000000000,\"share_percent\":4.1}],\"top_imports\":[{\"product\":\"Crude petroleum\",\"value_usd\":12000000000,\"share_percent\":6.2},{\"product\":\"Automobiles\",\"value_usd\":11000000000,\"share_percent\":5.6},{\"product\":\"Pharmaceuticals\",\"value_usd\":5500000000,\"share_percent\":2.8},{\"product\":\"Broadcasting equipment\",\"value_usd\":5000000000,\"share_percent\":2.6},{\"product\":\"Computers\",\"value_usd\":4500000000,\"share_percent\":2.3}],\"top_partners\":[{\"country\":\"Germany\",\"trade_value_usd\":20000000000,\"type\":\"export\"},{\"country\":\"Norway\",\"trade_value_usd\":18000000000,\"type\":\"export\"},{\"country\":\"Germany\",\"trade_value_usd\":30000000000,\"type\":\"import\"},{\"country\":\"Netherlands\",\"trade_value_usd\":15000000000,\"type\":\"import\"},{\"country\":\"China\",\"trade_value_usd\":12000000000,\"type\":\"import\"}],\"data_source\":\"embedded-trade-data\",\"note\":\"Product breakdown and partner data are estimates based on 2023 published trade statistics.\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:296:19\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: country-trade-data does not answer from embedded estimates when the World Bank fails"
+            ],
+            "fullName": "failure: country-trade-data does not answer from embedded estimates when the World Bank fails throws when only one of the two indicators fails",
+            "status": "failed",
+            "title": "throws when only one of the two indicators fails",
+            "duration": 0.3501879999985249,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"country_code\":\"SE\",\"country_name\":\"Sweden\",\"year\":2023,\"total_exports_usd\":195000000000,\"total_imports_usd\":195000000000,\"trade_balance_usd\":0,\"top_exports\":[{\"product\":\"Refined petroleum\",\"value_usd\":14000000000,\"share_percent\":7.2},{\"product\":\"Automobiles (Volvo)\",\"value_usd\":12000000000,\"share_percent\":6.2},{\"product\":\"Pharmaceuticals\",\"value_usd\":11000000000,\"share_percent\":5.6},{\"product\":\"Iron and steel\",\"value_usd\":8000000000,\"share_percent\":4.1},{\"product\":\"Telecommunications equipment (Ericsson)\",\"value_usd\":8000000000,\"share_percent\":4.1}],\"top_imports\":[{\"product\":\"Crude petroleum\",\"value_usd\":12000000000,\"share_percent\":6.2},{\"product\":\"Automobiles\",\"value_usd\":11000000000,\"share_percent\":5.6},{\"product\":\"Pharmaceuticals\",\"value_usd\":5500000000,\"share_percent\":2.8},{\"product\":\"Broadcasting equipment\",\"value_usd\":5000000000,\"share_percent\":2.6},{\"product\":\"Computers\",\"value_usd\":4500000000,\"share_percent\":2.3}],\"top_partners\":[{\"country\":\"Germany\",\"trade_value_usd\":20000000000,\"type\":\"export\"},{\"country\":\"Norway\",\"trade_value_usd\":18000000000,\"type\":\"export\"},{\"country\":\"Germany\",\"trade_value_usd\":30000000000,\"type\":\"import\"},{\"country\":\"Netherlands\",\"trade_value_usd\":15000000000,\"type\":\"import\"},{\"country\":\"China\",\"trade_value_usd\":12000000000,\"type\":\"import\"}],\"data_source\":\"embedded-trade-data\",\"note\":\"Product breakdown and partner data are estimates based on 2023 published trade statistics.\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:304:5\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: country-trade-data does not answer from embedded estimates when the World Bank fails"
+            ],
+            "fullName": "failure: country-trade-data does not answer from embedded estimates when the World Bank fails throws an outage, not 'no trade data', for a country without embedded data",
+            "status": "failed",
+            "title": "throws an outage, not 'no trade data', for a country without embedded data",
+            "duration": 0.6447889999999461,
+            "failureMessages": [
+              "AssertionError: expected 'Error' to be 'UpstreamUnavailableError' // Object.is equality\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:80:20)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:309:17\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: country-trade-data keeps the World Bank's answers"
+            ],
+            "fullName": "negative: country-trade-data keeps the World Bank's answers bills the embedded estimates when the World Bank has no figure for the year",
+            "status": "passed",
+            "title": "bills the embedded estimates when the World Bank has no figure for the year",
+            "duration": 0.5422419999995327,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: country-trade-data keeps the World Bank's answers"
+            ],
+            "fullName": "negative: country-trade-data keeps the World Bank's answers bills live totals when the World Bank answers",
+            "status": "passed",
+            "title": "bills live totals when the World Bank answers",
+            "duration": 0.5376620000006369,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: country-trade-data keeps the World Bank's answers"
+            ],
+            "fullName": "negative: country-trade-data keeps the World Bank's answers still says there is no trade data when the World Bank rejects the code and nothing is embedded",
+            "status": "passed",
+            "title": "still says there is no trade data when the World Bank rejects the code and nothing is embedded",
+            "duration": 0.5243850000006205,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: whois-lookup bills only the registry's answer about the domain"
+            ],
+            "fullName": "failure: whois-lookup bills only the registry's answer about the domain throws when the registry server fails, instead of billing IANA's record for the TLD",
+            "status": "failed",
+            "title": "throws when the registry server fails, instead of billing IANA's record for the TLD",
+            "duration": 1.0057660000002215,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"raw_whois\":\"% IANA WHOIS server\\ndomain:       COM\\norganisation: VeriSign Global Registry Services\\ncreated:      1985-01-01\\nchanged:      2023-12-07\\n\",\"created\":\"1985-01-01\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:376:17\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: whois-lookup bills only the registry's answer about the domain"
+            ],
+            "fullName": "failure: whois-lookup bills only the registry's answer about the domain throws on an empty reply from the registry server",
+            "status": "failed",
+            "title": "throws on an empty reply from the registry server",
+            "duration": 0.4949660000002041,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"raw_whois\":\"% IANA WHOIS server\\ndomain:       COM\\norganisation: VeriSign Global Registry Services\\ncreated:      1985-01-01\\nchanged:      2023-12-07\\n\",\"created\":\"1985-01-01\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:384:17\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: whois-lookup bills only the registry's answer about the domain"
+            ],
+            "fullName": "failure: whois-lookup bills only the registry's answer about the domain throws on a rate-limit notice",
+            "status": "failed",
+            "title": "throws on a rate-limit notice",
+            "duration": 0.30510299999878043,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.org\",\"raw_whois\":\"WHOIS LIMIT EXCEEDED - SEE WWW.PIR.ORG/WHOIS FOR DETAILS\\n\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:390:17\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: whois-lookup bills only the registry's answer about the domain"
+            ],
+            "fullName": "failure: whois-lookup bills only the registry's answer about the domain throws on a refusal notice",
+            "status": "failed",
+            "title": "throws on a refusal notice",
+            "duration": 0.31258899999920686,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.io\",\"raw_whois\":\"Access denied. Your IP address has been blocked for excessive querying\\n\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:397:17\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: whois-lookup bills only the registry's answer about the domain"
+            ],
+            "fullName": "failure: whois-lookup bills only the registry's answer about the domain refuses a TLD with no registry server here rather than billing IANA's TLD record",
+            "status": "failed",
+            "title": "refuses a TLD with no registry server here rather than billing IANA's TLD record",
+            "duration": 0.307383999999729,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.xyz\",\"raw_whois\":\"domain:       XYZ\\ncreated:      2014-03-20\\nrefer:        whois.nic.xyz\\n\",\"created\":\"2014-03-20\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectRefusal (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:87:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:403:17\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: whois-lookup keeps the registry's answers"
+            ],
+            "fullName": "negative: whois-lookup keeps the registry's answers bills a parsed record",
+            "status": "passed",
+            "title": "bills a parsed record",
+            "duration": 0.3401529999991908,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: whois-lookup keeps the registry's answers"
+            ],
+            "fullName": "negative: whois-lookup keeps the registry's answers bills the not-registered negative",
+            "status": "passed",
+            "title": "bills the not-registered negative",
+            "duration": 0.5752170000014303,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: whois-lookup keeps the registry's answers"
+            ],
+            "fullName": "negative: whois-lookup keeps the registry's answers bills a reply in a format the parser does not split (no rate-limit or refusal text)",
+            "status": "passed",
+            "title": "bills a reply in a format the parser does not split (no rate-limit or refusal text)",
+            "duration": 0.42958700000053796,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: page-exists never bills exists:null"
+            ],
+            "fullName": "failure: page-exists never bills exists:null refuses on HTTP 401 (the site blocks Strale)",
+            "status": "failed",
+            "title": "refuses on HTTP 401 (the site blocks Strale)",
+            "duration": 0.5297210000007908,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"url\":\"https://shop.test/listing/123\",\"exists\":null,\"confidence\":null,\"signals\":[],\"status_code\":401,\"final_url\":\"https://shop.test/listing/123\",\"redirected\":false,\"title\":null,\"content_length\":null,\"checked_at\":\"2026-11-11T22:17:53.626Z\",\"reason\":\"access_blocked\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectRefusal (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:87:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:437:7\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: page-exists never bills exists:null"
+            ],
+            "fullName": "failure: page-exists never bills exists:null refuses on HTTP 403 (the site blocks Strale)",
+            "status": "failed",
+            "title": "refuses on HTTP 403 (the site blocks Strale)",
+            "duration": 0.22807800000009593,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"url\":\"https://shop.test/listing/123\",\"exists\":null,\"confidence\":null,\"signals\":[],\"status_code\":403,\"final_url\":\"https://shop.test/listing/123\",\"redirected\":false,\"title\":null,\"content_length\":null,\"checked_at\":\"2026-11-11T22:17:53.627Z\",\"reason\":\"access_blocked\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectRefusal (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:87:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:437:7\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: page-exists never bills exists:null"
+            ],
+            "fullName": "failure: page-exists never bills exists:null refuses on HTTP 429 (the site blocks Strale)",
+            "status": "failed",
+            "title": "refuses on HTTP 429 (the site blocks Strale)",
+            "duration": 0.17354300000079093,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"url\":\"https://shop.test/listing/123\",\"exists\":null,\"confidence\":null,\"signals\":[],\"status_code\":429,\"final_url\":\"https://shop.test/listing/123\",\"redirected\":false,\"title\":null,\"content_length\":null,\"checked_at\":\"2026-11-11T22:17:53.627Z\",\"reason\":\"unexpected_status\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectRefusal (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:87:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:437:7\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: page-exists never bills exists:null"
+            ],
+            "fullName": "failure: page-exists never bills exists:null throws, breaker-exempt, on a 5xx from the caller's site",
+            "status": "failed",
+            "title": "throws, breaker-exempt, on a 5xx from the caller's site",
+            "duration": 0.22341400000004796,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"url\":\"https://shop.test/listing/123\",\"exists\":null,\"confidence\":null,\"signals\":[],\"status_code\":503,\"final_url\":\"https://shop.test/listing/123\",\"redirected\":false,\"title\":null,\"content_length\":null,\"checked_at\":\"2026-11-11T22:17:53.627Z\",\"reason\":\"server_error\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:443:17\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: page-exists never bills exists:null"
+            ],
+            "fullName": "failure: page-exists never bills exists:null throws on any other 4xx, as the site's own answer about the URL",
+            "status": "failed",
+            "title": "throws on any other 4xx, as the site's own answer about the URL",
+            "duration": 0.20433000000048196,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"url\":\"https://shop.test/listing/123\",\"exists\":null,\"confidence\":null,\"signals\":[],\"status_code\":400,\"final_url\":\"https://shop.test/listing/123\",\"redirected\":false,\"title\":null,\"content_length\":null,\"checked_at\":\"2026-11-11T22:17:53.627Z\",\"reason\":\"unexpected_status\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:451:17\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: page-exists never bills exists:null"
+            ],
+            "fullName": "failure: page-exists never bills exists:null throws, breaker-exempt, on a timeout",
+            "status": "failed",
+            "title": "throws, breaker-exempt, on a timeout",
+            "duration": 0.30913800000053016,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"url\":\"https://shop.test/listing/123\",\"exists\":null,\"confidence\":null,\"signals\":[],\"status_code\":null,\"final_url\":null,\"redirected\":false,\"title\":null,\"content_length\":null,\"checked_at\":\"2026-11-11T22:17:53.628Z\",\"reason\":\"timeout\",\"error\":\"timeout\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:471:19\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: page-exists never bills exists:null"
+            ],
+            "fullName": "failure: page-exists never bills exists:null throws, breaker-exempt, on a network error",
+            "status": "failed",
+            "title": "throws, breaker-exempt, on a network error",
+            "duration": 0.3097120000002178,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"url\":\"https://shop.test/listing/123\",\"exists\":null,\"confidence\":null,\"signals\":[],\"status_code\":null,\"final_url\":null,\"redirected\":false,\"title\":null,\"content_length\":null,\"checked_at\":\"2026-11-11T22:17:53.628Z\",\"reason\":\"network_error\",\"error\":\"fetch failed\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:471:19\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: page-exists never bills exists:null"
+            ],
+            "fullName": "failure: page-exists never bills exists:null throws, breaker-exempt, on a DNS failure",
+            "status": "failed",
+            "title": "throws, breaker-exempt, on a DNS failure",
+            "duration": 0.24982199999976729,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"url\":\"https://shop.test/listing/123\",\"exists\":null,\"confidence\":null,\"signals\":[],\"status_code\":null,\"final_url\":null,\"redirected\":false,\"title\":null,\"content_length\":null,\"checked_at\":\"2026-11-11T22:17:53.628Z\",\"reason\":\"network_error\",\"error\":\"fetch failed\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:471:19\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: page-exists never bills exists:null"
+            ],
+            "fullName": "failure: page-exists never bills exists:null throws, breaker-exempt, on a redirect loop",
+            "status": "failed",
+            "title": "throws, breaker-exempt, on a redirect loop",
+            "duration": 0.28378300000076706,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"url\":\"https://shop.test/listing/123\",\"exists\":null,\"confidence\":null,\"signals\":[],\"status_code\":null,\"final_url\":null,\"redirected\":false,\"title\":null,\"content_length\":null,\"checked_at\":\"2026-11-11T22:17:53.628Z\",\"reason\":\"redirect_loop\",\"error\":\"Too many redirects (>3) — refusing to follow further. Starting URL: https://shop.test/listing/123.\"}\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:72:13\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:79:15)\n    at /home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts:471:19\n    at file:///home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: page-exists bills its verdicts"
+            ],
+            "fullName": "negative: page-exists bills its verdicts bills a hard 404 as exists:false",
+            "status": "passed",
+            "title": "bills a hard 404 as exists:false",
+            "duration": 0.33164399999986927,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: page-exists bills its verdicts"
+            ],
+            "fullName": "negative: page-exists bills its verdicts bills a live page as exists:true",
+            "status": "passed",
+            "title": "bills a live page as exists:true",
+            "duration": 1.2458090000000084,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: page-exists bills its verdicts"
+            ],
+            "fullName": "negative: page-exists bills its verdicts bills a soft 404 as exists:false",
+            "status": "passed",
+            "title": "bills a soft 404 as exists:false",
+            "duration": 0.49192500000026484,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "passthrough: page-exists keeps input-safety refusals"
+            ],
+            "fullName": "passthrough: page-exists keeps input-safety refusals rethrows a restricted-address error on a redirect hop unchanged",
+            "status": "passed",
+            "title": "rethrows a restricted-address error on a redirect hop unchanged",
+            "duration": 0.30441400000017893,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794435464189,
+        "endTime": 1794435473631.3044,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts"
+      }
+    ]
+  }
+}

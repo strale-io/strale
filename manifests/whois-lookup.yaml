@@ -79,11 +79,20 @@ output_field_reliability:
   registrar: guaranteed
   name_servers: guaranteed
 limitations:
-  - title: Rate limits can slow high-volume lookups
-    text: Some registrars rate-limit WHOIS queries — bulk lookups may see slower response times
+  - title: Rate-limited or failed lookups are not billed
+    text: >-
+      Registries rate-limit WHOIS queries. When the registry's reply is a rate-limit or refusal
+      notice, or its WHOIS server does not answer, the call fails with an error and is not billed.
     category: availability
     severity: info
     workaround: Batch lookups with 1-2 second delays between requests, or use the RDAP protocol endpoint when available
+  - title: Only TLDs with a known registry server
+    text: >-
+      Each lookup asks the TLD's own registry WHOIS server, for about 38 TLDs, including .com, .net,
+      .org, .io, .se, .de, .uk and .eu. A domain under any other TLD is refused and not billed.
+    category: coverage
+    severity: info
+    workaround: For other TLDs, query the registry's RDAP service, or use domain-age-check for the creation date.
   - title: Redacted registrations have limited owner information
     text: GDPR-redacted registrations (common for EU domains) show limited registrant information
     category: coverage

@@ -36,9 +36,20 @@ tracks:
       Deferred from that review: github-repo-analyze's deterministic 403
       (Repository access blocked) still counts toward the breaker as
       retryable; safe-fetch's ssrf-too-many-redirects warning logs the start
-      URL with its query string (older than PR 1017). Next: wave 2c, rows 5, 6, 20, 26, 28 and
-      29; then wave 2d, rows 30, 31, 32, 33 and 35; each reconciled first
-      against later repairs such as customs PR999. Then wave 3; the Nager.Date
+      URL with its query string (older than PR 1017). Wave 2c (rows 5
+      pricing-page-extract, 6 gdpr-fine-lookup, 20 company-fundamentals, 26
+      country-trade-data, 28 whois-lookup, 29 page-exists), branch
+      fix/swallowed-failures-wave2c, is done once its PR merges; its
+      fail-before, after and guard receipts are in evidence. Found in wave 2c,
+      not fixed there: country-trade-data labels its embedded 2023 figures with
+      the requested year, and its partial country-name match reads KE as
+      Turkey; a 5xx from enforcementtracker.com still reads as the caller's
+      URL failing (breaker-exempt); whois-lookup no longer covers TLDs outside
+      its registry map (following IANA refer: would restore them), and an
+      unparsed registry reply that is not a rate-limit or refusal notice is
+      still billed raw; page-exists now fails a DNS NXDOMAIN rather than
+      answering exists false. Next: wave 2d, rows 30, 31, 32, 33 and 35,
+      reconciled first against later repairs such as customs PR999. Then wave 3; the Nager.Date
       no-calendar path (a weekends-only answer for countries such as TH, still
       billed) as a follow-up candidate; the perturbation replays (http_503,
       http_429, network_error, blocked_200, DNS ETIMEOUT) for every network
@@ -92,6 +103,9 @@ tracks:
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-tail-round2-after.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-tail-round3-fail-before.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-tail-round3-after.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-fail-before.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-after.json
+      - archive/receipts/2026-11-11-check-upstream-catch-guard-wave2c.json
   - id: T2
     title: "T2: Compliance-answer correctness (reference answers)"
     status: queued

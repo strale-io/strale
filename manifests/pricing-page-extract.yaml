@@ -21,6 +21,7 @@ output_schema:
   type: object
   example:
     url: https://example.com
+    page_status: no_pricing
     plans: []
     pricing_model: null
     enterprise_cta: false
@@ -29,6 +30,12 @@ output_schema:
     free_trial_available: false
     money_back_guarantee: false
   properties:
+    page_status:
+      type: string
+      enum: [pricing, no_pricing]
+      description: >-
+        pricing = the page shows prices or plans; no_pricing = a real page for the product that
+        publishes no prices (plans is then empty).
     plans:
       type: array
     pricing_model:
@@ -81,6 +88,7 @@ test_fixtures:
   health_check_input:
     url: https://stripe.com/pricing
 output_field_reliability:
+  page_status: common
   plans: guaranteed
   pricing_model: guaranteed
   enterprise_cta: guaranteed
@@ -91,6 +99,15 @@ limitations:
     category: coverage
     severity: info
     workaround: Flag extracted prices as 'list price' and note that enterprise or high-volume pricing requires direct contact
+  - title: Walled or empty pages fail without a charge
+    text: >-
+      When the page renders as a cookie, consent or login wall, an error or maintenance page, or an
+      empty app shell, the call fails with an error and is not billed, rather than returning an
+      empty plan list. A real page that publishes no prices returns page_status no_pricing with an
+      empty plan list, and is billed. Whether a page is walled is judged by the model reading it.
+    category: coverage
+    severity: info
+    workaround: Pass a pricing page that loads without a login or consent step.
   - title: Interactive pricing pages can hide plan details
     text: Dynamic pricing pages with complex JavaScript interactions may not fully render all plan tiers
     category: accuracy

@@ -153,6 +153,15 @@ limitations:
     category: freshness
     severity: info
     workaround: Cross-reference with UN Comtrade or national customs statistics for the most current trade figures
+  - title: World Bank outages fail without a charge
+    text: >-
+      Totals come from the World Bank for the requested year. When the World Bank has no figure for
+      that year, the embedded estimates answer instead and data_source is embedded-trade-data. When
+      the World Bank does not answer (an error status, a timeout or an unreadable response), the call
+      fails with an error and is not billed.
+    category: availability
+    severity: info
+    workaround: Retry after a short wait.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

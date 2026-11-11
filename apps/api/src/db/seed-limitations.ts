@@ -148,9 +148,13 @@ export const LIMITATIONS: LimitationDef[] = [
     limitationText: "GDPR-redacted registrations (common for EU domains) show limited registrant information",
     workaround: "Use the abuse contact email from the WHOIS response to request registrant details through the registrar's disclosure process" },
   { capabilitySlug: "whois-lookup", category: "availability", severity: "info",
-    title: "Some registrars rate-limit WHOIS queries, causing slower responses during bulk lookups",
-    limitationText: "Some registrars rate-limit WHOIS queries — bulk lookups may see slower response times",
+    title: "Rate-limited or failed lookups are not billed",
+    limitationText: "Registries rate-limit WHOIS queries. When the registry's reply is a rate-limit or refusal notice, or its WHOIS server does not answer, the call fails with an error and is not billed.",
     workaround: "Batch lookups with 1-2 second delays between requests, or use the RDAP protocol endpoint when available" },
+  { capabilitySlug: "whois-lookup", category: "coverage", severity: "info",
+    title: "Only TLDs with a known registry server",
+    limitationText: "Each lookup asks the TLD's own registry WHOIS server, for about 38 TLDs, including .com, .net, .org, .io, .se, .de, .uk and .eu. A domain under any other TLD is refused and not billed.",
+    workaround: "For other TLDs, query the registry's RDAP service, or use domain-age-check for the creation date." },
 
   // ── ssl-check ──
   { capabilitySlug: "ssl-check", category: "coverage", severity: "info",
@@ -283,6 +287,10 @@ export const LIMITATIONS: LimitationDef[] = [
     title: "GDPR fine database updates weekly — recently announced fines may take up to 7 days to appear",
     limitationText: "Fine database updated weekly — recently announced fines may take up to 7 days to appear",
     workaround: "For breaking enforcement news, check enforcementtracker.com directly or subscribe to the relevant DPA's press feed" },
+  { capabilitySlug: "gdpr-fine-lookup", category: "availability", severity: "info",
+    title: "Tracker outages fail without a charge",
+    limitationText: "When enforcementtracker.com shows no fine table (an error, maintenance or consent page, or an empty render), the call fails with an error and is not billed. An empty fines list means the tracker's table showed no fine matching the search.",
+    workaround: "Retry after a short wait." },
   { capabilitySlug: "gdpr-fine-lookup", category: "coverage", severity: "info",
     title: "Covers publicly reported fines only, as some national DPAs delay or omit publication",
     limitationText: "Covers publicly reported fines only — some national DPAs delay publication",
@@ -399,6 +407,10 @@ export const LIMITATIONS: LimitationDef[] = [
     title: "Dynamic pricing pages with complex JavaScript interactions may not render all plan tiers",
     limitationText: "Dynamic pricing pages with complex JavaScript interactions may not fully render all plan tiers",
     workaround: "If results appear incomplete, pass the direct pricing page URL rather than the homepage" },
+  { capabilitySlug: "pricing-page-extract", category: "coverage", severity: "info",
+    title: "Walled or empty pages fail without a charge",
+    limitationText: "When the page renders as a cookie, consent or login wall, an error or maintenance page, or an empty app shell, the call fails with an error and is not billed, rather than returning an empty plan list. A real page that publishes no prices returns page_status no_pricing with an empty plan list, and is billed. Whether a page is walled is judged by the model reading it.",
+    workaround: "Pass a pricing page that loads without a login or consent step." },
 
   // ── eu-regulation-search ──
   { capabilitySlug: "eu-regulation-search", category: "freshness", severity: "info",
@@ -528,6 +540,10 @@ export const LIMITATIONS: LimitationDef[] = [
     title: "Trade statistics are based on AI knowledge and may lag 6-12 months behind actual trade flows",
     limitationText: "Trade statistics based on AI knowledge — most recent data may lag 6-12 months behind actual trade flows",
     workaround: "Cross-reference with UN Comtrade or national customs statistics for the most current trade figures" },
+  { capabilitySlug: "country-trade-data", category: "availability", severity: "info",
+    title: "World Bank outages fail without a charge",
+    limitationText: "Totals come from the World Bank for the requested year. When the World Bank has no figure for that year, the embedded estimates answer instead and data_source is embedded-trade-data. When the World Bank does not answer (an error status, a timeout or an unreadable response), the call fails with an error and is not billed.",
+    workaround: "Retry after a short wait." },
 
   // ── crypto-price ──
   { capabilitySlug: "crypto-price", category: "freshness", severity: "info",
