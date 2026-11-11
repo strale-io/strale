@@ -123,7 +123,7 @@ limitations:
     severity: info
   - title: A failed source is named, never read as no backlinks
     text: >-
-      If Common Crawl and Serper both fail (or Common Crawl fails and Serper is not used), the call fails unbilled rather than returning an empty list. If one fails and the other answers, the list comes from the one that answered and the failed source is named in unavailable_sources.
+      If Common Crawl and Serper both fail (or Common Crawl fails and Serper is not used), the call fails unbilled rather than returning an empty list. Common Crawl mostly returns the domain's own pages, so when Serper is needed and fails and no backlink was found, the call also fails unbilled. If one fails and the other answers with backlinks, the list comes from the one that answered and the failed source is named in unavailable_sources.
     category: availability
     severity: info
 

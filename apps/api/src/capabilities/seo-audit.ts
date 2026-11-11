@@ -3,7 +3,8 @@ import { safeFetch } from "../lib/safe-fetch.js";
 import { STRALE_USER_AGENT } from "../lib/site-access.js";
 import { readRobotsTxt } from "../lib/resource-limits.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
-import { fetchUnavailable, httpUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
+import { httpUnavailable } from "../lib/upstream-result.js";
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 
 const ROBOTS = "robots.txt";
 
@@ -113,8 +114,10 @@ registerCapability("seo-audit", async (input: CapabilityInput) => {
     }
   } catch (err) {
     // degraded-ok: an unreadable robots.txt nulls the robots and sitemap checks, is named in unavailable_sources and is left out of the score; it is never reported as "No robots.txt".
-    const failure = fetchUnavailable(ROBOTS, err);
-    if (!(failure instanceof UpstreamUnavailableError)) throw failure;
+    // Any fetch error that is not a refusal counts, not only an upstream
+    // outage: safe-fetch's "Too many redirects" or a redirect to a restricted
+    // address says nothing about the page being audited (PR #1015 review).
+    if (isCapabilityRefusal(err)) throw err;
     robotsUnavailable = true;
   }
   checks.robots_txt = { present: robotsUnavailable ? null : !!robotsTxt };

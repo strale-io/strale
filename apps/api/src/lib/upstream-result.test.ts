@@ -12,12 +12,14 @@ import {
   fetchUnavailable,
   httpUnavailable,
   isDnsNegative,
+  quotedLegCodes,
   requireAnyLeg,
   UpstreamUnavailableError,
 } from "./upstream-result.js";
 import { outcomeFromError } from "./execution-outcome.js";
 import { classifyTransactionFailure, countsAgainstCapability } from "./transaction-failure-taxonomy.js";
 import { isUserInputError } from "./circuit-breaker.js";
+import { categorizeFailureReason, isRetryableFailure } from "./trust-helpers.js";
 import { withRetry } from "./retry.js";
 
 /** A rejection shaped like node:dns/promises raises it. */
@@ -160,6 +162,29 @@ describe("httpUnavailable / fetchUnavailable", () => {
     expect(fetchUnavailable("Example API", defect)).toBe(defect);
     const already = httpUnavailable("Example API", 503);
     expect(fetchUnavailable("Other API", already)).toBe(already);
+  });
+});
+
+describe("the breaker reads a helper error the way its retryable flag says", () => {
+  // recordFailure classifies by message; a retryable error whose text reads as
+  // auth_expired or endpoint_gone opens the breaker at once for 30 minutes.
+  it.each([429, 500, 502, 503, 504, 520])("httpUnavailable %i is retryable for the breaker too", (code) => {
+    const err = httpUnavailable("Example API", code);
+    expect(err.retryable).toBe(true);
+    expect(isRetryableFailure(categorizeFailureReason(err.message))).toBe(true);
+  });
+
+  it.each([
+    ["a timeout", new DOMException("aborted", "TimeoutError")],
+    ["a network error", Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNRESET" } })],
+  ])("fetchUnavailable on %s is transient for the breaker", (_l, cause) => {
+    expect(categorizeFailureReason(fetchUnavailable("Example API", cause).message)).toBe("transient");
+  });
+
+  it("quotedLegCodes quotes only the retryable legs when any leg is retryable", () => {
+    const legs = [httpUnavailable("A", 503), httpUnavailable("B", 403)];
+    expect(quotedLegCodes(legs)).toBe("HTTP 503");
+    expect(quotedLegCodes([httpUnavailable("A", 403), httpUnavailable("B", 404)])).toBe("HTTP 403, HTTP 404");
   });
 });
 

@@ -6,7 +6,7 @@ import {
   readTextWithLimit,
 } from "../lib/resource-limits.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
-import { fetchUnavailable, httpUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
+import { fetchUnavailable, httpUnavailable, quotedLegCodes, UpstreamUnavailableError } from "../lib/upstream-result.js";
 import {
   deriveResultDomain,
   isGotoLink,
@@ -60,8 +60,9 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
   let unresolvedLinkCount = 0;
   const backlinks: Backlink[] = [];
   // A leg that could not answer is named here, and the call throws when no leg
-  // answered: an empty list must mean the sources found nothing, never that
-  // they were down (2026-11-06 swallowed-upstream-failures audit, row 16).
+  // answered, or when Serper was needed, failed and nothing was found: an
+  // empty list must mean the sources found nothing, never that they were down
+  // (2026-11-06 swallowed-upstream-failures audit, row 16).
   const unavailableSources: string[] = [];
   const failures: Error[] = [];
 
@@ -147,11 +148,17 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
         }
         answered = true;
       } catch (err) {
-        // degraded-ok: a Serper failure is named in unavailable_sources; the call throws below when Common Crawl did not answer either.
+        // degraded-ok: a Serper failure is named in unavailable_sources; the call throws below when no backlink was found or Common Crawl did not answer either.
         const failure = fetchUnavailable(SERPER, err);
         if (!(failure instanceof UpstreamUnavailableError) && !isStraleVendorState(failure)) throw failure;
         failures.push(failure);
         unavailableSources.push(SERPER);
+        // Common Crawl's `url=*.domain` query returns the domain's own pages,
+        // which are never backlinks, so for most domains Serper is the only
+        // source that can find any. With nothing found, a failed Serper leg
+        // leaves no answer at all: "0 backlinks" would be a fabricated
+        // negative (PR #1015 review).
+        if (backlinks.length === 0) answered = false;
       }
     }
   }
@@ -161,11 +168,12 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
     // not the provider's, and must not count against the capability.
     const strale = failures.find(isStraleVendorState);
     if (strale) throw strale;
+    // Serper alone when Common Crawl answered with nothing.
     if (failures.length === 1) throw failures[0];
     const upstream = failures as UpstreamUnavailableError[];
     throw new UpstreamUnavailableError(
       `${COMMON_CRAWL} and ${SERPER}`,
-      `neither source answered (${upstream.map((f) => f.code ?? "error").join(", ")}).`,
+      `neither source answered (${quotedLegCodes(upstream)}).`,
       { code: upstream[0].code, retryable: upstream.some((f) => f.retryable) },
     );
   }

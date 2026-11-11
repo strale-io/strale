@@ -88,6 +88,14 @@ output_schema:
       type: ["array", "null"]
     consent_banner_detected:
       type: ["boolean", "null"]
+      description: >-
+        Null when the page analysis could not be read or did not say whether a banner is present (unknown, not "no banner").
+    consent_banner_text:
+      type: ["string", "null"]
+    third_party_domains:
+      type: ["array", "null"]
+    potential_issues:
+      type: ["array", "null"]
 data_source: Web page rendering (cookie detection, script analysis, consent banner check)
 data_source_type: scrape
 transparency_tag: ai_generated
@@ -120,7 +128,7 @@ limitations:
     workaround: Run separate scans on high-traffic sub-pages (e.g., /checkout, /login) and merge the cookie inventories
   - title: A failed request is not an empty result
     text: >-
-      If the site does not answer the cookie request (timeout, network error or a 5xx), the call fails unbilled rather than reporting no cookies. If the page analysis cannot be read (the model declines or answers in the wrong shape), the cookie inventory is still returned; tracking_scripts, consent_banner_detected, consent_banner_text, third_party_domains and potential_issues are null and the page analysis is named in unavailable_sources.
+      If the site does not answer the cookie request (timeout, network error or a 5xx), the call fails unbilled rather than reporting no cookies. If the page analysis cannot be read (the model declines or answers in the wrong shape), the cookie inventory is still returned; tracking_scripts, consent_banner_detected, consent_banner_text, third_party_domains and potential_issues are null and the page analysis is named in unavailable_sources. If the analysis does not say whether a consent banner is present, consent_banner_detected is null (unknown) and no missing-banner issue is added.
     category: availability
     severity: info
 

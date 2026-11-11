@@ -1,5 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { fetchUnavailable, httpUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
+import { fetchUnavailable, httpUnavailable, quotedLegCodes, UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 const OFF = "Open Food Facts product API";
 const UPCITEMDB = "UPCitemdb lookup API";
@@ -160,7 +160,7 @@ registerCapability("barcode-lookup", async (input: CapabilityInput) => {
   if (failures.length > 1) {
     throw new UpstreamUnavailableError(
       `${OFF} and ${UPCITEMDB}`,
-      `neither database answered (${failures.map((f) => f.code ?? "error").join(", ")}).`,
+      `neither database answered (${quotedLegCodes(failures)}).`,
       { code: failures[0].code, retryable: failures.some((f) => f.retryable) },
     );
   }

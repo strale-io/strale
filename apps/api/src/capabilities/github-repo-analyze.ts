@@ -2,7 +2,7 @@ import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
-import { MAX_REPO_FILE_BYTES, readJsonWithLimit, readTextTruncated } from "../lib/resource-limits.js";
+import { MAX_REPO_FILE_BYTES, readErrorTextTruncated, readJsonWithLimit, readTextTruncated } from "../lib/resource-limits.js";
 import { fetchUnavailable, httpUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 // F-0-006 Bucket D: user input is an owner/repo pair; requests go to
@@ -45,17 +45,16 @@ registerCapability("github-repo-analyze", async (input: CapabilityInput) => {
     ghJson(`${apiBase}/repos/${owner}/${repo}`, headers),
     // 409: the repository is empty, so it has no commits.
     ghJson(`${apiBase}/repos/${owner}/${repo}/commits?per_page=10`, headers, [404, 409]),
-    ghJson(`${apiBase}/repos/${owner}/${repo}/contributors?per_page=20`, headers),
+    // GitHub declines to list contributors for a repository whose history is
+    // too large (a 403 whose body says so); the rest of the answer stands
+    // without them.
+    ghJson(`${apiBase}/repos/${owner}/${repo}/contributors?per_page=20`, headers, [404], true),
     ghJson(`${apiBase}/repos/${owner}/${repo}/languages`, headers),
     ghFetchText(raw("README.md")),
     ghFetchText(raw("package.json")),
   ]);
-  const [repoData, commits, contributorsReply, languages, readme, packageJson] = settled.map((s, i) => {
+  const [repoData, commits, contributorsReply, languages, readme, packageJson] = settled.map((s) => {
     if (s.status === "fulfilled") return s.value;
-    // GitHub declines to list contributors for a repository whose history is
-    // too large (HTTP 403 that is not a rate limit); the rest of the answer
-    // stands without them.
-    if (i === 2 && s.reason instanceof UpstreamUnavailableError && s.reason.code === "HTTP 403") return UNLISTED;
     throw s.reason;
   }) as [unknown, unknown, unknown, unknown, string | null, string | null];
 
@@ -167,6 +166,20 @@ function unparseable(upstream: string, what: string): UpstreamUnavailableError {
 }
 
 /**
+ * GitHub declined the request without a rate-limit header: a secondary rate
+ * limit or abuse detection, both transient. The status stays in `code` and
+ * out of the message, because the breaker classifies by message and files any
+ * "403" as auth_expired, which opens it at once for 30 minutes for every
+ * caller (PR #1015 review).
+ */
+function ghDeclined(upstream: string, status: number): UpstreamUnavailableError {
+  return new UpstreamUnavailableError(upstream, "declined the request (a secondary rate limit or abuse detection); retry shortly.", {
+    code: `HTTP ${status}`,
+    retryable: true,
+  });
+}
+
+/**
  * Send one GitHub request. A rate limit (429, or 403 with no requests left
  * or a Retry-After) and a 5xx throw a retryable UpstreamUnavailableError, as
  * do a timeout and a network error. Any other response is returned.
@@ -184,8 +197,9 @@ async function ghRequest(url: string, upstream: string, headers?: Record<string,
     (res.status === 403 && (res.headers.get("x-ratelimit-remaining") === "0" || res.headers.has("retry-after")));
   if (rateLimited) {
     await res.body?.cancel();
-    throw new UpstreamUnavailableError(upstream, `rate limited (HTTP ${res.status}); retry shortly.`, {
-      code: "rate limited",
+    // No status number in the message: see ghDeclined.
+    throw new UpstreamUnavailableError(upstream, "rate limited; retry shortly.", {
+      code: `HTTP ${res.status}`,
       retryable: true,
     });
   }
@@ -194,13 +208,25 @@ async function ghRequest(url: string, upstream: string, headers?: Record<string,
 
 /**
  * A GitHub API JSON answer, or null when GitHub says there is none (a status
- * in `absent`, or 204 No Content). Any other non-OK status throws.
+ * in `absent`, or 204 No Content). With `tooLargeOk`, a 403 whose body says
+ * the list is too large returns UNLISTED. Any other 403 throws ghDeclined;
+ * any other non-OK status throws.
  */
-async function ghJson(url: string, headers: Record<string, string>, absent: number[] = [404]): Promise<unknown> {
+async function ghJson(
+  url: string,
+  headers: Record<string, string>,
+  absent: number[] = [404],
+  tooLargeOk = false,
+): Promise<unknown> {
   const res = await ghRequest(url, GITHUB_API, headers);
   if (absent.includes(res.status) || res.status === 204) {
     await res.body?.cancel();
     return null;
+  }
+  if (res.status === 403) {
+    const body = await readErrorTextTruncated(res);
+    if (tooLargeOk && /too large/i.test(body)) return UNLISTED;
+    throw ghDeclined(GITHUB_API, 403);
   }
   if (!res.ok) {
     await res.body?.cancel();
@@ -220,6 +246,10 @@ async function ghFetchText(url: string): Promise<string | null> {
   if (res.status === 404) {
     await res.body?.cancel();
     return null;
+  }
+  if (res.status === 403) {
+    await res.body?.cancel();
+    throw ghDeclined(GITHUB_RAW, 403);
   }
   if (!res.ok) {
     await res.body?.cancel();

@@ -148,6 +148,12 @@ export function requireAnyLeg<T>(results: PromiseSettledResult<T>[], label: stri
  *
  * The caller decides first which statuses ARE the answer (a 404 "no such
  * product", say) and never passes those here.
+ *
+ * The status is quoted in the message, and the breaker classifies by message:
+ * 429 and 5xx read as transient or unknown (both retryable there too), 401
+ * and 403 as auth_expired. A caller whose 401 or 403 is really a rate limit
+ * or another transient refusal (GitHub's) must not pass it here; it builds a
+ * retryable error without the number, as github-repo-analyze does.
  */
 export function httpUnavailable(upstream: string, status: number): UpstreamUnavailableError {
   const transient = status === 429 || status >= 500;
@@ -155,6 +161,22 @@ export function httpUnavailable(upstream: string, status: number): UpstreamUnava
     code: `HTTP ${status}`,
     retryable: transient,
   });
+}
+
+/**
+ * The codes to quote in one error that stands for several failed legs.
+ *
+ * The breaker reads the message, not `retryable` (`categorizeFailureReason`
+ * in lib/trust-helpers.ts files any "401" or "403" as auth_expired, which
+ * opens the breaker at once for 30 minutes). So a combined error that is
+ * retryable because one leg is transient quotes only the retryable legs'
+ * codes: a second leg's "HTTP 403" would otherwise turn a retry-shortly
+ * outage into a half-hour suspension for every caller.
+ */
+export function quotedLegCodes(failures: UpstreamUnavailableError[]): string {
+  const retryable = failures.filter((f) => f.retryable);
+  const quoted = retryable.length > 0 ? retryable : failures;
+  return [...new Set(quoted.map((f) => f.code ?? "error"))].join(", ");
 }
 
 /**

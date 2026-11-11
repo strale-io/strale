@@ -13,10 +13,34 @@ import {
 } from "./lib/browserless-extract.js";
 import type Anthropic from "@anthropic-ai/sdk";
 import { messageText } from "../lib/llm-response.js";
-import { fetchUnavailable, httpUnavailable } from "../lib/upstream-result.js";
+import { fetchUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 /** Named in unavailable_sources when the model's page analysis is unusable. */
 const PAGE_ANALYSIS = "page analysis";
+
+/**
+ * The caller's own site failed: its 5xx, a timeout or a network error. Still
+ * unbilled and retryable, but worded as the target's failure ("URL returned
+ * HTTP 5", "URL did not answer"), which the breaker's USER_INPUT_ERROR_PATTERNS
+ * in lib/circuit-breaker.ts recognise, as for url-to-markdown: one caller's
+ * broken site retried three times must not suspend cookie-scan for everyone
+ * (PR #1015 review). Anything else passes through as fetchUnavailable leaves it.
+ */
+function targetUnavailable(site: string, failure: number | unknown): Error {
+  if (typeof failure === "number") {
+    return new UpstreamUnavailableError(site, `URL returned HTTP ${failure}, a server error on the site itself; retry later.`, {
+      code: `HTTP ${failure}`,
+      retryable: true,
+    });
+  }
+  const err = fetchUnavailable(site, failure);
+  if (!(err instanceof UpstreamUnavailableError) || !err.retryable) return err;
+  return new UpstreamUnavailableError(site, `URL did not answer (${err.code ?? "network error"}); retry later.`, {
+    code: err.code,
+    retryable: true,
+    cause: failure,
+  });
+}
 
 // ─── Cookie scan — Browserless + HTTP fetch + Claude ─────────────────────────
 
@@ -175,14 +199,14 @@ registerCapability("cookie-scan", async (input: CapabilityInput) => {
     });
   } catch (err) {
     // Refusals, URL validation and Strale's own states pass through unchanged.
-    throw fetchUnavailable(site, err);
+    throw targetUnavailable(site, err);
   }
   // Only the headers are read here; release the body (#428).
   await discardBody(httpResponse, "cookie-scan: header-only fetch");
   // A block ends the scan: the render below would be the same request
   // through another route, which the data-access rule forbids.
   assertNotBlockStatus(url, httpResponse.status);
-  if (httpResponse.status >= 500) throw httpUnavailable(site, httpResponse.status);
+  if (httpResponse.status >= 500) throw targetUnavailable(site, httpResponse.status);
 
   // Parse Set-Cookie headers
   const setCookieHeaders = httpResponse.headers.getSetCookie?.() ?? [];
@@ -270,10 +294,11 @@ Only include tracking scripts where detected is true. For potential_issues, cons
   const hasTrackingCookies = cookies.some(
     (c) => c.category === "analytics" || c.category === "marketing",
   );
-  // Only a banner the analysis looked for and did not find is reported missing.
+  // Only a banner the analysis looked for and did not find is reported
+  // missing; an analysis that did not say (null) adds nothing.
   const potentialIssues = analysis ? [...analysis.potential_issues] : null;
   if (
-    analysis && potentialIssues && hasTrackingCookies && !analysis.consent_banner_detected &&
+    analysis && potentialIssues && hasTrackingCookies && analysis.consent_banner_detected === false &&
     !potentialIssues.some((i) => i.toLowerCase().includes("consent"))
   ) {
     potentialIssues.push("Tracking cookies detected but no cookie consent banner found.");
@@ -299,16 +324,25 @@ Only include tracking scripts where detected is true. For potential_issues, cons
 
 interface PageAnalysis {
   tracking_scripts: Array<{ name: string; detected: boolean }>;
-  consent_banner_detected: boolean;
+  /** Null when the analysis did not say: unknown, never "no banner". */
+  consent_banner_detected: boolean | null;
   consent_banner_text: string | null;
   third_party_domains: string[];
   potential_issues: string[];
 }
 
+/** A model's yes/no: a boolean or its string form; undefined when it is neither. */
+function readFlag(v: unknown): boolean | undefined {
+  if (v === true || v === "true") return true;
+  if (v === false || v === "false") return false;
+  return undefined;
+}
+
 /**
  * The model's analysis, or null when the reply does not carry one in the
- * requested shape. A missing list reads as empty, as before; a field of the
- * wrong type means the reply is not the analysis that was asked for.
+ * requested shape. A missing list reads as empty, as before; a missing
+ * consent_banner_detected reads null (unknown); a field of the wrong type
+ * means the reply is not the analysis that was asked for.
  */
 function readAnalysis(raw: unknown): PageAnalysis | null {
   if (!raw || typeof raw !== "object") return null;
@@ -317,15 +351,15 @@ function readAnalysis(raw: unknown): PageAnalysis | null {
   const scripts = list(a.tracking_scripts);
   const domains = list(a.third_party_domains_detected);
   const issues = list(a.potential_issues);
-  const banner = a.consent_banner_detected ?? false;
+  const bannerRaw = a.consent_banner_detected;
+  const banner = bannerRaw === undefined || bannerRaw === null ? null : readFlag(bannerRaw);
   const bannerText = a.consent_banner_text ?? null;
-  if (!scripts || !domains || !issues || typeof banner !== "boolean") return null;
+  if (!scripts || !domains || !issues || banner === undefined) return null;
   if (bannerText !== null && typeof bannerText !== "string") return null;
   return {
-    tracking_scripts: scripts.filter(
-      (x): x is { name: string; detected: boolean } =>
-        !!x && typeof x === "object" && (x as { detected?: unknown }).detected === true,
-    ),
+    tracking_scripts: scripts
+      .filter((x): x is Record<string, unknown> => !!x && typeof x === "object" && readFlag((x as { detected?: unknown }).detected) === true)
+      .map((x) => ({ ...x, detected: true }) as { name: string; detected: boolean }),
     consent_banner_detected: banner,
     consent_banner_text: bannerText,
     third_party_domains: domains.filter((d): d is string => typeof d === "string"),

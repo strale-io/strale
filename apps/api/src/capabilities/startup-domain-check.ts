@@ -4,10 +4,11 @@ import { inputRefusal } from "../lib/capability-refusal.js";
 import { dnsUnavailable, fetchUnavailable, httpUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 // A wrong "available" is the worst answer this tool can give: a founder may
-// act on it. So a domain is "available" only on a definitive NXDOMAIN, a
-// resolver that could not answer fails the call, and a handle check that could
-// not answer reads null rather than "available" or "taken" (2026-11-06
-// swallowed-upstream-failures audit, row 24).
+// act on it. So a domain is "available" only on a definitive NXDOMAIN; a
+// domain or handle whose check could not answer reads null rather than
+// "available" or "taken" and is named in unavailable_sources; and when no
+// domain lookup answered at all the call fails (2026-11-06
+// swallowed-upstream-failures audit, row 24; PR #1015 review).
 
 registerCapability("startup-domain-check", async (input: CapabilityInput) => {
   const keyword = ((input.company_name as string) ?? (input.keyword as string) ?? (input.task as string) ?? "").trim();
@@ -20,16 +21,28 @@ registerCapability("startup-domain-check", async (input: CapabilityInput) => {
     throw inputRefusal(
       "'company_name' must contain between 1 and 63 letters (a-z) or digits once spaces and punctuation are removed.",
       "company_name",
-      "Send the name in Latin letters or digits, at most 63 of them.",
+      "Send 'company_name' in Latin letters or digits, at most 63 of them.",
     );
   }
 
-  // Check domain availability via DNS
+  // Check domain availability via DNS. One extension whose resolver did not
+  // answer reads null and is named in unavailable_sources, like a handle;
+  // the call fails only when no extension could be checked (PR #1015 review).
   const extensions = [".com", ".io", ".ai", ".co", ".dev"];
+  const unavailableSources: string[] = [];
+  const lookups = await Promise.allSettled(extensions.map((ext) => isDomainAvailable(`${slug}${ext}`)));
+  const failedLookups = lookups.filter((l): l is PromiseRejectedResult => l.status === "rejected");
+  if (failedLookups.length === lookups.length) throw failedLookups[0].reason;
   const domainChecks = await Promise.all(
-    extensions.map(async (ext) => {
+    extensions.map(async (ext, i) => {
       const domain = `${slug}${ext}`;
-      const available = await isDomainAvailable(domain);
+      const lookup = lookups[i];
+      if (lookup.status === "rejected") {
+        if (!(lookup.reason instanceof UpstreamUnavailableError)) throw lookup.reason;
+        unavailableSources.push(`DNS for ${domain}`);
+        return { domain, extension: ext, available: null as boolean | null, current_owner: null as string | null };
+      }
+      const available: boolean | null = lookup.value;
       let currentOwner: string | null = null;
       if (!available) {
         // Try to detect what's there
@@ -59,7 +72,6 @@ registerCapability("startup-domain-check", async (input: CapabilityInput) => {
     [PYPI, `https://pypi.org/pypi/${slug}/json`],
   ];
   const settled = await Promise.allSettled(handleLegs.map(([label, url]) => checkUrl(url, label)));
-  const unavailableSources: string[] = [];
   const [githubAvail, npmAvail, pypiAvail] = settled.map((result, i) => {
     if (result.status === "fulfilled") return result.value;
     if (!(result.reason instanceof UpstreamUnavailableError)) throw result.reason;
@@ -82,14 +94,14 @@ registerCapability("startup-domain-check", async (input: CapabilityInput) => {
   ];
 
   const available = [
-    ...domainChecks.filter((d) => d.available).map((d) => ({ type: "domain", name: d.domain })),
+    ...domainChecks.filter((d) => d.available === true).map((d) => ({ type: "domain", name: d.domain })),
     ...socialChecks.filter((s) => s.available === true).map((s) => ({ type: s.platform.toLowerCase(), name: s.handle ?? s.package })),
   ];
 
-  // Only a check that answered "taken" is listed here: an unchecked handle
-  // (available: null) is neither available nor taken.
+  // Only a check that answered "taken" is listed here: an unchecked domain or
+  // handle (available: null) is neither available nor taken.
   const taken = [
-    ...domainChecks.filter((d) => !d.available).map((d) => ({ type: "domain", name: d.domain, details: d.current_owner })),
+    ...domainChecks.filter((d) => d.available === false).map((d) => ({ type: "domain", name: d.domain, details: d.current_owner })),
     ...socialChecks.filter((s) => s.available === false).map((s) => ({ type: s.platform.toLowerCase(), name: (s as Record<string, unknown>).handle ?? (s as Record<string, unknown>).package, details: "taken" })),
   ];
 
@@ -102,7 +114,7 @@ registerCapability("startup-domain-check", async (input: CapabilityInput) => {
       taken_count: taken.length,
       available,
       taken,
-      best_available_domain: domainChecks.find((d) => d.available)?.domain ?? null,
+      best_available_domain: domainChecks.find((d) => d.available === true)?.domain ?? null,
       ...(unavailableSources.length > 0 ? { unavailable_sources: unavailableSources } : {}),
     },
     provenance: { source: "dns-http", fetched_at: new Date().toISOString() },
