@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { performance } from "node:perf_hooks";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { executeWithTransientRetry } from "../lib/retry.js";
 import * as log from "../lib/log.js";
@@ -169,6 +170,70 @@ describe("Japanese company data through the official NTA v4 API", () => {
     const record = single.match(/<corporation>.*<\/corporation>/s)![0];
     fetchMock.mockResolvedValue(new Response(single.replace('<count>1</count>', '<count>50</count>').replace(record, record.repeat(50))));
     expect((await fetchNtaCorporations("国税商事", false)).records).toHaveLength(50);
+  });
+
+  it("refuses 64 KiB of deep nesting with the generic response error in under 100 ms", async () => {
+    const body = `<corporations><count>1</count>${"<a>".repeat(Math.ceil(64 * 1024 / 3))}`;
+    fetchMock.mockResolvedValue(new Response(body));
+    const started = performance.now();
+    await expect(execute({ corporate_number: "5111101000006" })).rejects.toMatchObject({
+      error_code: "execution_failed",
+      message: "NTA returned an unexpected response. Retry later.",
+    });
+    expect(performance.now() - started).toBeLessThan(100);
+  });
+
+  it("refuses more than 5,000 elements with the generic response error", async () => {
+    const body = `<corporations><count>0</count>${"<x/>".repeat(6000)}</corporations>`;
+    fetchMock.mockResolvedValue(new Response(body));
+    await expect(execute({ corporate_number: "5111101000006" })).rejects.toMatchObject({
+      error_code: "execution_failed",
+      message: "NTA returned an unexpected response. Retry later.",
+    });
+  });
+
+  it.each([
+    ["1 MiB of attributes on one element", (() => {
+      let tag = "<corporations";
+      for (let i = 0; tag.length < 1024 * 1024 - 64; i++) tag += ` a${i}=""`;
+      return `${tag}><count>1</count></corporations>`;
+    })()],
+    ["6,000 comments", `<corporations><count>0</count>${"<!---->".repeat(6000)}</corporations>`],
+  ])("refuses %s with the generic response error in under 200 ms", async (_label, body) => {
+    fetchMock.mockResolvedValue(new Response(body));
+    const started = performance.now();
+    await expect(execute({ corporate_number: "5111101000006" })).rejects.toMatchObject({
+      error_code: "execution_failed",
+      message: "NTA returned an unexpected response. Retry later.",
+    });
+    expect(performance.now() - started).toBeLessThan(200);
+  });
+
+  it("preserves mapped output for a real-shaped 50-record response", async () => {
+    const fields = [
+      ["corporateNumber", "5111101000006"], ["process", "01"], ["correct", "1"],
+      ["updateDate", "2026-11-11"], ["changeDate", "2026-11-11"], ["name", "株式会社検索対象除外"],
+      ["nameImageId", ""], ["kind", "301"], ["prefectureName", "東京都"], ["cityName", "千代田区"],
+      ["streetNumber", "霞が関3丁目1番1号"], ["addressImageId", ""], ["prefectureCode", "13"],
+      ["cityCode", "101"], ["postCode", "1000013"], ["addressOutside", ""], ["addressOutsideImageId", ""],
+      ["closeDate", ""], ["closeCause", ""], ["successorCorporateNumber", ""], ["changeCause", ""],
+      ["assignmentDate", "2015-10-05"], ["latest", "1"], ["enName", ""], ["enPrefectureName", ""],
+      ["enCityName", ""], ["enAddressOutside", ""], ["furigana", "ケンサクタイショウジョガイ"],
+      ["hihyoji", "1"], ["reservedField", ""],
+    ] as const;
+    const record = `<corporation>${fields.map(([name, value]) => `<${name}>${value}</${name}>`).join("")}</corporation>`;
+    fetchMock.mockResolvedValue(new Response(`<corporations><lastUpdateDate>2026-11-11</lastUpdateDate><count>50</count>${record.repeat(50)}</corporations>`));
+    const { output } = await execute({ corporate_number: "5111101000006" });
+    expect(output).toMatchObject({
+      registration_number: "5111101000006",
+      company_name: "株式会社検索対象除外",
+      business_type: "株式会社",
+      status: "active",
+      address: "東京都千代田区霞が関3丁目1番1号",
+      assignment_date: "2015-10-05",
+      last_updated: "2026-11-11",
+      search_excluded: true,
+    });
   });
 
   it.each([["103", "more than the legal form"], ["180", "too many companies match"], ["102", "Check the input"]])("maps NTA 400 code %s to an actionable refusal", async (code, advice) => {

@@ -8,6 +8,15 @@ import { SourceBlockedError, STRALE_USER_AGENT } from "./site-access.js";
 
 const MAX_RESPONSE_BYTES = 1024 * 1024;
 const MAX_RECORDS = 50;
+const MAX_XML_DEPTH = 8;
+const MAX_XML_ELEMENTS = 5000;
+// Comments, processing instructions and CDATA sections each become a DOM node
+// too; real responses have a handful (the XML declaration).
+const MAX_XML_NODES = 5000;
+// Real NTA type-12 responses carry no attributes. jsdom's cost per attribute
+// grows quadratically on one element (1 MiB of attributes: 64 s), so a small
+// total cap is the bound.
+const MAX_XML_ATTRIBUTES = 64;
 const COOLDOWN_MS = 60_000;
 const MAX_IN_FLIGHT = 4;
 // v4 appendix 2: 040-043 corporate number, 100-103 name; 180 handled apart.
@@ -44,6 +53,93 @@ export interface NtaResponse {
   lastUpdateDate: string;
 }
 
+/**
+ * Bound the amount of XML structure handed to a DOM parser. This is not an
+ * XML validator: jsdom remains responsible for validation. The scan only
+ * recognizes enough markup to count elements and nesting, and every search
+ * resumes after the characters the previous search consumed.
+ */
+export function assertXmlShape(
+  xml: string,
+  {
+    maxDepth,
+    maxElements,
+    maxNodes = Number.POSITIVE_INFINITY,
+    maxAttributes = Number.POSITIVE_INFINITY,
+  }: { maxDepth: number; maxElements: number; maxNodes?: number; maxAttributes?: number },
+): void {
+  let cursor = 0;
+  let depth = 0;
+  let elements = 0;
+  let nodes = 0;
+  let attributes = 0;
+  const countNode = () => {
+    nodes++;
+    if (nodes > maxNodes) throw new Error("XML node limit exceeded");
+  };
+
+  while (cursor < xml.length) {
+    const opening = xml.indexOf("<", cursor);
+    if (opening === -1) return;
+
+    if (xml.startsWith("<!--", opening)) {
+      countNode();
+      const end = xml.indexOf("-->", opening + 4);
+      if (end === -1) return;
+      cursor = end + 3;
+      continue;
+    }
+    if (xml.startsWith("<![CDATA[", opening)) {
+      countNode();
+      const end = xml.indexOf("]]>", opening + 9);
+      if (end === -1) return;
+      cursor = end + 3;
+      continue;
+    }
+    if (xml.startsWith("<?", opening)) {
+      countNode();
+      const end = xml.indexOf("?>", opening + 2);
+      if (end === -1) return;
+      cursor = end + 2;
+      continue;
+    }
+
+    const opensElement = xml[opening + 1] !== "/" && xml[opening + 1] !== "!";
+    let quote = "";
+    let end = opening + 1;
+    for (; end < xml.length; end++) {
+      const char = xml[end];
+      if (quote) {
+        if (char === quote) quote = "";
+      } else if (char === '"' || char === "'") {
+        quote = char;
+      } else if (char === ">") {
+        break;
+      } else if (char === "=" && opensElement) {
+        attributes++;
+        if (attributes > maxAttributes) throw new Error("XML attribute limit exceeded");
+      }
+    }
+    if (end === xml.length) return;
+
+    if (xml[opening + 1] === "/") {
+      if (depth > 0) depth--;
+    } else if (opensElement) {
+      elements++;
+      if (elements > maxElements) throw new Error("XML element limit exceeded");
+      countNode();
+
+      let last = end - 1;
+      while (/\s/.test(xml[last] ?? "")) last--;
+      if (xml[last] !== "/") {
+        depth++;
+        if (depth > maxDepth) throw new Error("XML nesting limit exceeded");
+      }
+    }
+    cursor = end + 1;
+  }
+}
+
 /** v4 revision 1.2 §§2.3.1, 4.3, 5.2, type=12. No external entities. */
 function parseResponse(xml: string): NtaResponse {
   if (/<!DOCTYPE|<!ENTITY/i.test(xml)) throw ntaError("execution_failed", "NTA returned an unsupported XML document. Retry later.");
@@ -52,6 +148,16 @@ function parseResponse(xml: string): NtaResponse {
   if (countText && Number(countText) > MAX_RECORDS) throw tooManyMatches();
   // Also bound dishonest/missing count envelopes before XML allocation.
   if ((xml.match(/<corporation(?:\s|>)/g) ?? []).length > MAX_RECORDS) throw tooManyMatches();
+  try {
+    assertXmlShape(xml, {
+      maxDepth: MAX_XML_DEPTH,
+      maxElements: MAX_XML_ELEMENTS,
+      maxNodes: MAX_XML_NODES,
+      maxAttributes: MAX_XML_ATTRIBUTES,
+    });
+  } catch {
+    throw ntaError("execution_failed", "NTA returned an unexpected response. Retry later.");
+  }
   let dom: JSDOM;
   try {
     dom = new JSDOM(xml, { contentType: "application/xml" });
