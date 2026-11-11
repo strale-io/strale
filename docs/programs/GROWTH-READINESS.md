@@ -24,7 +24,7 @@ fixed along the way does not block.
 | A1 | Some paid tools can charge for a failed call. Waves 2 and 3 of the swallowed-failure fix, then counting and refunding past charges. Built by Claude (money path). | `docs/programs/promise-audit/tracks.yaml` T1 | Waves 2a and 2b and the 2b tail are merged (#1014, #1015, #1017). Wave 2c is in review (#1018). Wave 2d is next, then wave 3, the perturbation replays and the past-charge count. |
 | A2 | Reference answers for sanctions-check and pep-check: listed names must be found. Scoped small. | `docs/programs/promise-audit/tracks.yaml` T2 | Not started. |
 | A3 | `apps/web/src/pages/signup.astro` shows no Terms line while the backend stamps `tos_accepted`. One sentence; Petter approves the wording. | `docs/programs/cto-readiness/tracks.yaml` T16, blocker item 2 | Waiting on Petter's wording. |
-| A4 | Tools on sale that cannot deliver: the customs-duty repair and the four DQ-41 tools. They wait on the database write key on Petter's PC. | `docs/programs/robustness/tracks.yaml` T4; DQ-41 and DQ-48 in `docs/company/DECISION-QUEUE.md` | Waiting on the database session at the PC. |
+| A4 | Tools that cannot deliver or cannot be listed: the customs-duty repair (onboarding against the database from the PC; DQ-48 terms) and the four DQ-41 tools (onboarded on 2026-10-30 but dark-launched; the free three promote themselves after a green week, invoice-counterparty-check needs a promotion path). | `docs/programs/robustness/tracks.yaml` T4 (open item 3); DQ-41 and DQ-48 in `docs/company/DECISION-QUEUE.md` | Customs repair waits on the database session at the PC; invoice-counterparty-check waits on a promotion path. |
 | A5 | Distribution clicks: PyPI trusted publishers and four releases, first npm publish of strale-ai-sdk and strale-cli, Zapier, n8n, Smithery, the Coinbase form, the 402 Index claim, the Claude connector. Sessions prepare and smoke-test. | `docs/programs/distribution/tracks.yaml` T2, T4 to T9, T12 | composio-strale 0.1.5 waits on Petter setting up its PyPI trusted publisher. The rest wait on Petter's click session. |
 
 ## B. Fix along the way
@@ -38,6 +38,7 @@ fixed along the way does not block.
 | Robustness R2 to R7 | `docs/programs/robustness/tracks.yaml` T2 to T7 |
 | Evidence, privacy, availability, answer-quality and claims promises | `docs/programs/promise-audit/tracks.yaml` T3 to T7 |
 | The Dilisense role and DPA: send one email, do not wait on it | `docs/programs/cto-readiness/tracks.yaml` T16, blocker item 1 |
+| Legal-text rewrites awaiting Petter's sign-off: the Privacy retention wording, the "charged only on success" claim, Terms at signup (the copy can also be narrowed while A1 is open) | `docs/programs/cto-readiness/tracks.yaml` T16, blocker item 3 |
 | Swiss UID, Zefix and ARES terms replies | DQ-40 in `docs/company/DECISION-QUEUE.md` |
 | Access2Markets terms contact | DQ-48 in `docs/company/DECISION-QUEUE.md` |
 

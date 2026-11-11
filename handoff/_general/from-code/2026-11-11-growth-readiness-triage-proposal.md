@@ -10,7 +10,7 @@ Petter asked on 2026-11-11 (about 08:40 Swedish time) for (1) a correct list of 
 
 Six program registers hold 59 tracks; 21 done, 38 open. Six decision-queue items are open (DQ-48, DQ-41, DQ-40, DQ-33, DQ-27, DQ-14).
 
-## Stale lines found (not yet corrected)
+## Stale lines found (as found)
 
 - brand-website T6 next_action says "Nothing is published"; SWITCH-OVER-READINESS.md says "not ready to switch today". Checked 2026-11-11: https://strale.io answers 200 and strale.dev answers 301 to strale.io with path and query kept.
 - docs/strategy/2026-11-06-revenue-plan.md week 1 lists the x402 settlement-drop alert as a draft (merged as #950) and week 3 lists the strale.dev 301 as pending.
