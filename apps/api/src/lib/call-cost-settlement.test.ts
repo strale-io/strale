@@ -94,7 +94,7 @@ vi.mock("./wallet-reservations.js", () => ({
   capture: state.capture, release: state.release,
 }));
 vi.mock("./solution-executor.js", () => ({
-  executeSolution: async () => ({ steps: { "test-step": { answer: "done" } }, errors: [], step_count: 1, stepTimings: [] }),
+  executeSolution: async () => ({ steps: { "test-step": { answer: "done" } }, errors: [], failures: [], step_count: 1, stepTimings: [] }),
   stepsThatRan: () => ["test-step"],
 }));
 vi.mock("./receipt/settle.js", () => ({ settleExecutionReceipt: state.receipt }));

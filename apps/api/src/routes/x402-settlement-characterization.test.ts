@@ -123,6 +123,8 @@ vi.mock("../lib/log.js", () => ({ logError: state.logError, logWarn: state.logWa
 import { x402GatewayV2, __resetX402CacheForTests } from "./x402-gateway-v2.js";
 import { doRoute } from "./do.js";
 import { recordAnonymousInvocation } from "../lib/invocation-facts.js";
+import { stepFailure, type StepFailure } from "../lib/solution-step-failure.js";
+import { targetUnavailable } from "../lib/upstream-result.js";
 vi.mock("../lib/matching.js", () => ({ matchCapability: async () => ({ capability: {
   id: "22222222-2222-2222-2222-222222222222", slug: "test-capability", name: "Test", priceCents: 5,
   isFreeTier: false, capabilityType: state.capabilityType, transparencyTag: "algorithmic", processesPersonalData: false,
@@ -144,7 +146,7 @@ beforeEach(() => {
   state.failIntent = false; state.failMark = false; state.failRecorded = false; state.failOrphan = false; state.orphanRows = [];
   state.schema = undefined;
   vi.clearAllMocks(); state.rows = []; state.events = []; state.intents = []; state.failRecord = false; state.failBegin = false; state.capabilityType = "deterministic"; __resetX402CacheForTests();
-  state.solution.mockImplementation(async () => { state.events.push("execute"); return { steps: { "test-capability": output.output }, errors: [], step_count: 1, latency_ms: 7 }; });
+  state.solution.mockImplementation(async () => { state.events.push("execute"); return { steps: { "test-capability": output.output }, errors: [], failures: [], step_count: 1, latency_ms: 7 }; });
   state.executor.mockImplementation(async () => { state.events.push("execute"); return output; });
   state.settle.mockImplementation(async () => { state.events.push("settle"); return { valid: true, settlementId: "settled-payment" }; });
 });
@@ -245,11 +247,42 @@ describe.each(routes)("H7b %s settlement characterization", route => {
   });
   it("failed execution never opens an intent or settles", async () => {
     state.executor.mockRejectedValue(new Error("execution failed"));
-    state.solution.mockResolvedValue({ steps: {}, errors: [], step_count: 0, latency_ms: 7 });
+    state.solution.mockResolvedValue({ steps: {}, errors: [], failures: [], step_count: 0, latency_ms: 7 });
     const response = await request(route);
     expect(response.status).toBe(route === "do" ? 500 : route === "solution" ? 502 : 400);
     expect(state.intents).toHaveLength(0); expect(state.settle).not.toHaveBeenCalled();
     expect(await observed(response)).toMatchSnapshot();
+  });
+});
+
+// Promise-audit T1 follow-up 42: an unbillable bundle answered retryable for
+// every cause, and dropped each step's own advice.
+describe("follow-up 42: x402 bundle retry advice", () => {
+  const failed = (failures: StepFailure[]) => state.solution.mockResolvedValue({
+    steps: Object.fromEntries(failures.map(f => [f.capability_slug, { error: String(f.details.error) }])),
+    errors: failures.map(f => `${f.capability_slug}: ${String(f.details.error)}`), failures, step_count: failures.length, latency_ms: 7,
+  });
+  it("every step a site refusal: not retryable, each step's advice listed", async () => {
+    failed([stepFailure("test-capability", targetUnavailable("URL", 404))]);
+    const response = await request("solution");
+    expect(response.status).toBe(502);
+    const body = await response.json();
+    expect(body.details).toMatchObject({ retryable: false, next_step: expect.stringMatching(/same answer/), errors: [expect.objectContaining({ capability_slug: "test-capability", retryable: false })] });
+    expect(state.settle).not.toHaveBeenCalled();
+  });
+  it("a step a retry could change: retryable", async () => {
+    failed([stepFailure("test-capability", targetUnavailable("URL", 503))]);
+    const body = await (await request("solution")).json();
+    expect(body.details).toMatchObject({ retryable: true, errors: [expect.objectContaining({ retryable: true })] });
+  });
+  it("a tripped gate is not retryable", async () => {
+    // A retryable step failure rides along, so only the gate can make this final.
+    const transient = stepFailure("other-capability", targetUnavailable("URL", 503));
+    state.solution.mockResolvedValue({ steps: { "test-capability": { found: false } }, errors: ["other-capability: HTTP 503"], failures: [transient], step_count: 2, latency_ms: 7,
+      gated: { capabilitySlug: "test-capability", field: "found", observed: false, reason: "not found" } });
+    const body = await (await request("solution")).json();
+    expect(body.failure_class).toBe("gate_tripped");
+    expect(body.details.retryable).toBe(false);
   });
 });
 

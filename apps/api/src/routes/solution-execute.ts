@@ -32,10 +32,11 @@ import { extractClientMeta } from "../lib/attribution.js";
 import { solutions, walletTransactions, transactions } from "../db/schema.js";
 import { authMiddleware } from "../lib/middleware.js";
 import { rateLimitByKey } from "../lib/rate-limit.js";
-import { apiError, recoveryDetails } from "../lib/errors.js";
+import { apiError } from "../lib/errors.js";
 import { keyCapError } from "../lib/api-keys.js";
 import { spendCapWouldExceed } from "./do.js";
 import { stepsThatRan, executeSolution } from "../lib/solution-executor.js";
+import { anyStepRetryable, stepFailureEntries } from "../lib/solution-step-failure.js";
 import {
   aggregateSolutionOutcome,
   assessOutput,
@@ -626,6 +627,16 @@ solutionExecuteRoute.post(
     // result.status uses the richer vocabulary for the caller:
     // "completed" (all ok), "partial" (some failed), "failed" (all failed)
     const responseStatus = allFailed ? "failed" : (errorCount > 0 ? "partial" : "completed");
+    // Promise-audit T1 follow-up 42. Retryable only when the run was refunded
+    // AND a retry could change at least one failed step. Before, an all-failed
+    // bundle said "retry" even when every step was a site refusal, and the
+    // refund wording followed allFailed while the refund followed billable,
+    // so a withheld run with some output was refunded yet told a rerun
+    // "charges the solution price again".
+    const bundleRetryable = refundRequired && outcome.retryable && anyStepRetryable(execResult.failures);
+    const withheldStep = Object.values(execResult.steps ?? {}).some(
+      (s) => (s as { platform_withheld?: unknown } | null)?.platform_withheld === true,
+    );
 
     return c.json({
       result: {
@@ -635,11 +646,17 @@ solutionExecuteRoute.post(
         steps: execResult.steps,
         errors: execResult.errors.length > 0 ? execResult.errors : undefined,
         ...(execResult.errors.length ? { details: {
-          retryable: allFailed,
-          next_step: allFailed
-            ? "This run was refunded; retry with exponential backoff after checking the failed steps."
-            : "Inspect the failed steps before retrying; a rerun charges the solution price again.",
-          errors: execResult.errors.map(error => recoveryDetails("execution_failed", "", { error: sanitizeFailureReason(error.replace(/^[^:]+: /, "")) })),
+          retryable: bundleRetryable,
+          next_step: !refundRequired
+            ? "Inspect the failed steps before retrying; a rerun charges the solution price again."
+            : bundleRetryable
+              ? "This run was refunded; retry with exponential backoff after checking the failed steps."
+              : gated
+                ? "This run was refunded; the gate stops a retry with the same input at the same step. Check the gate's reason under 'gated' first."
+                : withheldStep
+                  ? "This run was refunded; Strale withheld a step of this bundle, so a retry with the same input stops the same way. Follow each step's advice under 'errors'."
+                  : "This run was refunded; a retry with the same input will not change the failed steps. Follow each step's advice under 'errors' first.",
+          errors: stepFailureEntries(execResult.failures),
         } } : {}),
         step_count: totalSteps,
         latency_ms: latencyMs,
