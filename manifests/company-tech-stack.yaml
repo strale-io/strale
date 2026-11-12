@@ -169,6 +169,11 @@ limitations:
       page, not from a matched signature, and can be wrong or generic.
     category: accuracy
     severity: info
+  - title: Sites that refuse automated requests are not read
+    text: >-
+      When the site answers HTTP 401, 403, 407 or 429, shows an anti-bot challenge page instead of the content, or disallows the page in robots.txt, or its robots.txt cannot be fetched (a network or server error), the call fails with an error and is not billed. Strale does not try another route around the block. Repeating the call gets the same answer while the site keeps refusing; when robots.txt could not be fetched, wait at least 5 minutes before trying again. The response headers come from a second request; if that request is refused, the result is still returned and billed with a warning. After an HTTP 401, 403, 407 or 429 the header signals are those of that answer; after a challenge page or a robots.txt refusal, no header signals are included.
+    category: availability
+    severity: info
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:
