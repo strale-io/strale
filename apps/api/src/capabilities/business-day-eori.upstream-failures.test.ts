@@ -257,7 +257,7 @@ describe("business-day-check: only public and bank holidays are days off", () =>
   const US = [
     { date: "2026-02-12", name: "Lincoln's Birthday", global: false, counties: ["US-CA", "US-CT"], types: ["Observance"] },
     { date: "2026-05-08", name: "Truman Day", global: false, counties: ["US-MO"], types: ["School", "Authorities"] },
-    { date: "2026-10-12", name: "Columbus Day", global: false, counties: ["US-AL", "US-AZ"], types: ["Public"] },
+    { date: "2026-10-12", name: "Indigenous Peoples' Day", global: false, counties: ["US-AK", "US-AZ"], types: ["Public"] },
     { date: "2026-10-12", name: "Columbus Day", global: true, counties: null, types: ["Bank"] },
   ];
   const PT = [{ date: "2026-02-17", name: "Carnival", global: true, counties: null, types: ["Optional"] }];
@@ -289,7 +289,7 @@ describe("business-day-check: only public and bank holidays are days off", () =>
     expect(r.output).toMatchObject({ next_business_day: "2026-11-11" });
   });
 
-  it("counts a bank holiday, and names the nationwide entry: Columbus Day in the US", async () => {
+  it("counts a bank holiday, and names the nationwide entry when a regional one shares the date: Columbus Day, not Indigenous Peoples' Day", async () => {
     fetchMock.mockImplementation(nager(US));
     const exec = await load("business-day-check", "./business-day-check.js");
     const r = await exec({ date: "2026-10-12", country_code: "US" });

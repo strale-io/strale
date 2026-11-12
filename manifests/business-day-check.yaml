@@ -65,12 +65,13 @@ limitations:
     text: Uses Sat-Sun weekends for most countries and Fri-Sat for some Middle Eastern, North African and South Asian countries (for example Bahrain, Algeria and Bangladesh); some Fri-Sat rows are marked unverified in the code. Countries without a holiday calendar, such as Israel, Iran and Nepal, are refused whatever their weekend (see below).
     category: accuracy
     severity: info
-  - title: Regional holidays count for the whole country
+  - title: Which holidays count, and regional holidays
     text: >-
       Public and bank holidays count as days off; school, government-office, optional and observance days listed in the
-      holiday data do not. A public or bank holiday kept only in some states or regions (for example Corpus Christi in parts
-      of Germany, or Good Friday in some US states) is counted for the whole country, so the answer is "not a business day"
-      everywhere in that country on that date. There is no region input yet.
+      holiday data do not. A bank holiday counts even where most businesses work (for example Good Friday in Belgium). A
+      public or bank holiday kept only in some states or regions (for example Corpus Christi in parts of Germany, or Good
+      Friday in some US states) is counted for the whole country, so the answer is "not a business day" everywhere in that
+      country on that date. There is no region input.
     category: accuracy
     severity: warning
   - title: Holiday data from Nager.Date
