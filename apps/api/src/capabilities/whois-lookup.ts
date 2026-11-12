@@ -69,9 +69,10 @@ const REGISTRAR_NAME_KEYS = new Set(["registrar", "sponsoring registrar", "regis
 
 /**
  * Keys that mention the registrar but hold one of its details: its WHOIS
- * server, URL, IANA id, abuse contact and so on. Never the registrar's name.
+ * server, URL, IANA id, abuse contact, or a date such as "Registrar
+ * Registration Expiration Date" (review round 5). Never the registrar's name.
  */
-const REGISTRAR_DETAIL_KEY = /whois|server|url|abuse|iana|\bid\b|phone|email|contact/;
+const REGISTRAR_DETAIL_KEY = /whois|server|url|abuse|iana|\bid\b|phone|email|contact|date|expir|creat|updat/;
 
 registerCapability("whois-lookup", async (input: CapabilityInput) => {
   const domain = ((input.domain as string) ?? (input.task as string) ?? "").trim().toLowerCase();

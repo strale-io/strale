@@ -895,22 +895,33 @@ const COUNTRY_NAMES: Record<string, string> = {
   "turkey": "TR", "türkiye": "TR", "turkiye": "TR",
 };
 
+/** The shortest input read as the start of a country name ("swed" for Sweden). */
+const MIN_NAME_PREFIX = 4;
+
+/**
+ * A country code for the input, or null when it names no country this table
+ * knows, or more than one. Null is refused, unbilled: a guess bills the wrong
+ * country's figures (PR #1018 review rounds 4 and 5). Accepted:
+ *   - an ISO alpha-2 code (any code: the World Bank says whether it knows it);
+ *   - a name or alias in COUNTRY_NAMES, exactly;
+ *   - the start of such a name, at least MIN_NAME_PREFIX letters long, when
+ *     every name it starts belongs to one country.
+ * A name is never read out of a longer input: "Ukraine" holds "uk", "North
+ * Korea" holds "korea" and "Hong Kong, China" holds "china", and each used to
+ * bill that other country.
+ */
 function resolveCountryCode(input: string): string | null {
-  const clean = input.trim().toUpperCase();
-  // Direct 2-letter code
-  if (/^[A-Z]{2}$/.test(clean) && EMBEDDED_DATA[clean]) return clean;
-  // Check name mapping
   const lower = input.trim().toLowerCase();
   if (COUNTRY_NAMES[lower]) return COUNTRY_NAMES[lower];
-  // Partial match, only for an input longer than a code: a two-letter code
-  // the embedded table lacks (KE) is a substring of a country name
-  // ("turkey") and used to resolve to that country (PR #1018 review round 4, T3).
-  if (lower.length > 2) {
-    for (const [name, code] of Object.entries(COUNTRY_NAMES)) {
-      if (name.includes(lower) || lower.includes(name)) return code;
-    }
-  }
-  return clean.length === 2 ? clean : null;
+  const clean = lower.toUpperCase();
+  if (/^[A-Z]{2}$/.test(clean)) return clean;
+  if (lower.length < MIN_NAME_PREFIX) return null;
+  const codes = new Set(
+    Object.entries(COUNTRY_NAMES)
+      .filter(([name]) => name.startsWith(lower))
+      .map(([, code]) => code),
+  );
+  return codes.size === 1 ? [...codes][0] : null;
 }
 
 // World Bank API indicators
@@ -1016,8 +1027,10 @@ registerCapability("country-trade-data", async (input: CapabilityInput) => {
 
   const countryCode = resolveCountryCode(rawCountry);
   if (!countryCode) {
-    throw new Error(
-      `Could not resolve country "${rawCountry}" to a known country code. Use ISO alpha-2 (e.g. 'SE', 'US', 'CN').`,
+    throw inputRefusal(
+      `'country_code' must be an ISO alpha-2 code or a country name this capability knows; "${rawCountry}" is neither, or could name more than one country.`,
+      "country_code",
+      "Send 'country_code' as an ISO alpha-2 code, such as 'SE', 'US' or 'CN'.",
     );
   }
 
@@ -1075,7 +1088,9 @@ registerCapability("country-trade-data", async (input: CapabilityInput) => {
     top_exports: embedded?.top_exports ?? [],
     top_imports: embedded?.top_imports ?? [],
     top_partners: embedded?.top_partners ?? [],
-    data_source: liveData ? "World Bank API + embedded product data" : "embedded-trade-data",
+    // Names what this call used (review round 5): a live answer for a
+    // country with no embedded entry has no product data beside it.
+    data_source: liveData ? (embedded ? "World Bank API + embedded product data" : "World Bank API") : "embedded-trade-data",
     note: embedded
       ? "Product breakdown and partner data are estimates based on 2023 published trade statistics."
       : "Only aggregate data available from World Bank API. No product/partner breakdown for this country.",

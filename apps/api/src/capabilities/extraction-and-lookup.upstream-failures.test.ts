@@ -430,7 +430,7 @@ describe("negative: country-trade-data keeps the World Bank's answers", () => {
     fetchMock.mockImplementation(async (url: string) => wbValue(url.includes("NE.EXP") ? 9_000_000_000 : null));
     const out = await billed("country-trade-data", exec("country-trade-data")({ country_code: "ZW", year: 2023 }));
     expect(out).toMatchObject({
-      data_source: "World Bank API + embedded product data",
+      data_source: "World Bank API",
       total_exports_usd: 9_000_000_000,
       total_imports_usd: null,
       trade_balance_usd: null,
@@ -493,10 +493,58 @@ describe("failure: country-trade-data does not read a two-letter code as part of
     expect(err.message).toContain('No trade data available for country code "KE"');
   });
 
-  it("still resolves a partial country name longer than two letters", async () => {
+  it("still resolves the start of a country name of four letters or more", async () => {
     fetchMock.mockImplementation(async () => wbValue(null));
     const out = await billed("country-trade-data", exec("country-trade-data")({ country: "swed", year: 2023 }));
     expect(out.country_code).toBe("SE");
+  });
+
+  it("names World Bank API alone as the source when nothing is embedded for the country (review round 5)", async () => {
+    fetchMock.mockImplementation(async (url: string) => wbValue(url.includes("NE.EXP") ? 15_000_000_000 : 25_000_000_000));
+    const out = await billed("country-trade-data", exec("country-trade-data")({ country_code: "KE", year: 2023 }));
+    expect(out.data_source).toBe("World Bank API");
+  });
+});
+
+describe("failure: country-trade-data refuses a country it cannot name with certainty (review round 5)", () => {
+  // Each of these used to be billed as another country's figures:
+  // Ukraine as GB ("uk"), ITA as GB ("br-ita-in"), North Korea as KR,
+  // Hong Kong, China as CN.
+  it.each(["Ukraine", "ITA", "North Korea", "Hong Kong, China"])(
+    "refuses %s, unbilled, without asking the World Bank",
+    async (country) => {
+      const err = await expectRefusal(exec("country-trade-data")({ country, year: 2023 }));
+      expect(isUserInputError(err.message)).toBe(true);
+      expect(err.message).toContain(country);
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it("refuses the start of a name that more than one country shares", async () => {
+    await expectRefusal(exec("country-trade-data")({ country: "united", year: 2023 }));
+    await expectRefusal(exec("country-trade-data")({ country: "south", year: 2023 }));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses the start of a name shorter than four letters", async () => {
+    await expectRefusal(exec("country-trade-data")({ country: "swe", year: 2023 }));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["SE", "SE"],
+    ["se", "SE"],
+    ["GB", "GB"],
+    ["UK", "GB"],
+    ["Sweden", "SE"],
+    ["United Kingdom", "GB"],
+    ["south korea", "KR"],
+    ["USA", "US"],
+    ["Türkiye", "TR"],
+  ])("still resolves %s to %s", async (country, code) => {
+    fetchMock.mockImplementation(async () => wbValue(null));
+    const out = await billed("country-trade-data", exec("country-trade-data")({ country, year: 2023 }));
+    expect(out.country_code).toBe(code);
   });
 });
 
@@ -601,6 +649,25 @@ describe("failure: whois-lookup reads the registrar from the Registrar line (rev
     const out = await billed("whois-lookup", exec("whois-lookup")({ domain: "example.org" }));
     expect(out.registrar).toBeUndefined();
     expect(out.created).toBe("2001-01-01T00:00:00Z");
+  });
+
+  it("does not take a registrar date line as the registrar (review round 5)", async () => {
+    whoisServers({
+      data:
+        "Domain Name: EXAMPLE.ORG\r\nRegistrar Registration Expiration Date: 2030-01-01T00:00:00Z\r\n" +
+        "Registrar Creation Date: 2001-01-01T00:00:00Z\r\nRegistrar Updated Date: 2020-01-01T00:00:00Z\r\n" +
+        "Registrar: Example Registrar LLC\r\n",
+    });
+    const out = await billed("whois-lookup", exec("whois-lookup")({ domain: "example.org" }));
+    expect(out.registrar).toBe("Example Registrar LLC");
+  });
+
+  it("leaves the registrar unset when only registrar date lines mention it (review round 5)", async () => {
+    whoisServers({
+      data: "Domain Name: EXAMPLE.ORG\r\nRegistrar Registration Expiration Date: 2030-01-01T00:00:00Z\r\nCreation Date: 2001-01-01T00:00:00Z\r\n",
+    });
+    const out = await billed("whois-lookup", exec("whois-lookup")({ domain: "example.org" }));
+    expect(out.registrar).toBeUndefined();
   });
 });
 

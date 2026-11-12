@@ -67,17 +67,27 @@ test_fixtures:
     input:
       domain: google.com
     expected_fields:
-      - field: registrar
+      - field: domain
         operator: not_null
         reliability: guaranteed
+      - field: raw_whois
+        operator: not_null
+        reliability: guaranteed
+      - field: registrar
+        operator: not_null
+        reliability: common
   health_check_input:
     domain: example.com
+# Only domain and raw_whois are in every billed reply: a "not registered"
+# answer, and a reply this parser cannot split, carry no parsed fields
+# (PR #1018 review round 5).
 output_field_reliability:
   domain: guaranteed
-  created: guaranteed
-  expires: guaranteed
-  registrar: guaranteed
-  name_servers: guaranteed
+  raw_whois: guaranteed
+  created: common
+  expires: common
+  registrar: common
+  name_servers: common
 limitations:
   - title: Rate-limited or failed lookups are not billed
     text: >-
