@@ -401,7 +401,11 @@ describe("protocol-fees-lookup negative: a protocol without revenue tracking kee
       revenue_all_time_usd: null,
     });
   });
+});
 
+describe("protocol-fees-lookup failure: DeFi Llama's 400 for an unknown protocol reads as not found", () => {
+  // DeFi Llama answers an unknown slug with HTTP 400, not 404 (probed
+  // 2026-11-12); before, that surfaced as "fees API returned HTTP 400".
   it("an unknown protocol fails as not found", async () => {
     llama(async () => notTracked("nope"), async () => notTracked("nope"));
     await expect(feesLookup("nope")).rejects.toThrow(/not found on DeFi Llama/);
