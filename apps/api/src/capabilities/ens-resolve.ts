@@ -2,7 +2,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { createPublicClient, http, namehash, type Hex } from "viem";
 import { mainnet } from "viem/chains";
 import { normalize } from "viem/ens";
-import { ethRpcFailure, getEthRpcEndpoints, NO_LICENSED_ETH_RPC, rpcEndpointHost } from "../lib/eth-rpc-endpoints.js";
+import { ethRpcFailure, getEthRpcEndpoints, isContractAnswer, NO_LICENSED_ETH_RPC, rpcEndpointHost } from "../lib/eth-rpc-endpoints.js";
 
 // F-0-006 Bucket D: ENS resolution uses viem's RPC against the hardcoded
 // Ethereum mainnet endpoint pool in lib/eth-rpc-endpoints.ts. User input
@@ -116,8 +116,9 @@ registerCapability("ens-resolve", async (input: CapabilityInput) => {
           args: [node, "avatar"],
         });
         if (avatar) avatarUrl = avatar;
-      } catch {
-        // Avatar lookup can fail — not critical
+      } catch (err) {
+        // degraded-ok: a resolver without an avatar record, or without text() at all, reverts or returns nothing, which is "no avatar" (avatar_url null); any provider failure is rethrown and leaves through ethRpcFailure, unbilled, so the avatar is never silently lost on a billed call.
+        if (!isContractAnswer(err)) throw err;
       }
 
       return {

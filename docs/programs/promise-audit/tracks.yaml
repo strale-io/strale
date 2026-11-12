@@ -311,6 +311,20 @@ tracks:
       removed; (41) a 4xx caused by Strale's own request (an Accept header the
       site rejects) is also filed as the target's and never reaches the
       breaker or the quality floor.
+      (40) fixed on branch fix/og-carbon-site-failures: og-image-check's
+      dead Strale-Bot/1.0 user agent is removed from its page and image
+      fetches. website-carbon-estimate's page had the shape og-image-check's
+      had before (39): a non-2xx threw `HTTP <status> fetching <url>`, and a
+      network error, timeout or body that dropped mid-read went out raw and
+      was counted against the capability with the caller's URL in the
+      message. It now goes through targetUnavailable: a 4xx is the target's
+      answer, not retryable; a 5xx, 408, timeout or a body dropped with a
+      network code is the target's, retryable; a 401, 403, 407 or 429 is a
+      refusal; the size cap stays a refusal; EAI_AGAIN and network errors
+      with no code (an uncoded mid-body drop included) are counted under
+      fixed text with no host. Its user agent is safeFetch's honest
+      one. Regression tests in caller-host-out-of-breaker.test.ts fail
+      against the previous executor.
       (35) fixed on branch fix/url-validation-by-type: page-exists
       recognised the URL validator's own refusal on a redirect hop by the
       word \"restricted\" in an error's message, so a redirect loop under a
@@ -349,6 +363,33 @@ tracks:
       completed over TLS with a trusted certificate; a rejected certificate is
       named in issues by its TLS code, a redirect to http is named and answers
       avoid, and the manifest documents what the field does and does not check.
+      (36) fixed on branch docs/site-block-limitations: 15 page-fetching
+      tools' manifests now say that a site which refuses automated requests
+      (a block status or a challenge page) is refused unbilled, naming what
+      each tool does with such a site; the boot text sync publishes them (no
+      tool is report-only), with (27)'s robots-txt-parse limitation.
+      Independent review NO-GO, its must-fixes applied, re-review GO.
+      (33) fixed on branch fix/alchemy-rpc-error-typing: Alchemy's rejected key
+      (HTTP 401/403 with a JSON-RPC body), its JSON-RPC 429 and -32005, and an
+      internal error (-32603) that does not say it reverted are typed, unbilled
+      provider failures; a revert stays the contract's answer whatever its
+      text. ens-resolve's avatar read no longer bills a provider failure as no
+      avatar, and the EVM stopping the avatar contract (out of gas, an invalid
+      opcode) stays no avatar. In ens-resolve, a failure of a name's offchain
+      (CCIP-read) gateway is the name's, unbilled and never counted, including
+      a lookup that hands off to a second gateway, while a provider failure on
+      a callback call stays Alchemy's. wallet-balance-lookup fails unbilled on
+      a provider failure in a token-name read (a rate limit, a rejected key, a
+      timeout, a server error) instead of billing Unknown names; a token whose
+      metadata Alchemy refuses with HTTP 400 still reads Unknown. A fetch error
+      that quotes the keyed URL is redacted. Found, not fixed: viem's offchain
+      gateway fetch has no timeout of its own, so a silent gateway holds the
+      call until the request deadline; ens-reverse-lookup's forward check goes
+      through the Universal Resolver, which turns a gateway failure into no
+      address, billed as verified false; a rejected key is recognised from
+      the wording of Alchemy's message, and node errors such as header not
+      found or missing trie node stay untyped; wallet-balance-lookup reads up
+      to 20 token names at once, so one rate limit fails the whole call.
       (44) fixed on branch fix/page-fetcher-block-status: meta-extract,
       link-extract and gdpr-website-check threw a non-2xx as a generic error
       naming the caller's URL and let a network error, a timeout or a body
@@ -366,7 +407,7 @@ tracks:
       (safeFetch already replaced them), and each manifest gains a limitation
       saying a page that refuses or fails the request is not read and the
       call is unbilled; manifest-text-sync publishes it at boot.
-      Next: (36), (33), (43), (44); then measuring past billed calls from
+      Next: (41), (42); then measuring past billed calls from
       the affected paths since their earliest releases, deciding refunds per
       policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against
       listed and dry-run prices (P-011, P-008). Do not assume the proposed

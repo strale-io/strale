@@ -19,6 +19,10 @@
  *   rather than refused.
  *
  * Every case below runs against a host whose name contains "gone" and "403".
+ * website-carbon-estimate's page (follow-up 40) had the same shape as
+ * og-image-check's: a non-2xx threw `HTTP ${status} fetching ${url}` and a
+ * network error or timeout went out raw.
+ *
  * The "failure" blocks fail against the pre-fix executors. */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -46,6 +50,7 @@ import "./og-image-check.js";
 import "./meta-extract.js";
 import "./link-extract.js";
 import "./gdpr-website-check.js";
+import "./website-carbon-estimate.js";
 
 /** A host name the breaker's substring categoriser would misread if it ever saw it. */
 const HOST = "gone-403.test";
@@ -128,6 +133,7 @@ const targets: Array<[string, string, Record<string, unknown>]> = [
   ["meta-extract's page", "meta-extract", { url: `https://${HOST}/page` }],
   ["link-extract's page", "link-extract", { url: `https://${HOST}/page` }],
   ["gdpr-website-check's page", "gdpr-website-check", { url: `https://${HOST}/page` }],
+  ["website-carbon-estimate's page", "website-carbon-estimate", { url: `https://${HOST}/page` }],
 ];
 
 describe.each(targets)("%s failure: a status from the caller's site is the target's, never counted", (_label, slug, input) => {
@@ -223,6 +229,25 @@ describe("follow-up 44: the page read sends no tool-specific user agent", () => 
   });
 });
 
+describe("website-carbon-estimate failure: a body that drops mid-read is the target's", () => {
+  it("throws as the target's failure, retryable, never counted", async () => {
+    site(async () => {
+      let sent = false;
+      const body = new ReadableStream<Uint8Array>({
+        pull(c) {
+          if (sent) return c.error(Object.assign(new TypeError("terminated"), { cause: { code: "ECONNRESET" } }));
+          sent = true;
+          c.enqueue(new Uint8Array(1024));
+        },
+      });
+      return new Response(body, { status: 200, headers: { "content-type": "text/html" } });
+    });
+    const err = await thrown("website-carbon-estimate", { url: `https://${HOST}/page` });
+    expectTargetFailure(err);
+    expect(err.retryable).toBe(true);
+  });
+});
+
 describe("negative: an answering homepage and page are unchanged, billed", () => {
   it("domain-contact-extract reads a homepage that answers", async () => {
     site(async () => status(200, "<html><body><p>hello@gone-403.test</p></body></html>", { "content-type": "text/html" }));
@@ -252,5 +277,13 @@ describe("negative: an answering homepage and page are unchanged, billed", () =>
       getDirectExecutor(slug)!({ url: `https://${HOST}/page` }),
     )) as { output: Record<string, unknown> };
     check(output);
+  });
+
+  it("website-carbon-estimate measures a page that answers", async () => {
+    site(async () => status(200, "x".repeat(2048), { "content-type": "text/html" }));
+    const { output } = (await withAcquisitionMethod("customer_directed_fetch", () =>
+      getDirectExecutor("website-carbon-estimate")!({ url: `https://${HOST}/page` }),
+    )) as { output: Record<string, unknown> };
+    expect(output.page_size_kb).toBe(2);
   });
 });
