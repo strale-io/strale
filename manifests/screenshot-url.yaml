@@ -117,7 +117,7 @@ limitations:
     severity: info
   - title: Sites that refuse automated requests are not read
     text: >-
-      When the site answers HTTP 401, 403, 407 or 429, shows an anti-bot challenge page instead of the content, or disallows the page in robots.txt, or its robots.txt cannot be fetched (a network or server error), the call fails with an error and is not billed. Strale does not try another route around the block. Repeating the call gets the same answer while the site keeps refusing; when robots.txt could not be fetched, wait at least 5 minutes before trying again. Challenge-page detection is best-effort: when the plain pre-check cannot reach the page, the rendered page is checked only for its HTTP status.
+      When the site answers HTTP 401, 403, 407 or 429, shows an anti-bot challenge page instead of the content, or disallows the page in robots.txt, or its robots.txt cannot be fetched (a network or server error), the call fails with an error and is not billed. Strale does not try another route around the block. Repeating the call gets the same answer while the site keeps refusing; when robots.txt could not be fetched, wait at least 5 minutes before trying again. Challenge-page detection is best-effort: when the plain pre-check cannot reach the page, the rendered page is checked only for its HTTP status and final address.
     category: availability
     severity: info
 
