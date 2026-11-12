@@ -220,7 +220,7 @@ export function isPlatformRefusal(reason: string): boolean {
  * registry outage is the tool's upstream failing, which the breaker must see
  * (promise-audit follow-up (56)).
  */
-const TARGET_SITE_5XX_RE = /The target site(?: \([^)]+\))? returned a server error/;
+const TARGET_SITE_5XX_RE = /The target site(?: \(\S+\))? returned a server error/;
 
 /** Exported so tests can assert the pattern list stays in sync with its producers. */
 export function isUserInputError(reason: string): boolean {

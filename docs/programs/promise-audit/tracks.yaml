@@ -546,6 +546,10 @@ tracks:
       is reported as the registry's failure. Regression tests for (56) and
       (58) are in registry-5xx.upstream-failures.test.ts and fail against
       the previous code.
+      (59) Open: a 5xx from Browserless itself is worded as the target
+      site's ('The target site (host) returned a server error'), so the
+      breaker still excuses a Browserless outage as the caller's site
+      failing (container-track.upstream-failures.test.ts labels the case).
       Next: the (50) recommendation; then measuring past
       billed calls from
       the affected paths since their earliest releases, deciding refunds per

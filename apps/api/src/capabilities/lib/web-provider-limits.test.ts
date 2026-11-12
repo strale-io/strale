@@ -75,6 +75,7 @@ import {
 } from "./web-provider.js";
 import { MAX_FETCHED_HTML_BYTES, MAX_ERROR_BODY_BYTES, ResourceLimitError } from "../../lib/resource-limits.js";
 import { streamingResponseOf } from "./streaming-response-testutil.js";
+import { isUserInputError } from "../../lib/circuit-breaker.js";
 import {
   classifyTransactionFailure,
   countsAgainstCapability,
@@ -262,6 +263,16 @@ describe("tier 3 (Browserless) HTML is stream-bounded", () => {
   it("an upstream 5xx keeps its existing humanised message", async () => {
     browserlessFetchMock.mockResolvedValue(new Response("boom", { status: 503 }));
     await expect(render()).rejects.toThrow(/returned a server error \(HTTP 503\)/);
+  });
+
+  it("the breaker still excuses the 5xx message this module builds (promise-audit 56)", async () => {
+    // Renders the real message rather than a copy, so rewording it without
+    // the breaker's TARGET_SITE_5XX_RE fails here instead of silently
+    // counting a caller's site outage against the tool.
+    browserlessFetchMock.mockResolvedValue(new Response("boom", { status: 503 }));
+    const message = await render().then(() => "", (err: Error) => err.message);
+    expect(message).toMatch(/returned a server error \(HTTP 503\)/);
+    expect(isUserInputError(message)).toBe(true);
   });
 
   it("a huge error body is TRUNCATED, not refused — and reading actually STOPS at the cap", async () => {
