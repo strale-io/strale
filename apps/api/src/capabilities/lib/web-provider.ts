@@ -371,6 +371,19 @@ function netErrorMessage(bodyText: string, domain: string): string | null {
   return null;
 }
 
+/** Chrome's canonical navigation-failure marker, as Browserless relays it in a 5xx body. */
+const CHROME_NET_ERROR_RE = /net::ERR_[A-Z_]+/;
+
+/**
+ * A 5xx from Browserless itself (promise-audit (59)). Fixed string, status
+ * only: no upstream bytes reach the caller. Deliberately not the
+ * "The target site … returned a server error" shape, which the breaker
+ * excuses as the caller's site failing.
+ */
+export function renderingServiceServerError(status: number): string {
+  return `The page-rendering service (Browserless) returned a server error (HTTP ${status}). This is usually transient — try again in a few minutes.`;
+}
+
 /** Map a non-OK Browserless response status into an honest, actionable message. */
 function humanizeBrowserlessStatus(status: number, targetUrl: string, bodyText = ""): string {
   let hostname = "";
@@ -727,6 +740,16 @@ async function fetchPageOnce(
             );
             continue;
           }
+          // promise-audit (59): /content answers 200 for a rendered page
+          // whatever the target said (its status is in X-Response-Code), and
+          // wraps Chrome's own navigation failures in a 5xx whose body names
+          // a `net::ERR_*`. A 5xx without one is Browserless itself failing,
+          // so it is worded as the rendering service's, not the target's:
+          // the breaker excuses the target-site shape, and a Browserless
+          // outage must count against the tools that depend on it.
+          if (response.status >= 500 && !CHROME_NET_ERROR_RE.test(errText)) {
+            throw new Error(renderingServiceServerError(response.status));
+          }
           const humanMsg = humanizeBrowserlessStatus(response.status, targetUrl, errText);
           throw new Error(humanMsg);
         }
@@ -764,6 +787,7 @@ async function fetchPageOnce(
 
         return { html, cached: false, fetchTimeMs, attempt: attempt + 1 };
       } catch (err) {
+        // degraded-ok: retries the Browserless request only for a transport failure (timeout, refused or unresolved connection, fetch failed, abort) with an attempt left; a size refusal, a site refusal and every last-attempt failure rethrow.
         // #428: an oversize refusal is deterministic — the page is the size it
         // is — so it must not consume a retry. Re-rendering it would transfer
         // 16 MiB+ again to reach the identical answer.

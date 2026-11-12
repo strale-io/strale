@@ -538,18 +538,25 @@ tracks:
       'The target site (host) returned a server error' shape, so a
       cvrapi.dk or Companies House 5xx now counts toward their breakers;
       the (41) guard's exemptions for those two messages are gone.
-      (57) Open: linkedin-url-validate sends Accept text/html and reports
-      accessible: false with the site's status, a billed answer a 406 of
-      Strale's own making can produce.
+      (57) Closed, moot: linkedin-url-validate sends Accept text/html and
+      reports accessible: false with the site's status, but it is in the
+      DEACTIVATED map (DEC-20260427-H-5: LinkedIn forbids all automated
+      access) and LinkedIn is in DEC-20261023-A's never lane, so the tool
+      never runs and cannot bill. No code change; the right step is not to
+      fix code that must not run.
       (58) Fixed: polish-company-data answers 'not found' only when both
       KRS registers answer 404; any other status from the register S retry
       is reported as the registry's failure. Regression tests for (56) and
       (58) are in registry-5xx.upstream-failures.test.ts and fail against
       the previous code.
-      (59) Open: a 5xx from Browserless itself is worded as the target
-      site's ('The target site (host) returned a server error'), so the
-      breaker still excuses a Browserless outage as the caller's site
-      failing (container-track.upstream-failures.test.ts labels the case).
+      (59) Fixed: a 5xx from Browserless /content whose body names no
+      Chrome net::ERR_* is Browserless itself failing (it answers 200 for a
+      rendered page whatever the target said), and is now worded as 'The
+      page-rendering service (Browserless) returned a server error', which
+      the breaker does not excuse and the taxonomy files as upstream. A 5xx
+      carrying a Chrome navigation failure keeps the target-site wording and
+      stays excused. Regression tests in web-provider-limits.test.ts fail
+      against the previous code.
       Next: the (50) recommendation; then measuring past
       billed calls from
       the affected paths since their earliest releases, deciding refunds per

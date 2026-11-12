@@ -70,6 +70,7 @@ vi.mock("../../lib/url-validator.js", () => ({ validateUrl: vi.fn(async () => {}
 
 import {
   fetchPage,
+  renderingServiceServerError,
   __resetWebProviderCacheForTests,
   __webProviderCacheStatsForTests,
 } from "./web-provider.js";
@@ -260,18 +261,29 @@ describe("tier 3 (Browserless) HTML is stream-bounded", () => {
     await expect(render()).rejects.toThrow(/empty or too-short HTML/);
   });
 
-  it("an upstream 5xx keeps its existing humanised message", async () => {
+  it("Browserless's own 5xx is worded as the rendering service's and counts against the tool (promise-audit 59)", async () => {
+    // A 5xx with no Chrome net-error in its body is Browserless failing, not
+    // the caller's site: /content answers 200 for a rendered page whatever
+    // the target said. Worded as the target's, the breaker excused it.
     browserlessFetchMock.mockResolvedValue(new Response("boom", { status: 503 }));
-    await expect(render()).rejects.toThrow(/returned a server error \(HTTP 503\)/);
+    const message = await render().then(() => "", (err: Error) => err.message);
+    expect(message).toBe(renderingServiceServerError(503));
+    expect(message).not.toMatch(/target site/);
+    expect(isUserInputError(message)).toBe(false);
+    expect(classifyTransactionFailure(message)).toBe("upstream");
+    expect(countsAgainstCapability(classifyTransactionFailure(message))).toBe(true);
   });
 
-  it("the breaker still excuses the 5xx message this module builds (promise-audit 56)", async () => {
+  it("a 5xx carrying Chrome's navigation failure stays the target's, and the breaker excuses it (promise-audit 56, 59)", async () => {
     // Renders the real message rather than a copy, so rewording it without
     // the breaker's TARGET_SITE_5XX_RE fails here instead of silently
     // counting a caller's site outage against the tool.
-    browserlessFetchMock.mockResolvedValue(new Response("boom", { status: 503 }));
+    // A fresh response per attempt: a 5xx is retried once before it is final.
+    browserlessFetchMock.mockImplementation(
+      async () => new Response("Error: net::ERR_CONNECTION_RESET at https://site.test/", { status: 500 }),
+    );
     const message = await render().then(() => "", (err: Error) => err.message);
-    expect(message).toMatch(/returned a server error \(HTTP 503\)/);
+    expect(message).toMatch(/The target site \(\S+\) returned a server error \(HTTP 500\)/);
     expect(isUserInputError(message)).toBe(true);
   });
 
