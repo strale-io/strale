@@ -1,0 +1,35 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "c99e8a708fec85d27719276ff1fb2e960593568b"
+  },
+  "at": "2026-11-12T13:22:01.589Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/n8n-deprecation.json"
+  },
+  "summary": {
+    "check": "npm deprecation of n8n-nodes-strale 0.1.x",
+    "source": "https://registry.npmjs.org/n8n-nodes-strale",
+    "done_by": "Petter, npm deprecate n8n-nodes-strale@\"<1.0.0\"",
+    "checked_at": "2026-11-12T13:22:01.415Z"
+  },
+  "topic": "n8n-nodes-strale-0-1-x-deprecated",
+  "raw": {
+    "check": "npm deprecation of n8n-nodes-strale 0.1.x",
+    "source": "https://registry.npmjs.org/n8n-nodes-strale",
+    "dist_tags": {
+      "latest": "1.0.0"
+    },
+    "deprecated_by_version": {
+      "0.1.0": "Superseded by n8n-nodes-strale 1.0.0, which passes n8n's community package scanner. Please update to 1.0.0.",
+      "0.1.1": "Superseded by n8n-nodes-strale 1.0.0, which passes n8n's community package scanner. Please update to 1.0.0.",
+      "0.1.2": "Superseded by n8n-nodes-strale 1.0.0, which passes n8n's community package scanner. Please update to 1.0.0.",
+      "0.1.3": "Superseded by n8n-nodes-strale 1.0.0, which passes n8n's community package scanner. Please update to 1.0.0.",
+      "0.1.4": "Superseded by n8n-nodes-strale 1.0.0, which passes n8n's community package scanner. Please update to 1.0.0.",
+      "1.0.0": null
+    },
+    "done_by": "Petter, npm deprecate n8n-nodes-strale@\"<1.0.0\"",
+    "checked_at": "2026-11-12T13:22:01.415Z"
+  }
+}

@@ -10,8 +10,8 @@ Strale publishes eight npm packages out of this monorepo:
 | `strale-semantic-kernel` | `packages/semantic-kernel-strale` | |
 | `strale-capabilities` | `packages/strale-capabilities` | generated, no build step |
 | `n8n-nodes-strale` | `packages/n8n-nodes-strale` | n8n community node from 1.0.0; 0.1.x came from `strale-io/n8n-nodes-strale` with a token |
-| `strale-ai-sdk` | `packages/ai-sdk-strale` | Vercel AI SDK tools (D6); first publish needs Petter, see below |
-| `strale-cli` | `packages/cli` | agent-safe CLI, binary `strale`; first publish needs Petter, see below |
+| `strale-ai-sdk` | `packages/ai-sdk-strale` | Vercel AI SDK tools (D6); 0.1.0 first published by Petter 2026-11-12, later versions through this workflow |
+| `strale-cli` | `packages/cli` | agent-safe CLI, binary `strale`; 0.1.0 first published by Petter 2026-11-12, later versions through this workflow |
 
 The Python packages publish through their own workflow; see
 [`pypi-publishing.md`](pypi-publishing.md).
