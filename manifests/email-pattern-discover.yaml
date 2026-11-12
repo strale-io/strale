@@ -46,7 +46,7 @@ output_schema:
       type:
         - string
         - "null"
-      description: When website_checked is false, why the homepage was not read (robots.txt, a refusal, an HTTP status, no answer, too large). Null otherwise.
+      description: When website_checked is false, why the homepage was not read (robots.txt, a refusal, an HTTP status, no answer, too large, or a site Strale does not fetch). Null when it was read; absent when the domain has no MX records.
 data_source: DNS protocol + public website HTML
 data_source_type: api
 transparency_tag: algorithmic
@@ -103,9 +103,9 @@ limitations:
   - title: The homepage is read only when the site allows it
     text: >-
       Published addresses are searched for on the domain's homepage only. When robots.txt disallows
-      it, the site refuses automated access, it answers an error, or it does not answer, the call
-      still succeeds on the DNS answer with website_checked false and a website_note giving the
-      reason; an empty public_emails_found then means the page was not read, not that it lists none.
+      it, the site refuses automated access, it answers an error, it does not answer, or it is a site
+      Strale does not fetch, the call still succeeds on the DNS answer with website_checked false and
+      a website_note giving the reason; an empty public_emails_found then means the page was not read, not that it lists none.
     category: coverage
     severity: info
   - title: Pages are limited to 16 MiB of HTML

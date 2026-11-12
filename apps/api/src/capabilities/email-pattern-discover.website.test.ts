@@ -105,6 +105,15 @@ describe("email-pattern-discover says whether the homepage was read (follow-up 4
     expect(out.website_note).toMatch(/too large/);
   });
 
+  it("a homepage Strale does not fetch (terms prohibit automated access) is reported as Strale's policy, not as no answer", async () => {
+    safeFetchMock.mockRejectedValue(
+      new Error("example.com is not a supported source: its Terms of Service prohibit automated access, so Strale does not fetch it."),
+    );
+    const out = await run();
+    expect(out.website_checked).toBe(false);
+    expect(out.website_note).toMatch(/Strale does not fetch this site's homepage/);
+  });
+
   it("the call still succeeds on the DNS answer whatever the homepage did", async () => {
     safeFetchMock.mockRejectedValue(new TypeError("fetch failed"));
     const out = await run();

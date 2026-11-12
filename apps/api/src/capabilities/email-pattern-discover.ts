@@ -5,6 +5,8 @@ import dns from "node:dns/promises";
 import { dnsOrEmpty } from "../lib/upstream-result.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { ResourceLimitError, readPageHtml } from "../lib/resource-limits.js";
+import { TOS_REFUSAL_MARKER } from "../lib/tos-blocklist.js";
+import { UrlValidationError } from "../lib/url-validator.js";
 
 /**
  * Email Pattern Discovery — detect email format for a domain.
@@ -208,6 +210,9 @@ function describeWebsiteFailure(err: unknown): string {
       default:
         return "The homepage refused automated access, so it was not searched for published addresses.";
     }
+  }
+  if (err instanceof UrlValidationError || (err instanceof Error && err.message.includes(TOS_REFUSAL_MARKER))) {
+    return "Strale does not fetch this site's homepage (a private address, or a site whose terms prohibit automated access), so it was not searched for published addresses.";
   }
   if (err instanceof ResourceLimitError) {
     return "The homepage was too large to read, so it was not searched for published addresses.";
