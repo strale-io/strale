@@ -42,7 +42,15 @@ async function fetchByKrs(krsNumber: string): Promise<Record<string, unknown>> {
       headers: { Accept: "application/json", "User-Agent": "Strale/1.0 (+https://strale.dev)" },
       signal: AbortSignal.timeout(15000),
     });
-    if (!r2.ok) throw new Error(`Polish entity with KRS ${krsNumber} not found in either P or S register.`);
+    if (r2.status === 404) {
+      throw new Error(`Polish entity with KRS ${krsNumber} not found in either P or S register.`);
+    }
+    if (!r2.ok) {
+      // Only a 404 from both registers means the entity does not exist. Any
+      // other status is the registry failing, and saying "not found" would
+      // file its outage as the caller's input (promise-audit follow-up (58)).
+      throw new Error(`KRS API returned HTTP ${r2.status} for register S`);
+    }
     return parseKrsResponse(await r2.json() as any, krsNumber, "S");
   }
 

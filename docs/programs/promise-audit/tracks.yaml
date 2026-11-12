@@ -534,16 +534,18 @@ tracks:
       status is excused for a 406, not only by targetUnavailable; that adds
       invoice-extract (no Accept, so */*). It fails against the previous
       Accept values.
-      (56) Open: the breaker's 'returned a server error' entry, meant for a
-      target site's 5xx, also excuses a registry's 5xx (danish-company-data,
-      uk-filing-events), so a registry outage never trips its breaker.
+      (56) Fixed: the breaker excuses a 5xx only in web-provider's own
+      'The target site (host) returned a server error' shape, so a
+      cvrapi.dk or Companies House 5xx now counts toward their breakers;
+      the (41) guard's exemptions for those two messages are gone.
       (57) Open: linkedin-url-validate sends Accept text/html and reports
       accessible: false with the site's status, a billed answer a 406 of
       Strale's own making can produce.
-      (58) Open: after a 404 from KRS register P, polish-company-data
-      answers 'not found' for any non-2xx from its register S retry (~line
-      45), so a registry 5xx there is filed as the caller's input, the same
-      kind of misattribution as (56).
+      (58) Fixed: polish-company-data answers 'not found' only when both
+      KRS registers answer 404; any other status from the register S retry
+      is reported as the registry's failure. Regression tests for (56) and
+      (58) are in registry-5xx.upstream-failures.test.ts and fail against
+      the previous code.
       Next: the (50) recommendation; then measuring past
       billed calls from
       the affected paths since their earliest releases, deciding refunds per
