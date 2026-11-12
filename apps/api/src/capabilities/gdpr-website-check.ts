@@ -1,7 +1,10 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readPageHtml } from "../lib/resource-limits.js";
-import { validateUrl } from "../lib/url-validator.js";
+import { assertNotBlockStatus } from "../lib/site-access.js";
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
+import { targetUnavailable } from "../lib/upstream-result.js";
+import { UrlValidationError, validateUrl } from "../lib/url-validator.js";
 
 registerCapability("gdpr-website-check", async (input: CapabilityInput) => {
   let url = ((input.url as string) ?? (input.domain as string) ?? (input.task as string) ?? "").trim();
@@ -10,20 +13,37 @@ registerCapability("gdpr-website-check", async (input: CapabilityInput) => {
   if (!url.startsWith("http://") && !url.startsWith("https://")) url = "https://" + url;
   await validateUrl(url);
 
-  const response = await safeFetch(url, {
-    signal: AbortSignal.timeout(15000),
-    headers: { "User-Agent": "Mozilla/5.0 (compatible; StraleBot/1.0)" },
-    // redirect handling: safeFetch follows up to 3 hops with per-hop re-validation
-  });
+  // The caller's own page. Its failures are the caller's target: unbilled and
+  // never counted against this capability; a site that refuses automated
+  // access (401, 403, 407, 429) is a refusal, as for og-image-check
+  // (promise-audit T1 follow-up 44).
+  const site = `website ${hostOf(url)}`;
+  let response: Response;
+  try {
+    // F-0-006: safeFetch validates + re-validates on each redirect hop, and
+    // sends Strale's honest user agent for a page read.
+    response = await safeFetch(url, { signal: AbortSignal.timeout(15000) });
+  } catch (err) {
+    // The caller's URL failing Strale's URL guard is their input, as before.
+    if (err instanceof UrlValidationError || isCapabilityRefusal(err)) throw err;
+    throw targetUnavailable(site, err);
+  }
 
   if (!response.ok) {
     // Nothing below reads the body (#434). Cancel it rather than leaving
     // it to pin the keep-alive connection until GC.
     await discardBody(response, "gdpr-website-check: non-2xx");
-    throw new Error(`HTTP ${response.status} fetching ${url}`);
+    assertNotBlockStatus(url, response.status);
+    throw targetUnavailable(site, response.status);
   }
-
-  const html = await readPageHtml(response);
+  let html: string;
+  try {
+    html = await readPageHtml(response);
+  } catch (err) {
+    // The connection dropped or timed out mid-body. A size cap is a refusal.
+    if (isCapabilityRefusal(err)) throw err;
+    throw targetUnavailable(site, err);
+  }
   const htmlLower = html.toLowerCase();
   const headers: Record<string, string> = {};
   response.headers.forEach((v, k) => { headers[k] = v; });
@@ -104,3 +124,7 @@ registerCapability("gdpr-website-check", async (input: CapabilityInput) => {
     provenance: { source: "http-analysis", fetched_at: new Date().toISOString() },
   };
 });
+
+function hostOf(url: string): string {
+  return URL.canParse(url) ? new URL(url).hostname.replace(/^www\./, "") : "unknown";
+}
