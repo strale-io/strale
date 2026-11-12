@@ -47,6 +47,7 @@ import { __resetRobotsCacheForTests } from "../lib/robots-txt.js";
 import { outcomeFromError, assertBillableOutput } from "../lib/execution-outcome.js";
 import { isUserInputError } from "../lib/circuit-breaker.js";
 import { isCapabilityRefusal } from "../lib/capability-refusal.js";
+import { UrlValidationError, validateUrl } from "../lib/url-validator.js";
 import "./port-check.js";
 import "./og-image-check.js";
 import "./domain-contact-extract.js";
@@ -260,6 +261,24 @@ describe("og-image-check failure: an image check that failed is not a broken ima
   });
 });
 
+describe("og-image-check failure: a refusal on the way to a public image is not a finding (#1021 delta review)", () => {
+  it("a public image URL whose redirect (or robots.txt redirect) the URL guard refuses throws, unbilled", async () => {
+    ogSite(async () => {
+      throw new UrlValidationError("This URL targets a restricted address.");
+    });
+    const err = await expectUnbilledTargetFailure(ogCheck());
+    expect(err.message).toContain("image host img.test");
+  });
+
+  it("Strale's connect-time SSRF refusal stays unbilled, never the not-public finding", async () => {
+    ogSite(async () => {
+      throw Object.assign(new Error("Resolved host targets a restricted address."), { code: "ESSRFBLOCKED" });
+    });
+    const err = await thrown(ogCheck());
+    expect(outcomeFromError(err)).toMatchObject({ billable: false });
+  });
+});
+
 describe("og-image-check negative: a missing image is still the finding, billed", () => {
   it.each([404, 410])("an image answering HTTP %i is reported non-200", async (code) => {
     ogSite(async () => status(code));
@@ -277,6 +296,7 @@ describe("og-image-check negative: a missing image is still the finding, billed"
   ])("an og:image the URL guard refuses (%s) is reported not publicly fetchable", async (imageUrl) => {
     const { validateUrl: realValidateUrl } =
       await vi.importActual<typeof import("../lib/url-validator.js")>("../lib/url-validator.js");
+    vi.mocked(validateUrl).mockImplementationOnce(realValidateUrl);
     safeFetchMock.mockImplementation(async (url: string) => {
       if (String(url) === imageUrl) {
         await realValidateUrl(imageUrl);

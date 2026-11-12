@@ -3,8 +3,8 @@ import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readPageHtml } from "../lib/resource-limits.js";
 import { assertNotBlockStatus } from "../lib/site-access.js";
 import { isCapabilityRefusal } from "../lib/capability-refusal.js";
-import { targetUnavailable } from "../lib/upstream-result.js";
-import { UrlValidationError } from "../lib/url-validator.js";
+import { targetUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
+import { UrlValidationError, validateUrl } from "../lib/url-validator.js";
 
 registerCapability("og-image-check", async (input: CapabilityInput) => {
   const rawUrl = ((input.url as string) ?? (input.task as string) ?? "").trim();
@@ -89,7 +89,7 @@ registerCapability("og-image-check", async (input: CapabilityInput) => {
   } else if (imageNotPublic) {
     issues.push("og:image URL is not publicly fetchable");
     recommendations.push(
-      "Use a public http(s) URL for og:image. Social platforms cannot fetch localhost, private network addresses or data: URLs.",
+      "Use a valid, public http(s) URL for og:image. Social platforms cannot fetch localhost, private network addresses or data: URLs.",
     );
   } else if (!imageExists) {
     issues.push("og:image URL returns non-200 status");
@@ -195,10 +195,10 @@ const NOT_PUBLIC = "not_public" as const;
 /**
  * The image's response headers; null when the image URL answered a client
  * error (404, 410, ...), so "og:image URL returns non-200 status" is the
- * finding the caller pays for; or NOT_PUBLIC when Strale's URL guard refuses
- * the image URL (localhost, a private address, a data: URL, or a redirect to
- * one). That is a misconfigured page, a finding the caller pays for, not the
- * caller's input fault: they sent the page URL, not the image URL.
+ * finding the caller pays for; or NOT_PUBLIC when the image URL itself fails
+ * Strale's URL guard (localhost, a private address, a data: URL, a malformed
+ * URL). That is the page's own misconfiguration, a finding the caller pays
+ * for, not the caller's input fault: they sent the page URL, not this one.
  *
  * Every other failure throws, unbilled (2026-11-06 swallowed-failures audit,
  * row 31). Before, a timeout, a network error or a 5xx was swallowed and
@@ -206,8 +206,11 @@ const NOT_PUBLIC = "not_public" as const;
  * check failed. A block (401, 403, 407, 429, robots.txt) ends the check as a
  * refusal, as it does for the page itself. A 5xx, a 408, a timeout or a
  * network error is the image host failing: `targetUnavailable`, worded and
- * marked as the caller's target, retryable. A server that does not
- * implement HEAD (405, 501) is asked again with GET, headers only.
+ * marked as the caller's target, retryable. So is a redirect the URL guard
+ * refuses, whether on the image or on the image host's robots.txt: the image
+ * was never checked, so nothing is reported about it (#1021 delta review). A
+ * server that does not implement HEAD (405, 501) is asked again with GET,
+ * headers only.
  */
 async function probeImage(imageUrl: string): Promise<Headers | null | typeof NOT_PUBLIC> {
   const site = `image host ${extractDomain(imageUrl)}`;
@@ -227,8 +230,16 @@ async function probeImage(imageUrl: string): Promise<Headers | null | typeof NOT
       });
     }
   } catch (err) {
-    // degraded-ok: only Strale's URL guard refusing the page's own image URL returns NOT_PUBLIC, reported as the "not publicly fetchable" finding; every other failure throws below.
-    if (err instanceof UrlValidationError) return NOT_PUBLIC;
+    // degraded-ok: NOT_PUBLIC only when the image URL itself fails the URL guard, reported as the "not publicly fetchable" finding; a refused redirect and every other failure throw below.
+    if (err instanceof UrlValidationError) {
+      if (await failsUrlGuard(imageUrl)) return NOT_PUBLIC;
+      throw new UpstreamUnavailableError(site, "URL did not answer: it redirected the check to an address Strale does not fetch.", {
+        code: "redirect refused",
+        retryable: false,
+        cause: err,
+        targetFault: true,
+      });
+    }
     if (isCapabilityRefusal(err)) throw err;
     throw targetUnavailable(site, err);
   }
@@ -238,6 +249,17 @@ async function probeImage(imageUrl: string): Promise<Headers | null | typeof NOT
   assertNotBlockStatus(imageUrl, resp.status);
   if (resp.status >= 500 || resp.status === 408) throw targetUnavailable(site, resp.status);
   return null;
+}
+
+/** True when the URL guard refuses this URL as written, before any redirect. */
+async function failsUrlGuard(url: string): Promise<boolean> {
+  try {
+    await validateUrl(url);
+    return false;
+  } catch (err) {
+    // degraded-ok: a classifier, not a fetch: false sends the caller's catch to throw the unbilled redirect-refused error, so nothing is swallowed.
+    return err instanceof UrlValidationError;
+  }
 }
 
 function extractMeta(html: string, name: string, attr: string = "name"): string | null {
