@@ -285,6 +285,7 @@ describe("robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up
     serve(() => new Response("Not found", { status: 200, headers: { "content-type": "text/plain" } }));
     const { output } = await run("robots-txt-parse", { url: "https://textsoft404.example.com" });
     expect(output).toMatchObject({ exists: false, message: NOT_A_ROBOTS_TXT, rules: [], sitemaps: [], user_agents: [] });
+    expect(outcomeFromOutput("robots-txt-parse", output).billable, "no robots.txt is a real answer").toBe(true);
   });
 
   it("returns exists:false for a multi-line plain-text error page", async () => {
@@ -315,6 +316,24 @@ describe("robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up
   it("keeps a robots.txt with a Disallow line and no User-agent line", async () => {
     serve(() => new Response("Disallow: /private\n", { status: 200, headers: { "content-type": "text/plain" } }));
     const { output } = await run("robots-txt-parse", { url: "https://noagent.example.com" });
+    expect(output.exists).toBe(true);
+  });
+
+  it("keeps a robots.txt written without colons, as Google's parser reads it", async () => {
+    serve(() => new Response("User-agent *\nDisallow /\n", { status: 200, headers: { "content-type": "text/plain" } }));
+    const { output } = await run("robots-txt-parse", { url: "https://nocolon.example.com" });
+    expect(output.exists).toBe(true);
+  });
+
+  it("keeps a robots.txt with misspelled directives", async () => {
+    serve(() => new Response("Useragent: *\nDisalow: /\n", { status: 200, headers: { "content-type": "text/plain" } }));
+    const { output } = await run("robots-txt-parse", { url: "https://typo.example.com" });
+    expect(output.exists).toBe(true);
+  });
+
+  it("keeps a robots.txt whose only directives are publisher extensions", async () => {
+    serve(() => new Response("Content-Usage: train-ai=n\nACAP-crawler: *\n", { status: 200, headers: { "content-type": "text/plain" } }));
+    const { output } = await run("robots-txt-parse", { url: "https://publisher.example.com" });
     expect(output.exists).toBe(true);
   });
 

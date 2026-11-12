@@ -11,14 +11,14 @@ import { isChallengeResponse, siteAccessRefusal } from "../lib/site-access.js";
 const NO_ROBOTS_TXT = { rules: [], sitemaps: [], user_agents: [], blocks_all_crawlers: false } as const;
 
 /**
- * Directive names a robots.txt may carry: RFC 9309's, the widely honoured
- * extensions, and the search-engine ones this parser does not tabulate. A
- * body with content lines and none of these is not a robots.txt.
+ * A line that names a robots.txt directive: RFC 9309's, the widely honoured
+ * extensions, the search-engine and publisher ones this parser does not
+ * tabulate (Host, Clean-param, Content-Usage, ACAP-*), and the forms Google's
+ * parser also accepts (no colon, "useragent", "disalow", "dissallow"). A body
+ * with content lines and none of these is not a robots.txt.
  */
-const ROBOTS_DIRECTIVES = new Set([
-  "user-agent", "allow", "disallow", "crawl-delay", "sitemap",
-  "host", "clean-param", "request-rate", "visit-time", "noindex", "content-signal",
-]);
+const ROBOTS_DIRECTIVE_LINE =
+  /^(?:user[-_ ]?agent|dis+al+ow|allow|sitemap|site-map|crawl[-_ ]?delay|host|clean-param|request-rate|visit-time|noindex|nofollow|noarchive|content-signal|content-usage|comment|robot-version|acap-[a-z-]+)\s*(?::|\s)/i;
 
 registerCapability("robots-txt-parse", async (input: CapabilityInput) => {
   let url = ((input.url as string) ?? (input.domain as string) ?? (input.task as string) ?? "").trim();
@@ -99,12 +99,10 @@ registerCapability("robots-txt-parse", async (input: CapabilityInput) => {
   // The same soft 404 answered as JSON or plain text ("Not found", a JSON
   // error) is not a robots.txt either (promise-audit T1 follow-up 27). An
   // empty file or one of comments only still exists with no rules, as does
-  // one whose only directives are ones the rules table does not hold.
+  // one whose only directives the rules table does not hold, or that a
+  // crawler would read despite a missing colon or a misspelling.
   const contentLines = lines.filter(l => l && !l.startsWith("#"));
-  const hasDirective = contentLines.some(l => {
-    const colon = l.indexOf(":");
-    return colon > 0 && ROBOTS_DIRECTIVES.has(l.slice(0, colon).trim().toLowerCase());
-  });
+  const hasDirective = contentLines.some(l => ROBOTS_DIRECTIVE_LINE.test(l));
   if (rules.length === 0 && sitemaps.length === 0 && contentLines.length > 0 && !hasDirective) {
     return {
       output: { url: robotsUrl, exists: false, message: "No robots.txt found: the site answered with a page that is not a robots.txt.", ...NO_ROBOTS_TXT },

@@ -117,6 +117,13 @@ limitations:
       the result.
     category: coverage
     severity: info
+  - title: A page that is not a robots.txt reads as no robots.txt
+    text: >-
+      A site that answers /robots.txt with 200 and an HTML page, or with text that has no robots.txt
+      directive (a JSON error, a plain "Not found"), is reported as exists false, the same answer a
+      404 gives. A file that is empty or holds only comments is reported as existing with no rules.
+    category: accuracy
+    severity: info
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

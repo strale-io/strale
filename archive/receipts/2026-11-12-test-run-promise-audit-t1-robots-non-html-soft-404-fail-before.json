@@ -1,0 +1,367 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "65bedbe88497ae708c2fecfdafb733644f9b5eb7"
+  },
+  "at": "2026-11-12T09:56:01.606Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/robots27-fail-before.json"
+  },
+  "summary": {
+    "numTotalTestSuites": 4,
+    "numPassedTestSuites": 2,
+    "numFailedTestSuites": 2,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 26,
+    "numPassedTests": 4,
+    "numFailedTests": 4,
+    "numPendingTests": 18,
+    "numTodoTests": 0,
+    "startTime": 1794477354533,
+    "success": false
+  },
+  "topic": "promise-audit-t1-robots-non-html-soft-404-fail-before",
+  "raw": {
+    "numTotalTestSuites": 4,
+    "numPassedTestSuites": 2,
+    "numFailedTestSuites": 2,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 26,
+    "numPassedTests": 4,
+    "numFailedTests": 4,
+    "numPendingTests": 18,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794477354533,
+    "success": false,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) refuses a ToS-blocklisted domain rather than grading its HTTPS as failed",
+            "status": "skipped",
+            "title": "refuses a ToS-blocklisted domain rather than grading its HTTPS as failed",
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) refuses a redirect to a private address rather than grading it",
+            "status": "skipped",
+            "title": "refuses a redirect to a private address rather than grading it",
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) grades on the domain's own redirect when the hop it leads to does not answer",
+            "status": "skipped",
+            "title": "grades on the domain's own redirect when the hop it leads to does not answer",
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) asks the domain itself first and follows its redirect for the site's headers",
+            "status": "skipped",
+            "title": "asks the domain itself first and follows its redirect for the site's headers",
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) names why a redirect was not followed when its scheme is refused",
+            "status": "skipped",
+            "title": "names why a redirect was not followed when its scheme is refused",
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) grades a redirect chain past the cap on the 3xx it ends at, not as a failure",
+            "status": "skipped",
+            "title": "grades a redirect chain past the cap on the 3xx it ends at, not as a failure",
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) grades no answer within 8 s under its own issue, not as a refused connection",
+            "status": "skipped",
+            "title": "grades no answer within 8 s under its own issue, not as a refused connection",
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) still grades a TLS failure of the domain itself",
+            "status": "skipped",
+            "title": "still grades a TLS failure of the domain itself",
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) does not grade a temporary failure of Strale's own resolver",
+            "status": "skipped",
+            "title": "does not grade a temporary failure of Strale's own resolver",
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) does not grade a bare EAI_AGAIN either",
+            "status": "skipped",
+            "title": "does not grade a bare EAI_AGAIN either",
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) refuses Strale's own connect-time SSRF block rather than grading it",
+            "status": "skipped",
+            "title": "refuses Strale's own connect-time SSRF block rather than grading it",
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18)"
+            ],
+            "fullName": "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18) returns exists:false for an HTML page served with 200",
+            "status": "skipped",
+            "title": "returns exists:false for an HTML page served with 200",
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18)"
+            ],
+            "fullName": "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18) gives a 404 the fields the manifest guarantees",
+            "status": "skipped",
+            "title": "gives a 404 the fields the manifest guarantees",
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18)"
+            ],
+            "fullName": "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18) keeps a robots.txt that opens with an HTML-style comment and has rules",
+            "status": "skipped",
+            "title": "keeps a robots.txt that opens with an HTML-style comment and has rules",
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18)"
+            ],
+            "fullName": "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18) reads an HTML page after a byte-order mark as no robots.txt",
+            "status": "skipped",
+            "title": "reads an HTML page after a byte-order mark as no robots.txt",
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18)"
+            ],
+            "fullName": "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18) reads an HTML page as no robots.txt even when it is served as text/plain",
+            "status": "skipped",
+            "title": "reads an HTML page as no robots.txt even when it is served as text/plain",
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18)"
+            ],
+            "fullName": "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18) keeps an empty robots.txt as one that exists with no rules",
+            "status": "skipped",
+            "title": "keeps an empty robots.txt as one that exists with no rules",
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18)"
+            ],
+            "fullName": "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18) keeps a real robots.txt served as text/html",
+            "status": "skipped",
+            "title": "keeps a real robots.txt served as text/html",
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up 27)"
+            ],
+            "fullName": "robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up 27) returns exists:false for a JSON error served with 200",
+            "status": "failed",
+            "title": "returns exists:false for a JSON error served with 200",
+            "duration": 81.05581900000004,
+            "failureMessages": [
+              "AssertionError: expected { …(10) } to deeply equal { …(7) }\n    at /home/user/strale-wt-robots/apps/api/src/capabilities/probe-failure-regressions.test.ts:272:20\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-robots/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up 27)"
+            ],
+            "fullName": "robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up 27) returns exists:false for a plain-text 'Not found' served with 200",
+            "status": "failed",
+            "title": "returns exists:false for a plain-text 'Not found' served with 200",
+            "duration": 4.2555529999999635,
+            "failureMessages": [
+              "AssertionError: expected { …(10) } to match object { exists: false, …(4) }\n(6 matching properties omitted from actual)\n    at Proxy.<anonymous> (file:///home/user/strale-wt-robots/node_modules/@vitest/expect/dist/index.js:1283:10)\n    at Proxy.<anonymous> (file:///home/user/strale-wt-robots/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale-wt-robots/node_modules/chai/index.js:1700:25)\n    at /home/user/strale-wt-robots/apps/api/src/capabilities/probe-failure-regressions.test.ts:287:20\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-robots/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up 27)"
+            ],
+            "fullName": "robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up 27) returns exists:false for a multi-line plain-text error page",
+            "status": "failed",
+            "title": "returns exists:false for a multi-line plain-text error page",
+            "duration": 2.9893670000000157,
+            "failureMessages": [
+              "AssertionError: expected true to be false // Object.is equality\n    at /home/user/strale-wt-robots/apps/api/src/capabilities/probe-failure-regressions.test.ts:293:27\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-robots/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up 27)"
+            ],
+            "fullName": "robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up 27) returns exists:false for a JSON array served with 200",
+            "status": "failed",
+            "title": "returns exists:false for a JSON array served with 200",
+            "duration": 5.185440999999969,
+            "failureMessages": [
+              "AssertionError: expected true to be false // Object.is equality\n    at /home/user/strale-wt-robots/apps/api/src/capabilities/probe-failure-regressions.test.ts:299:27\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-robots/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up 27)"
+            ],
+            "fullName": "robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up 27) keeps a robots.txt of comments only as one that exists with no rules",
+            "status": "passed",
+            "title": "keeps a robots.txt of comments only as one that exists with no rules",
+            "duration": 2.03397700000005,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up 27)"
+            ],
+            "fullName": "robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up 27) keeps a robots.txt whose only directive is one this parser does not tabulate",
+            "status": "passed",
+            "title": "keeps a robots.txt whose only directive is one this parser does not tabulate",
+            "duration": 1.6646839999999656,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up 27)"
+            ],
+            "fullName": "robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up 27) keeps a robots.txt with a Disallow line and no User-agent line",
+            "status": "passed",
+            "title": "keeps a robots.txt with a Disallow line and no User-agent line",
+            "duration": 1.57793300000003,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up 27)"
+            ],
+            "fullName": "robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up 27) keeps a robots.txt whose directives are in upper case",
+            "status": "passed",
+            "title": "keeps a robots.txt whose directives are in upper case",
+            "duration": 1.763830999999982,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794477355429,
+        "endTime": 1794477355529.764,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale-wt-robots/apps/api/src/capabilities/probe-failure-regressions.test.ts"
+      }
+    ]
+  }
+}
