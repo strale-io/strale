@@ -506,9 +506,17 @@ tracks:
       (55) fixed: web-provider's plain fetch and preflight, url-to-markdown
       and tech-stack-detect now add */*;q=0.8 to their Accept, so a 406 can
       no longer be filed as the site's answer. The (41) guard also scans
-      capabilities/lib and finds a tool by its own wording ('URL returned
-      HTTP n' or 'Check the URL is correct'), not only by targetUnavailable;
-      it fails against the previous Accept values.
+      capabilities/lib and selects a tool by asking the breaker and the
+      failure taxonomy whether any message it builds that names an HTTP
+      status is excused for a 406, not only by targetUnavailable; that adds
+      invoice-extract (no Accept, so */*). It fails against the previous
+      Accept values.
+      (56) Open: the breaker's 'returned a server error' entry, meant for a
+      target site's 5xx, also excuses a registry's 5xx (danish-company-data,
+      uk-filing-events), so a registry outage never trips its breaker.
+      (57) Open: linkedin-url-validate sends Accept text/html and reports
+      accessible: false with the site's status, a billed answer a 406 of
+      Strale's own making can produce.
       Next: the (50) recommendation; then measuring past
       billed calls from
       the affected paths since their earliest releases, deciding refunds per
