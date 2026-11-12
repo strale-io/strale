@@ -1,0 +1,50 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "apps/api vitest (2 files), sources from merge-base 70f5f849",
+    "commit": "48421ee404d3babf24ff50ad5bf045bb96f1b72d"
+  },
+  "at": "2026-11-12T02:52:40.608Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/fb.json"
+  },
+  "summary": {
+    "ok": false,
+    "expected": "fail",
+    "total": 230,
+    "passed": 211,
+    "failed": 19,
+    "note": "Against main the challenge page (with and without cf-mitigated) is billed by seven executors, api-health-check reports it healthy, and the CZ register's NENALEZEN and status-less replies are misread."
+  },
+  "topic": "upstream-failure-replay-wave3-fail-before",
+  "raw": {
+    "ok": false,
+    "label": "fail-before: the six changed source files checked out from merge-base 70f5f849, tests from the wave 3 branch",
+    "sources_from": "70f5f849f9cb42a39b225b0f1c4a4b3ee61fb6e8",
+    "command": "cd apps/api && npx vitest run src/capabilities/upstream-failure-replay.test.ts src/capabilities/cz-unreliable-vat-payer.test.ts",
+    "total": 230,
+    "passed": 211,
+    "failed": 19,
+    "failed_tests": [
+      "api-health-check does not bill a blocked_200",
+      "api-health-check does not bill a blocked_200_body_only",
+      "base64-encode-url does not bill a blocked_200",
+      "base64-encode-url does not bill a blocked_200_body_only",
+      "cz-unreliable-vat-payer does not bill a blocked_200",
+      "cz-unreliable-vat-payer does not bill a blocked_200_body_only",
+      "og-image-check does not bill a blocked_200",
+      "og-image-check does not bill a blocked_200_body_only",
+      "page-exists does not bill a blocked_200",
+      "page-exists does not bill a blocked_200_body_only",
+      "reports an unknown DIČ (NENALEZEN) as not registered",
+      "robots-txt-parse does not bill a blocked_200",
+      "robots-txt-parse does not bill a blocked_200_body_only",
+      "sitemap-parse does not bill a blocked_200",
+      "sitemap-parse does not bill a blocked_200_body_only",
+      "throws when an OK reply carries no payer status",
+      "throws, unbilled, when the reply carries no status",
+      "website-carbon-estimate does not bill a blocked_200",
+      "website-carbon-estimate does not bill a blocked_200_body_only"
+    ]
+  }
+}

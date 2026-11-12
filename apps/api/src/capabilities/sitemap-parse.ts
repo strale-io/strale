@@ -90,6 +90,11 @@ registerCapability("sitemap-parse", async (input: CapabilityInput) => {
 
   // Parse XML minimally without external deps
   const isSitemapIndex = xml.includes("<sitemapindex");
+  // An HTML page served with 200 at the sitemap URL (a soft 404, a maintenance
+  // page) is not an empty sitemap; it was billed as one (promise-audit T1 wave 3).
+  if (!isSitemapIndex && !xml.includes("<urlset")) {
+    throw new Error("Response does not appear to be a sitemap: it has no <urlset> or <sitemapindex> element.");
+  }
 
   if (isSitemapIndex) {
     // Sitemap index — extract child sitemap URLs

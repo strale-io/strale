@@ -25,13 +25,13 @@ output_schema:
     input_dic:
       type: string
     dic:
-      type: string
+      type: ["string", "null"]
     is_registered_vat_payer:
       type: boolean
     is_unreliable_payer:
-      type: boolean
+      type: ["boolean", "null"]
     financial_office_code:
-      type: string
+      type: ["string", "null"]
     published_accounts:
       type: array
       items:
@@ -110,12 +110,28 @@ limitations:
       currently open or held by the named bank.
     category: accuracy
     severity: info
+  - title: A DIČ not in the VAT-payer register is not explained further
+    text: >-
+      A DIČ the register does not find among VAT payers is returned as is_registered_vat_payer false, with dic,
+      is_unreliable_payer and financial_office_code null. The register's answer does not say why: the DIČ may belong to
+      an identified person, a deregistered payer, a member of a VAT group invoicing under the group's DIČ, or an
+      unreliable person (nespolehlivá osoba), or it may not exist.
+    category: coverage
+    severity: info
+    workaround: If the invoice charges Czech VAT, ask the supplier which DIČ it is registered under and check that one.
   - title: Status snapshot only — history not returned
     text: >-
       The check returns the current unreliable-payer flag as of the response_generated_at date. Historical changes (when
       the flag was set/cleared) are not exposed.
     category: coverage
     severity: info
+# dic, is_unreliable_payer and financial_office_code are null for a DIČ not in
+# the register (see the limitation above), which capability-output-contracts.ts
+# would call common. They stay guaranteed because the runner's known-answer
+# gate (isCheckEnforced) skips every check on a common field, which would drop
+# the three equals checks on the registered-payer answer; the guaranteed-field
+# sentinel only requires the key, which both answers carry. Promise-audit T1
+# follow-up (24) resolves the two definitions.
 output_field_reliability:
   input_dic: guaranteed
   dic: guaranteed

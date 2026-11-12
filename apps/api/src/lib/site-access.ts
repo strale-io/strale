@@ -30,6 +30,7 @@
  */
 
 import { CapabilityRefusalError, ROBOTS_UNAVAILABLE_DETAILS } from "./capability-refusal.js";
+import { peekTextPrefix } from "./resource-limits.js";
 import { SITE_BLOCK_MARKER } from "./tos-blocklist.js";
 
 /**
@@ -50,6 +51,47 @@ export const STRALE_ROBOTS_TOKEN = "StraleBot";
 export const STRALE_PAGE_HEADERS: Readonly<Record<string, string>> = {
   "User-Agent": STRALE_USER_AGENT,
 };
+
+/**
+ * Detect JS-challenge / anti-bot interstitials that come back with HTTP 200
+ * and enough bytes to pass the "substantial content" heuristics. Observed
+ * live: EUR-Lex's "verify that you're not a robot … Enable JavaScript and
+ * then reload" shell (2KB, HTTP 200/202). Under DEC-20261023-A a challenge is
+ * a block: the fetch path refuses on it rather than handing it to a real
+ * browser to solve. Markers are deliberately narrow —
+ * a real article MENTIONING robots must not trip this — so each pattern
+ * targets interstitial phrasing, not topic words.
+ */
+export function looksLikeJsChallenge(html: string): boolean {
+  const head = html.slice(0, 6000);
+  // NOTE: no bare `_Incapsula_Resource` marker — Imperva injects that script
+  // tag into NORMALLY SERVED pages too, so it false-positives on good content
+  // (review M-1). `__cf_chl_` / `cf-browser-verification` are challenge-only.
+  return (
+    /verify that you'?re not a robot/i.test(head) ||
+    /enable javascript and then reload/i.test(head) ||
+    /checking your browser before accessing/i.test(head) ||
+    /__cf_chl_|cf-browser-verification/i.test(head)
+  );
+}
+
+/** How much of a page {@link looksLikeJsChallenge} reads. */
+const CHALLENGE_PEEK_CHARS = 6000;
+
+/**
+ * Is this response an anti-bot challenge rather than the page?
+ *
+ * Cloudflare marks its challenges with `cf-mitigated: challenge` whatever the
+ * status; otherwise the start of an HTML body is peeked from a clone, so the
+ * caller still gets the whole body from `response`.
+ */
+export async function isChallengeResponse(response: Response): Promise<boolean> {
+  if (response.headers.get("cf-mitigated")?.trim().toLowerCase() === "challenge") return true;
+  const type = response.headers.get("content-type") ?? "";
+  if (type && !/html/i.test(type)) return false;
+  const head = await peekTextPrefix(response, CHALLENGE_PEEK_CHARS);
+  return head !== null && looksLikeJsChallenge(head);
+}
 
 /**
  * Statuses that mean "this site refuses this request": authentication (401,

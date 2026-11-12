@@ -131,6 +131,14 @@ limitations:
     category: coverage
     severity: info
     workaround: If the sitemap is an index, extract the child sitemap URLs and process each one separately
+  - title: Only uncompressed XML sitemaps are parsed
+    text: >-
+      The response must contain a <urlset> or <sitemapindex> element without a namespace prefix. A plain-text or gzipped
+      sitemap, an HTML page served at the sitemap URL, or a site's anti-bot challenge page fails with an error and is
+      not billed.
+    category: coverage
+    severity: info
+    workaround: Pass the URL of the uncompressed XML sitemap.
   - title: Sitemaps above the 50 MB protocol maximum are refused
     text: >-
       An uncompressed sitemap above 50 MB or 50,000 URLs exceeds the protocol maximum and is refused

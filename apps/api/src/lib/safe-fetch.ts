@@ -1,5 +1,5 @@
 import { currentAcquisitionMethod, type AcquisitionMethod } from "./data-access.js";
-import { asSourceBlocked, SiteAccessRefusedError, STRALE_USER_AGENT } from "./site-access.js";
+import { asSourceBlocked, isChallengeResponse, SiteAccessRefusedError, siteAccessRefusal, STRALE_USER_AGENT } from "./site-access.js";
 /**
  * safeFetch: fetch() wrapper that resists SSRF (F-0-006).
  *
@@ -215,7 +215,7 @@ export async function safeFetch(
     headers.set("User-Agent", STRALE_USER_AGENT);
     init.headers = headers;
   }
-  return followRedirects(
+  const response = await followRedirects(
     typeof url === "string" ? url : url.toString(),
     init,
     maxRedirects,
@@ -236,6 +236,17 @@ export async function safeFetch(
     returnOnRedirectCap ?? false,
     onRequestTiming,
   );
+  // DEC-20261023-A stops a page read at a challenge as at a 403. Without this,
+  // every executor that reads the page itself billed the interstitial as the
+  // site's content: no og:image, a 600-byte "A"-rated page, an empty sitemap
+  // (promise-audit T1 wave 3). An availability probe reports what answered.
+  if (pageRead && purpose !== "availability_probe" && (await isChallengeResponse(response))) {
+    const target = response.url || String(url);
+    await discardBody(response, "anti-bot challenge page");
+    const refusal = siteAccessRefusal(target, { kind: "challenge" });
+    throw acquisitionMethod === "public_page_read" ? asSourceBlocked(refusal, target) : refusal;
+  }
+  return response;
 }
 
 /**

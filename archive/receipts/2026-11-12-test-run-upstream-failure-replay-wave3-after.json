@@ -1,0 +1,44 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "apps/api vitest (whole suite, two runs)",
+    "commit": "48421ee404d3babf24ff50ad5bf045bb96f1b72d"
+  },
+  "at": "2026-11-12T02:52:40.750Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/after.json"
+  },
+  "summary": {
+    "ok": true,
+    "total": 20276,
+    "passed": 19615,
+    "failed": 0,
+    "skipped": 661,
+    "note": "Includes the 225-case failure replay over 32 recordings x 7 modes; tsc and the upstream-catch guard pass."
+  },
+  "topic": "upstream-failure-replay-wave3-after",
+  "raw": {
+    "ok": true,
+    "label": "after: wave 3 branch, whole apps/api suite in two runs",
+    "runs": [
+      {
+        "command": "cd apps/api && npx vitest run src/capabilities src/lib",
+        "failed": 0,
+        "passed": 9114,
+        "skipped": 202,
+        "total": 9316
+      },
+      {
+        "command": "cd apps/api && npx vitest run --exclude 'src/capabilities/**' --exclude 'src/lib/**'",
+        "failed": 0,
+        "passed": 10501,
+        "skipped": 459,
+        "total": 10960
+      }
+    ],
+    "also": [
+      "npx tsc --noEmit -p apps/api: exit 0",
+      "node apps/api/scripts/check-upstream-catches.mjs: pass"
+    ]
+  }
+}

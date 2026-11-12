@@ -8,7 +8,7 @@ import {
   readTextWithLimit,
 } from "../lib/resource-limits.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
-import { STRALE_USER_AGENT, SiteAccessRefusedError, isBlockStatus } from "../lib/site-access.js";
+import { STRALE_USER_AGENT, SiteAccessRefusedError, SourceBlockedError, isBlockStatus } from "../lib/site-access.js";
 import { assertRobotsAllowed } from "../lib/robots-txt.js";
 import { looksLikeJsChallenge } from "./lib/web-provider.js";
 import type Anthropic from "@anthropic-ai/sdk";
@@ -135,9 +135,8 @@ async function fetchTranscript(videoId: string): Promise<string | null> {
       blocked = isBlockStatus(pageRes.status);
     }
   } catch (err) {
-    // A site-access refusal (robots.txt) is a block; anything else falls
-    // through to the render.
-    blocked = err instanceof SiteAccessRefusedError;
+    // degraded-ok: a robots.txt refusal or a source block (safeFetch stops at a challenge) sets blocked, which skips the rendered fetch; any other direct-fetch failure falls through to the render, and a page neither route read makes the call throw, unbilled.
+    blocked = err instanceof SiteAccessRefusedError || err instanceof SourceBlockedError;
   }
 
   // Fallback: Browserless renders full JS and gets captions — only when the
