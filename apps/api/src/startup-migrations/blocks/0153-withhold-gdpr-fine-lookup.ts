@@ -19,9 +19,13 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
  *
  * 1. The capability. The slug is in the DEACTIVATED map (auto-register.ts),
  *    whose boot sync runs before startup migrations (index.ts) and clears
- *    is_active, visible and x402_enabled without a reason. So, as block 0148
- *    does, this writes only the reason, and only once all three flags are
- *    already false (review finding H1 on #844).
+ *    is_active, visible and x402_enabled without touching the reason. So, as
+ *    block 0148 does, this writes only the reason, and only once all three
+ *    flags are already false (review finding H1 on #844). It writes it only
+ *    over no reason or a vendor-control-tower `vendor:` marker: any other
+ *    reason is a deliberate decision by someone else (a rebuild kept dark, a
+ *    later founder decision), which this block, running every boot, must
+ *    leave alone rather than rewrite on each boot.
  *
  * 2. The solutions. That boot sync does not cascade to bundles. Every solution
  *    with a gdpr-fine-lookup step would stay on sale with a step that can no
@@ -32,12 +36,17 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
  *    switches it back on. The crypto-price precedent (2026-09-06) withheld its
  *    bundles the same way rather than rewriting them.
  *
- * Guards: the solution UPDATE matches only while the capability is still
- * withheld (is_active = false and carrying this reason), and only solutions
- * that still have the step and are still on some rail or carry a vendor
- * suspension marker. A relisting — the capability back on a licensed or
- * regulator source, or a bundle rebuilt without the step — therefore matches
- * nothing, which is what lets the block run every boot (run-policy.ts).
+ * Guards: the solution UPDATE matches only while the capability is off on
+ * every surface (is_active, visible and x402_enabled all false), whatever its
+ * reason, and only solutions that still have the step and are still on some
+ * rail or carry a vendor suspension marker. It does not key on step 1's
+ * reason: a bundle whose step cannot run must not be on sale, even if the
+ * capability row carries some older reason step 1 leaves alone. A relisting —
+ * the capability back on a licensed or regulator source (is_active true), or
+ * a bundle rebuilt without the step — matches nothing, and a bundle this block
+ * has withheld is off both rails with a non-vendor reason, so it matches
+ * nothing again either. That is what lets the block run every boot
+ * (run-policy.ts).
  *
  * Every boot, not once: if the boot sync fails on the boot that ships this
  * (it logs and does not retry), steps 1 and 2 match nothing and return
@@ -48,7 +57,11 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
  * `vendor:` reason and later restores its previous rails only while that
  * exact marker is still there (vendor-control-tower.ts). A bundle suspended
  * that way is off both rails, so it is matched by its marker instead, and
- * overwriting the marker makes the tower's restore a no-op.
+ * overwriting the marker makes the tower's restore a no-op: its open
+ * vendor_solution_suspensions row stays unrestored and the tower records a
+ * restore_error on each attempt. The tower's suspend step only takes rows with
+ * no reason or a `vendor:` one, so it never touches the bundle again and the
+ * two cannot loop. The same holds for a `vendor:` marker on the capability.
  *
  * One capability row and the solutions with one step; no bulk operation
  * (DEC-20260504-B). Only strings are bound and timestamps are now() in SQL
@@ -73,7 +86,7 @@ export async function runMigration0153_withholdGdprFineLookup(
            updated_at = now()
      WHERE slug = ${GDPR_FINE_LOOKUP_SLUG}
        AND is_active = false AND visible = false AND x402_enabled = false
-       AND deactivation_reason IS DISTINCT FROM ${GDPR_FINE_LOOKUP_WITHHELD_REASON}
+       AND (deactivation_reason IS NULL OR deactivation_reason LIKE 'vendor:%')
   `);
   const capAffected = (capRes as { count?: number }).count ?? 0;
 
@@ -88,8 +101,7 @@ export async function runMigration0153_withholdGdprFineLookup(
        AND EXISTS (
          SELECT 1 FROM capabilities
           WHERE slug = ${GDPR_FINE_LOOKUP_SLUG}
-            AND is_active = false
-            AND deactivation_reason = ${GDPR_FINE_LOOKUP_WITHHELD_REASON})
+            AND is_active = false AND visible = false AND x402_enabled = false)
   `);
   const solAffected = (solRes as { count?: number }).count ?? 0;
 
@@ -98,7 +110,7 @@ export async function runMigration0153_withholdGdprFineLookup(
     block: "0153_withholdGdprFineLookup",
     outcome:
       affected === 0
-        ? "no change (gdpr-fine-lookup already carries its reason and no listed solution has it as a step, or it is listed)"
+        ? "no change (gdpr-fine-lookup already carries a reason and no listed solution has it as a step, or it is listed)"
         : `gdpr-fine-lookup withheld — enforcementtracker.com is CC BY-NC-SA 4.0 with TDM reserved; reason recorded on ${capAffected} capability row(s), ${solAffected} solution(s) withheld`,
     rows_affected: affected,
     duration_ms: Date.now() - startedAt,

@@ -109,17 +109,33 @@ describe("block 0153: records the reason and withholds every solution with the s
     expect(BLOCK_RUN_POLICY.runMigration0153_withholdGdprFineLookup?.policy).toBe("every_boot");
   });
 
-  it("writes the capability reason only once the boot sync has cleared all three flags", async () => {
+  it("writes the capability reason only once the boot sync has cleared all three flags, and only over no reason or a vendor: marker", async () => {
     const { tx, queries } = recordingTx([1, 1]);
     const result = await runMigration0153_withholdGdprFineLookup(tx);
     expect(queries).toHaveLength(2);
     expect(flat(queries[0].sql)).toBe(
-      "UPDATE capabilities SET deactivation_reason = $1, updated_at = now() WHERE slug = $2 AND is_active = false AND visible = false AND x402_enabled = false AND deactivation_reason IS DISTINCT FROM $3",
+      "UPDATE capabilities SET deactivation_reason = $1, updated_at = now() WHERE slug = $2 AND is_active = false AND visible = false AND x402_enabled = false AND (deactivation_reason IS NULL OR deactivation_reason LIKE 'vendor:%')",
     );
-    expect(queries[0].params).toEqual([GDPR_FINE_LOOKUP_WITHHELD_REASON, "gdpr-fine-lookup", GDPR_FINE_LOOKUP_WITHHELD_REASON]);
+    expect(queries[0].params).toEqual([GDPR_FINE_LOOKUP_WITHHELD_REASON, "gdpr-fine-lookup"]);
     expect(GDPR_FINE_LOOKUP_SLUG).toBe("gdpr-fine-lookup");
     expect(result.block).toBe("0153_withholdGdprFineLookup");
     expect(result.rows_affected).toBe(2);
+  });
+
+  it("leaves a different deliberate capability reason alone, so it never rewrites one on every boot", async () => {
+    // Review round 3 on #1019: "IS DISTINCT FROM <this reason>" would replace
+    // any later deliberate reason (a rebuild kept dark, another decision) on
+    // each boot. The guard admits only NULL or a vendor-control-tower marker.
+    const { tx, queries } = recordingTx([0, 0]);
+    await runMigration0153_withholdGdprFineLookup(tx);
+    const capSql = flat(queries[0].sql);
+    const where = capSql.slice(capSql.indexOf(" WHERE "));
+    expect(where).toContain("(deactivation_reason IS NULL OR deactivation_reason LIKE 'vendor:%')");
+    expect(where).not.toMatch(/IS DISTINCT FROM|deactivation_reason <>|deactivation_reason !=/);
+    // The only reason bound is the one it writes, in SET; none is compared in WHERE.
+    expect(queries[0].params.filter((p) => p === GDPR_FINE_LOOKUP_WITHHELD_REASON)).toHaveLength(1);
+    expect(where).not.toMatch(/deactivation_reason = \$/);
+    expect(GDPR_FINE_LOOKUP_WITHHELD_REASON.startsWith("vendor:")).toBe(false);
   });
 
   it("switches off, on both rails and with a deliberate reason, the solutions that still have the step while the capability stays withheld", async () => {
@@ -128,16 +144,23 @@ describe("block 0153: records the reason and withholds every solution with the s
     expect(flat(queries[1].sql)).toBe(
       "UPDATE solutions SET is_active = false, x402_enabled = false, deactivation_reason = $1, updated_at = now() " +
         "WHERE id IN (SELECT solution_id FROM solution_steps WHERE capability_slug = $2) AND (is_active = true OR x402_enabled = true OR deactivation_reason LIKE 'vendor:%') " +
-        "AND EXISTS ( SELECT 1 FROM capabilities WHERE slug = $3 AND is_active = false AND deactivation_reason = $4)",
+        "AND EXISTS ( SELECT 1 FROM capabilities WHERE slug = $3 AND is_active = false AND visible = false AND x402_enabled = false)",
     );
-    expect(queries[1].params).toEqual([
-      GDPR_FINE_LOOKUP_SOLUTION_REASON,
-      "gdpr-fine-lookup",
-      "gdpr-fine-lookup",
-      GDPR_FINE_LOOKUP_WITHHELD_REASON,
-    ]);
+    expect(queries[1].params).toEqual([GDPR_FINE_LOOKUP_SOLUTION_REASON, "gdpr-fine-lookup", "gdpr-fine-lookup"]);
     // No automated sweep may switch it back on (lib/solution-activation.ts).
     expect(wasDeactivatedDeliberately(GDPR_FINE_LOOKUP_SOLUTION_REASON)).toBe(true);
+  });
+
+  it("still withholds the bundles when the capability carries an unrelated non-vendor reason step 1 leaves alone", async () => {
+    // Step 2 keys on the capability being off on every surface, whatever its
+    // reason: a bundle whose step cannot run must not stay on sale.
+    const { tx, queries } = recordingTx([0, 1]);
+    await runMigration0153_withholdGdprFineLookup(tx);
+    const solSql = flat(queries[1].sql);
+    const exists = solSql.slice(solSql.indexOf("EXISTS"));
+    expect(exists).toContain("is_active = false AND visible = false AND x402_enabled = false");
+    expect(exists).not.toMatch(/deactivation_reason/);
+    expect(queries[1].params).not.toContain(GDPR_FINE_LOOKUP_WITHHELD_REASON);
   });
 
   it("also takes a vendor-suspended bundle, so the vendor control tower cannot restore it to sale", async () => {
@@ -152,12 +175,16 @@ describe("block 0153: records the reason and withholds every solution with the s
     expect(GDPR_FINE_LOOKUP_SOLUTION_REASON.startsWith("vendor:")).toBe(false);
   });
 
-  it("cannot undo a relisting: it never sets a capability flag", async () => {
+  it("cannot undo a relisting: it never sets a capability flag, and both steps need all three flags false", async () => {
     const { tx, queries } = recordingTx([0, 0]);
     await runMigration0153_withholdGdprFineLookup(tx);
-    const capSql = queries[0].sql.toLowerCase();
+    const capSql = flat(queries[0].sql).toLowerCase();
     expect(capSql.slice(capSql.indexOf(" set "), capSql.indexOf(" where "))).not.toMatch(/is_active|visible|x402_enabled/);
-    expect(capSql).not.toMatch(/\bor\b/);
+    // Every flag condition is ANDed at the top level; the only OR is inside the reason guard.
+    expect(capSql).toContain("and is_active = false and visible = false and x402_enabled = false and (deactivation_reason is null or deactivation_reason like 'vendor:%')");
+    expect(capSql.match(/\bor\b/g)).toHaveLength(1);
+    const solSql = flat(queries[1].sql).toLowerCase();
+    expect(solSql.slice(solSql.indexOf("exists"))).toContain("is_active = false and visible = false and x402_enabled = false");
   });
 
   it("is a no-op on a second run and binds no Date or Buffer", async () => {
