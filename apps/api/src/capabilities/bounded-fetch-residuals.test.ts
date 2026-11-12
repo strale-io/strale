@@ -51,7 +51,8 @@ const isPreflight = (init: unknown) =>
   new Headers((init as RequestInit | undefined)?.headers).get("range") === "bytes=0-8191";
 const preflightPage = () =>
   new Response("<html><body>ordinary page</body></html>", { status: 200, headers: { "content-type": "text/html" } });
-vi.mock("../lib/safe-fetch.js", () => ({
+vi.mock("../lib/safe-fetch.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../lib/safe-fetch.js")>()),
   safeFetch: (...args: unknown[]) => (isPreflight(args[1]) ? preflightPage() : safeFetchMock(...args)),
 }));
 
