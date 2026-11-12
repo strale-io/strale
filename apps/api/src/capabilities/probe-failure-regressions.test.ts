@@ -10,7 +10,9 @@
  *   and no answer within 8 s keeps its grade under its own issue text.
  * - robots-txt-parse (18): an HTML page served with 200 at /robots.txt (a
  *   soft 404) was returned as a robots.txt that exists with no rules. It now
- *   reads as no robots.txt, the same answer a 404 gives.
+ *   reads as no robots.txt, the same answer a 404 gives. Follow-up (27):
+ *   the same soft 404 answered as JSON or plain text ("Not found") does too,
+ *   while an empty file or one of comments only still exists with no rules.
  *
  * Each test uses its own host: robots.txt answers are cached per origin.
  */
@@ -256,6 +258,69 @@ describe("robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18
   it("keeps a real robots.txt served as text/html", async () => {
     serve(() => new Response("User-agent: *\nDisallow: /admin\n", { status: 200, headers: { "content-type": "text/html" } }));
     const { output } = await run("robots-txt-parse", { url: "https://mislabelled.example.com" });
+    expect(output.exists).toBe(true);
+    expect(output.total_disallow_rules).toBe(1);
+  });
+});
+
+describe("robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up 27)", () => {
+  const NOT_A_ROBOTS_TXT = "No robots.txt found: the site answered with a page that is not a robots.txt.";
+
+  it("returns exists:false for a JSON error served with 200", async () => {
+    serve(() => new Response('{"error":"Not found","status":404}', { status: 200, headers: { "content-type": "application/json" } }));
+    const { output } = await run("robots-txt-parse", { url: "https://jsonsoft404.example.com" });
+    expect(output).toEqual({
+      url: "https://jsonsoft404.example.com/robots.txt",
+      exists: false,
+      message: NOT_A_ROBOTS_TXT,
+      rules: [],
+      sitemaps: [],
+      user_agents: [],
+      blocks_all_crawlers: false,
+    });
+    expect(outcomeFromOutput("robots-txt-parse", output).billable, "no robots.txt is a real answer").toBe(true);
+  });
+
+  it("returns exists:false for a plain-text 'Not found' served with 200", async () => {
+    serve(() => new Response("Not found", { status: 200, headers: { "content-type": "text/plain" } }));
+    const { output } = await run("robots-txt-parse", { url: "https://textsoft404.example.com" });
+    expect(output).toMatchObject({ exists: false, message: NOT_A_ROBOTS_TXT, rules: [], sitemaps: [], user_agents: [] });
+  });
+
+  it("returns exists:false for a multi-line plain-text error page", async () => {
+    serve(() => new Response("404 page not found\nThe requested URL was not found on this server.\n", { status: 200 }));
+    const { output } = await run("robots-txt-parse", { url: "https://multiline404.example.com" });
+    expect(output.exists).toBe(false);
+  });
+
+  it("returns exists:false for a JSON array served with 200", async () => {
+    serve(() => new Response("[]", { status: 200, headers: { "content-type": "application/json" } }));
+    const { output } = await run("robots-txt-parse", { url: "https://jsonarray.example.com" });
+    expect(output.exists).toBe(false);
+  });
+
+  it("keeps a robots.txt of comments only as one that exists with no rules", async () => {
+    serve(() => new Response("# Allow everything\n# contact: webmaster@example.com\n", { status: 200, headers: { "content-type": "text/plain" } }));
+    const { output } = await run("robots-txt-parse", { url: "https://commentsonly.example.com" });
+    expect(output.exists).toBe(true);
+    expect(output.total_rules).toBe(0);
+  });
+
+  it("keeps a robots.txt whose only directive is one this parser does not tabulate", async () => {
+    serve(() => new Response("Host: www.example.com\n", { status: 200, headers: { "content-type": "text/plain" } }));
+    const { output } = await run("robots-txt-parse", { url: "https://hostonly.example.com" });
+    expect(output.exists).toBe(true);
+  });
+
+  it("keeps a robots.txt with a Disallow line and no User-agent line", async () => {
+    serve(() => new Response("Disallow: /private\n", { status: 200, headers: { "content-type": "text/plain" } }));
+    const { output } = await run("robots-txt-parse", { url: "https://noagent.example.com" });
+    expect(output.exists).toBe(true);
+  });
+
+  it("keeps a robots.txt whose directives are in upper case", async () => {
+    serve(() => new Response("USER-AGENT: *\nDISALLOW: /x\n", { status: 200, headers: { "content-type": "text/plain" } }));
+    const { output } = await run("robots-txt-parse", { url: "https://uppercase.example.com" });
     expect(output.exists).toBe(true);
     expect(output.total_disallow_rules).toBe(1);
   });
