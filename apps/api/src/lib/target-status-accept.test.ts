@@ -31,12 +31,17 @@ import { isUserInputError } from "./circuit-breaker.js";
 // classifiers themselves, not a copy of their phrases: every string or
 // template literal that names an HTTP status is read with 406 in place of each
 // interpolation, and a file whose message either classifier excuses is checked
-// the same way. capabilities/lib is scanned too.
+// the same way, and so is a file that sets `targetFault: true` itself. Every
+// folder under capabilities/ is scanned. Known limits: a message reads as
+// naming a status only when HTTP or status stands just before it, and only
+// safeFetch calls are checked (no selected file uses plain fetch today).
 const ROOT = new URL("../capabilities/", import.meta.url);
-const DIRS = [
-  { dir: ROOT, prefix: "", lib: "../lib/" },
-  { dir: new URL("lib/", ROOT), prefix: "lib/", lib: "../../lib/" },
-];
+/** capabilities/ and every folder under it, each with its relative path to src/lib. */
+function dirsUnder(dir: URL, prefix = "", lib = "../lib/"): { dir: URL; prefix: string; lib: string }[] {
+  const subdirs = readdirSync(dir, { withFileTypes: true }).filter(d => d.isDirectory() && !d.name.startsWith("__"));
+  return [{ dir, prefix, lib }, ...subdirs.flatMap(d => dirsUnder(new URL(`${d.name}/`, dir), `${prefix}${d.name}/`, `../${lib}`))];
+}
+const DIRS = dirsUnder(ROOT);
 
 /** A status Strale's own Accept can draw, put in place of every interpolation. */
 const PROBE_STATUS = "406";
@@ -45,6 +50,11 @@ const NAMES_STATUS = new RegExp(`(?:HTTP|status)\\W{0,3}${PROBE_STATUS}\\b`, "i"
 /** Is a failure with this message excused: not counted against the tool, and filed as the caller's or the target's? */
 function excused(message: string): boolean {
   return classifyTransactionFailure(message) === "caller_input" || isUserInputError(message);
+}
+
+/** Does the file mark a failure as the target's directly (`targetFault: true`), the flag that leaves it unbilled? */
+function setsTargetFault(src: ts.SourceFile): boolean {
+  return nodes(src, ts.isPropertyAssignment).some(p => keyName(p.name) === "targetfault" && p.initializer.kind !== ts.SyntaxKind.FalseKeyword);
 }
 
 /** Every string or template literal in the file that names an HTTP status, with PROBE_STATUS for each interpolation. */
@@ -200,7 +210,8 @@ const scanned = DIRS.flatMap(({ dir, prefix, lib }) =>
     const safeFetch = importedAs(src, `${lib}safe-fetch.js`, "safeFetch");
     const calls = nodes(src, ts.isCallExpression);
     const messages = statusMessages(src);
-    const selected = calls.some(target.isCall) || messages.some(m => excused(m) && !exemptIn(file).has(m));
+    const selected = calls.some(target.isCall) || setsTargetFault(src)
+      || messages.some(m => excused(m) && !exemptIn(file).has(m));
     return { file, src, messages, selected, fetches: calls.filter(safeFetch.isCall), indirect: safeFetch.indirectUses(src) };
   }),
 ).sort((a, b) => a.file.localeCompare(b.file));

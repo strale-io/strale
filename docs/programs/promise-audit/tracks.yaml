@@ -517,6 +517,10 @@ tracks:
       (57) Open: linkedin-url-validate sends Accept text/html and reports
       accessible: false with the site's status, a billed answer a 406 of
       Strale's own making can produce.
+      (58) Open: after a 404 from KRS register P, polish-company-data
+      answers 'not found' for any non-2xx from its register S retry (~line
+      45), so a registry 5xx there is filed as the caller's input, the same
+      kind of misattribution as (56).
       Next: the (50) recommendation; then measuring past
       billed calls from
       the affected paths since their earliest releases, deciding refunds per

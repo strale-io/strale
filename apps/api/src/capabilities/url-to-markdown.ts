@@ -141,7 +141,7 @@ async function tryPlainFetch(url: string): Promise<string | null> {
 
     return null;
   } catch (err) {
-    // degraded-ok: a transport failure, or any error not recognised below, returns null so fetchRenderedHtml runs web-provider's full chain, which repeats validateUrl, robots, the plain request with its SSRF check, and the challenge checks; definitive answers, refusals and oversize rethrow here.
+    // degraded-ok: a transport failure, or any error not recognised below, returns null so fetchRenderedHtml runs web-provider's full chain, which repeats validateUrl, robots, the plain request with its SSRF check, and the challenge checks; definitive answers, refusals, oversize and any message naming SSRF or 'private' rethrow here.
     if (err instanceof DefinitiveFetchError) throw err;
     // A block or a policy refusal is the answer, not a reason to try Browserless.
     if (isCapabilityRefusal(err)) throw err;
