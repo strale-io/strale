@@ -1,0 +1,34 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "6cdb68198939cb3ec13bcedb1962895ff329dad1"
+  },
+  "at": "2026-11-11T22:32:53.899Z",
+  "inputs": {
+    "command": "cd apps/api && npx vitest run --reporter=json"
+  },
+  "summary": {
+    "ok": true,
+    "expected": "pass",
+    "total": 10908,
+    "passed": 10449,
+    "failed": 0,
+    "skipped": 459,
+    "code_at": "6cdb6819"
+  },
+  "topic": "swallowed-failures-wave2c-full-api-suite",
+  "raw": {
+    "numTotalTestSuites": 1951,
+    "numPassedTestSuites": 1951,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 10908,
+    "numPassedTests": 10449,
+    "numFailedTests": 0,
+    "numPendingTests": 459,
+    "numTodoTests": 0,
+    "startTime": 1794436191154,
+    "success": true
+  }
+}

@@ -148,9 +148,13 @@ export const LIMITATIONS: LimitationDef[] = [
     limitationText: "GDPR-redacted registrations (common for EU domains) show limited registrant information",
     workaround: "Use the abuse contact email from the WHOIS response to request registrant details through the registrar's disclosure process" },
   { capabilitySlug: "whois-lookup", category: "availability", severity: "info",
-    title: "Some registrars rate-limit WHOIS queries, causing slower responses during bulk lookups",
-    limitationText: "Some registrars rate-limit WHOIS queries — bulk lookups may see slower response times",
+    title: "Rate-limited or failed lookups are not billed",
+    limitationText: "Registries rate-limit WHOIS queries. When the registry's reply is a rate-limit or refusal notice, or its WHOIS server does not answer, the call fails with an error and is not billed. Any other reply is billed, including one this parser cannot split into fields: some registries answer in their own format, so such a reply is returned in raw_whois with no parsed fields.",
     workaround: "Batch lookups with 1-2 second delays between requests, or use the RDAP protocol endpoint when available" },
+  { capabilitySlug: "whois-lookup", category: "coverage", severity: "info",
+    title: "Only TLDs with a known registry server",
+    limitationText: "Each lookup asks the TLD's own registry WHOIS server, for about 38 TLDs, including .com, .net, .org, .io, .se, .de, .uk and .eu. A domain under any other TLD is refused and not billed.",
+    workaround: "For other TLDs, query the registry's RDAP service, or use domain-age-check for the creation date." },
 
   // ── ssl-check ──
   { capabilitySlug: "ssl-check", category: "coverage", severity: "info",
@@ -399,6 +403,10 @@ export const LIMITATIONS: LimitationDef[] = [
     title: "Dynamic pricing pages with complex JavaScript interactions may not render all plan tiers",
     limitationText: "Dynamic pricing pages with complex JavaScript interactions may not fully render all plan tiers",
     workaround: "If results appear incomplete, pass the direct pricing page URL rather than the homepage" },
+  { capabilitySlug: "pricing-page-extract", category: "coverage", severity: "info",
+    title: "Walled or empty pages fail without a charge",
+    limitationText: "When the page renders as a cookie, consent or login wall, an error or maintenance page, or an empty app shell, the call fails with an error and is not billed, rather than returning an empty plan list. A real page that publishes no prices returns page_status no_pricing with an empty plan list, and is billed. Whether a page is walled is judged by the model reading it; prices visible under a cookie banner or overlay count as a pricing page.",
+    workaround: "Pass a pricing page that loads without a login or consent step." },
 
   // ── eu-regulation-search ──
   { capabilitySlug: "eu-regulation-search", category: "freshness", severity: "info",
@@ -525,9 +533,17 @@ export const LIMITATIONS: LimitationDef[] = [
 
   // ── country-trade-data ──
   { capabilitySlug: "country-trade-data", category: "freshness", severity: "info",
-    title: "Trade statistics are based on AI knowledge and may lag 6-12 months behind actual trade flows",
-    limitationText: "Trade statistics based on AI knowledge — most recent data may lag 6-12 months behind actual trade flows",
-    workaround: "Cross-reference with UN Comtrade or national customs statistics for the most current trade figures" },
+    title: "Embedded figures are 2023 estimates, not updated",
+    limitationText: "The product and partner breakdown, and the totals whenever the World Bank does not supply them, come from an embedded table of 2023 estimates that is not updated. When the totals come from that table, totals_year is 2023 whatever year was requested.",
+    workaround: "Read totals_year before comparing years, and cross-reference UN Comtrade or national customs statistics for current product and partner figures." },
+  { capabilitySlug: "country-trade-data", category: "availability", severity: "info",
+    title: "World Bank outages fail without a charge",
+    limitationText: "Totals come from the World Bank for the requested year when it has both exports and imports. When it has neither, the embedded 2023 estimates answer for both totals and data_source is embedded-trade-data. When it has only one, the embedded estimates answer for both where the country has an entry; for a country without one, the World Bank's single figure is returned beside a null. The two sources are never mixed, and totals_year names the year the totals are for; data_source is World Bank API when the country has no embedded entry. When the World Bank does not answer (an error status, a timeout, an unreadable response or a rejected request), the call fails with an error and is not billed.",
+    workaround: "After a World Bank server error (5xx), a 429 or a timeout, retry after a short wait; any other error status, and a rejected or unreadable answer, will not change on retry." },
+  { capabilitySlug: "country-trade-data", category: "coverage", severity: "info",
+    title: "Country names are read only from a short list",
+    limitationText: "The country is an ISO alpha-2 code, a name or alias on a short list (such as Sweden, UK or USA), or the start of one of those names when it is at least four letters long and fits only one country. Any other name, including one that contains a listed name (North Korea, or Hong Kong, China), is refused and not billed.",
+    workaround: "Send 'country_code' as an ISO alpha-2 code, such as 'SE', 'US' or 'CN'." },
 
   // ── crypto-price ──
   { capabilitySlug: "crypto-price", category: "freshness", severity: "info",

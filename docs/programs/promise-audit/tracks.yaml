@@ -36,9 +36,58 @@ tracks:
       Deferred from that review: github-repo-analyze's deterministic 403
       (Repository access blocked) still counts toward the breaker as
       retryable; safe-fetch's ssrf-too-many-redirects warning logs the start
-      URL with its query string (older than PR 1017). Next: wave 2c, rows 5, 6, 20, 26, 28 and
-      29; then wave 2d, rows 30, 31, 32, 33 and 35; each reconciled first
-      against later repairs such as customs PR999. Then wave 3; the Nager.Date
+      URL with its query string (older than PR 1017). Wave 2c (rows 5
+      pricing-page-extract, 20 company-fundamentals, 26 country-trade-data, 28
+      whois-lookup, 29 page-exists), branch fix/swallowed-failures-wave2c, is
+      done once its PR merges. Row 6 gdpr-fine-lookup moved out of wave 2c to
+      the separate PR that withholds the capability (Petter's decision: the
+      enforcementtracker.com data is CC BY-NC-SA 4.0 with a TDM reservation,
+      and its substring match billed other companies' fines), and closes with
+      that PR. Wave 2c's receipts are in evidence, one set per coordinator
+      round: the build (no suffix), then r2, r3, r4 and r5 for the fixes made in
+      coordinator rounds 2 to 5 (a commit message names the review it
+      answers, so r3's commit 332cbd8a says \"review round 2\"). Round 3 billed
+      page-exists dns_nxdomain only for the requested host, counted pricing's
+      model-judged page_error against the capability, stopped
+      country-trade-data mixing live and embedded totals, and narrowed the
+      Domain Trust Check copy. Round 4 filed cookie-scan's robots.txt
+      pre-check failures as the target's (a dead host no longer counts or
+      retries), counted an empty pricing render against the capability (the
+      earlier Browserless blind spot), made the SEC 403 not retryable, added
+      country-trade-data totals_year and stopped two-letter codes matching
+      country names (KE read as Turkey), took the whois registrar from the
+      Registrar line, and narrowed the copy of country-trade-data, whois-lookup,
+      page-exists and five WHOIS solutions. Round 5 made country-trade-data
+      refuse, unbilled, any name it cannot read with certainty (it had billed
+      Ukraine and ITA as GB, North Korea as KR and Hong Kong, China as CN),
+      named its data_source per call, marked its totals and whois-lookup's
+      parsed fields common rather than guaranteed, and stopped a registrar
+      date line being read as the registrar. Startup block 0154 (ledger M097;
+      0153 and M096 are PR 1019's) delivers the solution copy to the live
+      rows; after deploy, the read-only query in PR 1018's body must show
+      each of the five slugs narrowed (each guard is the repository text,
+      unchanged since March or April 2026; production was not queried, so a
+      row edited by hand stays as it is). Found in wave 2c, not fixed there:
+      (1) the crypto and web3 solutions token-project-dd (both entries),
+      defi-risk-check, crypto-counterparty-kyb, web3-counterparty-kyb and
+      web3-dapp-trust still say \"looks up WHOIS records\" without the
+      common-TLD caveat, and need the same guarded copy block as 0154;
+      (2) token-project-dd is defined twice in db/solution-catalogue.ts;
+      (3) web-provider fetchPage (capabilities/lib/web-provider.ts, the
+      robots.txt pre-check in fetchPageOnce) rethrows a bare ENOTFOUND for
+      pricing-page-extract and every other render caller, so a dead host
+      still counts against those capabilities; (4) EAI_AGAIN, a failure of
+      Strale's own resolver, is filed as the target's fault in cookie-scan
+      and page-exists, so a platform DNS outage never reaches the quality
+      floor; (5) page-exists bills dns_nxdomain on the resolver's ENOTFOUND
+      without a second resolver confirming it; (6) whois-lookup no longer
+      covers TLDs outside its registry map (following IANA refer: would
+      restore them; until then the WHOIS step of those solutions refuses .xyz
+      and .top); (7) optional: domain-trust's short description \"is this
+      domain trustworthy?\" overstates what a WHOIS, SSL and header check
+      shows.
+      Next: wave 2d, rows 30, 31, 32, 33 and 35,
+      reconciled first against later repairs such as customs PR999. Then wave 3; the Nager.Date
       no-calendar path (a weekends-only answer for countries such as TH, still
       billed) as a follow-up candidate; the perturbation replays (http_503,
       http_429, network_error, blocked_200, DNS ETIMEOUT) for every network
@@ -92,6 +141,23 @@ tracks:
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-tail-round2-after.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-tail-round3-fail-before.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2b-tail-round3-after.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-fail-before.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-after.json
+      - archive/receipts/2026-11-11-check-upstream-catch-guard-wave2c.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-full-api-suite.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r2-fail-before.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r2-after.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r2-full-api-suite.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r3-fail-before.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r3-after.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r3-full-api-suite.json
+      - archive/receipts/2026-11-12-test-run-swallowed-failures-wave2c-r4-fail-before.json
+      - archive/receipts/2026-11-12-test-run-swallowed-failures-wave2c-r4-after.json
+      - archive/receipts/2026-11-12-test-run-swallowed-failures-wave2c-r4-full-api-suite.json
+      - archive/receipts/2026-11-12-test-run-swallowed-failures-wave2c-r5-fail-before.json
+      - archive/receipts/2026-11-12-test-run-swallowed-failures-wave2c-r5-after.json
+      - archive/receipts/2026-11-12-test-run-swallowed-failures-wave2c-r5-full-api-suite.json
+
   - id: T2
     title: "T2: Compliance-answer correctness (reference answers)"
     status: queued

@@ -258,7 +258,7 @@ describe("unbounded readers only ever go down (resource-limits.ts is the body re
       "Read it with readJsonWithLimit / readTextWithLimit / readBodyWithLimit / readJsonPickWithLimit from lib/resource-limits.ts.",
       "raw_response_reads",
     );
-    expect(Object.values(inv.raw).reduce((a, b) => a + b, 0)).toBe(218);
+    expect(Object.values(inv.raw).reduce((a, b) => a + b, 0)).toBe(217);
   });
 
   it("no production file imports from test-helpers/ or test-support/ (those directories are not scanned)", () => {

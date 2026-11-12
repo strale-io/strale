@@ -143,7 +143,10 @@ const DELISTED_AFTER_0124 = new Set(["price-compare", "eu-trademark-search", "gd
 const NARROWED_AFTER_0124 = new Map([
   // PR #1017: backlink-check dropped its Common Crawl leg; "web archives" went with it.
   ["backlink-check", "Find possible backlinks to a domain from Google search results. Returns linking pages and available link details."],
+  // PR #1018: country-trade-data's totals fall back to embedded 2023 estimates, and its product and partner breakdown is always those estimates (review round 4, T2).
+  ["country-trade-data", "Get a country's trade figures: World Bank totals where available, else 2023 estimates, plus 2023 product and partner estimates."],
 ]);
+
 const pinnedManifestDescription = (slug: string, description: string) =>
   NARROWED_AFTER_0124.get(slug) ??
   (DELISTED_AFTER_0124.has(slug) ? `Currently unavailable. ${description}` : description);
@@ -1537,6 +1540,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0151_correctSanctionsLimitations",
       "runMigration0152_businessSummaryDeliveries",
       "runMigration0153_withholdGdprFineLookup",
+      "runMigration0154_narrowWhoisSolutionCopy",
     ]);
   });
 });
@@ -2476,7 +2480,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(153);
+    expect(Math.max(...numbers)).toBe(154);
   });
 });
 

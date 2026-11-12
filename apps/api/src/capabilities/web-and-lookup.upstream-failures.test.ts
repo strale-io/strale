@@ -651,7 +651,24 @@ describe("review fix: cookie-scan failures of the caller's own site do not open 
   );
 });
 
+describe("PR #1018 review S1: cookie-scan failures of the caller's own site do not count against the quality floor", () => {
+  it.each(transient.filter(([label]) => label !== "HTTP 429"))(
+    "the site's %s is filed with fault target and counts_against_capability false",
+    async (_label, answer) => {
+      site(answer);
+      const err = await expectUnbilledUpstreamFailure(exec("cookie-scan")({ url: "https://shop.test" }));
+      expect(outcomeFromError(err)).toMatchObject({
+        billable: false,
+        failure_class: "provider_unavailable",
+        fault: "target",
+        counts_against_capability: false,
+      });
+    },
+  );
+});
+
 describe("review fix: startup-domain-check keeps the report when one extension's DNS fails", () => {
+
   const failOnly = (failing: string, code: string) =>
     (async (name: string) => {
       throw dnsError(name === failing ? code : "ENOTFOUND");
@@ -772,6 +789,20 @@ describe("tail: cookie-scan reads a redirect loop on the caller's site as the ta
     const err = await expectUnbilledUpstreamFailure(exec("cookie-scan")({ url: "https://shop.test" }));
     expect(err.message).toContain("URL did not answer");
     expect(isUserInputError(err.message)).toBe(true);
+  });
+});
+
+describe("PR #1018 review round 2 nit: cookie-scan does not call an unresolvable host retryable", () => {
+  it("the site's ENOTFOUND stays unbilled, the target's fault, and not retryable", async () => {
+    const cause = Object.assign(new Error("getaddrinfo ENOTFOUND shop.test"), { code: "ENOTFOUND", hostname: "shop.test" });
+    site(async () => {
+      throw Object.assign(new TypeError("fetch failed"), { cause });
+    });
+    const err = await expectUnbilledUpstreamFailure(exec("cookie-scan")({ url: "https://shop.test" }));
+    expect(err.message).toContain("URL did not answer (ENOTFOUND)");
+    expect(err.retryable).toBe(false);
+    expect(isUserInputError(err.message)).toBe(true);
+    expect(outcomeFromError(err)).toMatchObject({ fault: "target", counts_against_capability: false });
   });
 });
 

@@ -1261,6 +1261,19 @@
         "solutions.x402_enabled"
       ],
       "sha256": "d95d8fbb6e9073069b6df1743e83eb9b0dd2ddee9189e98a5c201b9ce8e8be59"
+    },
+    {
+      "id": "M097",
+      "function": "runMigration0154_narrowWhoisSolutionCopy",
+      "title": "Narrow Whois Solution Copy",
+      "added": "2026-11-11",
+      "columns_written": [
+        "solutions.agent_description",
+        "solutions.example_output",
+        "solutions.long_description",
+        "solutions.target_audience"
+      ],
+      "sha256": "5330b5ac1dde8b5fc042e67e3ff1970d58127098015170381478e155a4242745"
     }
   ],
   "known_overlaps": [
@@ -1736,9 +1749,10 @@
       "blocks": [
         "M064",
         "M066",
-        "M086"
+        "M086",
+        "M097"
       ],
-      "note": "M064 (0121, 2026-10-23) rewrote kyb-complete-se's long_description once (ledgered), guarded on the exact pre-repair text. M066 (0123, 2026-10-26, catalogue copy) rewrites the long_description of web-extract-clean and the kyb-essentials/kyb-complete/invoice-verify families once (ledgered), each row guarded on its exact 2026-10-26 production value; for kyb-complete-se that guard is M064's own target, so on a fresh database they apply in order (M064, then M066). They cannot fight: M064 never fires again, and M066's new text is not M064's old text (startup-migrations.test.ts asserts the chain). M086 (0143, 2026-11-06) rewrites the long_description of the single solution 'domain-trust' once (run policy once), guarded on the exact 2026-11-06 production text; neither M064 (kyb-complete-se) nor M066 (web-extract-clean and the kyb-essentials/kyb-complete/invoice-verify families) touches that slug, so it cannot fight them."
+      "note": "M064 (0121, 2026-10-23) rewrote kyb-complete-se's long_description once (ledgered), guarded on the exact pre-repair text. M066 (0123, 2026-10-26, catalogue copy) rewrites the long_description of web-extract-clean and the kyb-essentials/kyb-complete/invoice-verify families once (ledgered), each row guarded on its exact 2026-10-26 production value; for kyb-complete-se that guard is M064's own target, so on a fresh database they apply in order (M064, then M066). They cannot fight: M064 never fires again, and M066's new text is not M064's old text (startup-migrations.test.ts asserts the chain). M086 (0143, 2026-11-06) rewrites the long_description of the single solution 'domain-trust' once (run policy once), guarded on the exact 2026-11-06 production text; neither M064 (kyb-complete-se) nor M066 (web-extract-clean and the kyb-essentials/kyb-complete/invoice-verify families) touches that slug, so it cannot fight them. M097 (0154, 2026-11-11, PR #1018) rewrites the long_description of domain-trust, domain-intel, vendor-risk-assess, lead-enrich and company-intelligence-sdr once (run policy once), each guarded on its exact current text; none of those slugs is written by M064 (kyb-complete-se) or M066 (web-extract-clean and the kyb-essentials/kyb-complete/invoice-verify families). For domain-trust its guard is M086's own target text, so on a fresh database they apply in order (M086, then M097); M086 never fires again and M097's new text is not M086's old text (startup-migration-0154.test.ts asserts the chain), so they cannot fight."
     },
     {
       "column": "transactions.integrity_hash",
@@ -1922,6 +1936,14 @@
         "M093"
       ],
       "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M093 (block 0150, DQ-47) inserts only pep-check rows, once, where their text is missing. Neither can write the other's rows."
+    },
+    {
+      "column": "solutions.agent_description",
+      "blocks": [
+        "M066",
+        "M097"
+      ],
+      "note": "M066 (0123, 2026-10-26, catalogue copy) rewrites the agent_description of web-extract-clean and the kyb-essentials/kyb-complete/invoice-verify families once (ledgered), each row guarded on its exact 2026-10-26 production value. M097 (0154, 2026-11-11, PR #1018) rewrites only domain-trust's agent_description once (run policy once), guarded on its exact current text. The slugs are disjoint, so they cannot fight."
     }
   ]
 }

@@ -4,6 +4,39 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
+import { UpstreamUnavailableError } from "../lib/upstream-result.js";
+
+/**
+ * Below this much visible text the render is a shell, not a pricing page.
+ * Same floor as gdpr-fine-lookup and container-track.
+ */
+const MIN_PAGE_TEXT = 200;
+
+/**
+ * The caller's page rendered, but not as a page that can answer: an empty
+ * app shell, or (as the model reports it) a cookie, consent or login wall,
+ * an error or maintenance page (2026-11-06 swallowed-failures audit, row 5).
+ * Before, each came back as a billed `plans: []`, which reads as "this
+ * product publishes no prices". Now the call throws, unbilled. The page is
+ * the caller's target, not a source Strale depends on, so the wording ("URL
+ * did not answer") is one the breaker's USER_INPUT_ERROR_PATTERNS recognise:
+ * one caller's walled site must not suspend the capability for everyone.
+ * Not retryable: the same URL serves the same wall.
+ *
+ * Neither throw is marked `targetFault`, so both count against this
+ * capability's quality floor. The model's `page_error` is a judgement: a
+ * prompt or model regression would show up only as more of them (PR #1018
+ * review round 2, S-b). An empty render is also exactly what a degraded
+ * renderer produces, so filing it as the target's fault would hide a
+ * Browserless regression from the floor (review round 4, B2).
+ */
+function unreadablePage(fullUrl: string, what: string, code: string): UpstreamUnavailableError {
+  return new UpstreamUnavailableError(
+    `website ${new URL(fullUrl).hostname}`,
+    `URL did not answer with a readable pricing page: ${what}.`,
+    { code, retryable: false },
+  );
+}
 
 registerCapability("pricing-page-extract", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.task as string) ?? "").trim();
@@ -12,6 +45,9 @@ registerCapability("pricing-page-extract", async (input: CapabilityInput) => {
   const fullUrl = url.startsWith("http") ? url : `https://${url}`;
   const html = await fetchRenderedHtml(fullUrl);
   const pageText = htmlToText(html).slice(0, 10000);
+  if (pageText.trim().length < MIN_PAGE_TEXT) {
+    throw unreadablePage(fullUrl, "it rendered almost no text (an empty app shell or a blank page)", "empty");
+  }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
@@ -30,6 +66,7 @@ ${pageText}
 
 Return JSON:
 {
+  "page_status": "pricing" if the page shows prices or plans, even behind a cookie banner, consent overlay or popup (visible prices always mean "pricing"), "no_pricing" if it is a real page for the product that publishes no prices (for example only "Contact sales"), or "page_error" if it is a cookie or consent wall, a login wall, an error or maintenance page, or an app shell with no product content at all,
   "plans": [
     {
       "name": "plan name",
@@ -47,10 +84,29 @@ Return JSON:
   "money_back_guarantee": <true/false>,
   "annual_discount": "string or null (e.g. 'Save 20%')",
   "pricing_model": "per-seat/flat-rate/usage-based/tiered/freemium"
-}`,
+}
+
+If page_status is "page_error", return "plans": [] and false for every boolean.`,
     truncationGuidance: "This pricing page produced more plans than fit in one call.",
     parseFailureError: () => new Error("Failed to extract pricing data."),
   });
+  // The model's page_error is honoured only when it found no plan: a page
+  // that shows prices under a cookie banner is a pricing page, and dropping
+  // the plans it read would fail a call that has an answer (PR #1018 review, S4).
+  // It is then billed as "pricing", the manifest's enum being [pricing, no_pricing].
+  const hasPlans = Array.isArray(output.plans) && output.plans.length > 0;
+  if (output.page_status === "page_error" && !hasPlans) {
+    throw unreadablePage(
+      fullUrl,
+      "it showed a cookie, consent or login wall, an error page or an empty app shell instead of the product's pricing",
+      "page_error",
+    );
+  }
+  // Any value outside the manifest's enum (page_error with plans, a missing
+  // or invented status) is billed as what the plans show (review round 4, T8).
+  if (output.page_status !== "pricing" && output.page_status !== "no_pricing") {
+    output.page_status = hasPlans ? "pricing" : "no_pricing";
+  }
   output.url = fullUrl;
 
   return {

@@ -4,6 +4,7 @@ import { createConnection } from "node:net";
 import { MAX_WHOIS_RESPONSE_BYTES, ResourceLimitError, createCappedTextSink } from "../lib/resource-limits.js";
 import { getRdapBase, lookupRdapDomain, type RdapDomainResult } from "../lib/rdap/domain.js";
 import { UpstreamUnavailableError } from "../lib/upstream-result.js";
+import { WHOIS_NOT_REGISTERED, WHOIS_RATE_LIMITED } from "./lib/whois-replies.js";
 
 // F-0-006 Bucket D: opens a WHOIS TCP connection to a HARDCODED server
 // below (TLD_SERVERS map). The user domain is the query payload only.
@@ -113,8 +114,6 @@ const REGISTRIES = "domain registration registries";
  *     RDAP record carries no registration event and that has no WHOIS server.
  *     Nothing more can be asked, so it is a refusal, not a billed "unknown".
  */
-const WHOIS_NOT_REGISTERED =
-  /\bno match\b|\bnot found\b|no data found|no entries found|nothing found|no object found|\bstatus:\s*(free|available)\b|\bis (free|available for registration)\b|domain not registered|we do not have an entry in our database matching your query/i;
 
 /**
  * WHOIS servers whose replies never carry a creation date for a registered
@@ -134,7 +133,6 @@ function noCreationDateRefusal(registry: string) {
     "Send 'domain' under a TLD whose registry publishes creation dates, such as example.com or example.se; for this domain, ask its registrar for the registration date.",
   );
 }
-const WHOIS_RATE_LIMITED = /limit (exceeded|reached)|exceeded .*limit|rate.?limit|too many (queries|requests)|try again later|quota/i;
 
 function registriesUnavailable(detail: string, options: { code?: string; retryable?: boolean } = {}): UpstreamUnavailableError {
   return new UpstreamUnavailableError(REGISTRIES, detail, options);

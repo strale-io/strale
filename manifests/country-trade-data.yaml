@@ -3,7 +3,7 @@
 
 slug: country-trade-data
 name: "Country Trade Data"
-description: "Get a country's top exports and imports, trade balance and main trading partners, from the World Bank."
+description: "Get a country's trade figures: World Bank totals where available, else 2023 estimates, plus 2023 product and partner estimates."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -22,7 +22,8 @@ output_schema:
   type: object
   example:
     note: Product breakdown and partner data are estimates based on 2023 published trade statistics.
-    year: 2025
+    year: 2023
+    totals_year: 2023
     data_source: embedded-trade-data
     top_exports:
       - product: Refined petroleum
@@ -83,12 +84,14 @@ output_schema:
     top_imports:
       type: array
     total_exports_usd:
-      type: number
+      type: ["number", "null"]
     total_imports_usd:
-      type: number
+      type: ["number", "null"]
     trade_balance_usd:
+      type: ["number", "null"]
+    totals_year:
       type: number
-data_source: Static database (bilateral trade statistics, updated annually)
+data_source: World Bank API totals; embedded 2023 estimates (not updated) for products, partners and fallback totals
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
@@ -116,27 +119,34 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: array
-      - field: total_exports_usd
+      - field: totals_year
         operator: not_null
         reliability: guaranteed
-      - field: total_exports_usd
+      - field: totals_year
         operator: type
         reliability: guaranteed
         value: number
       - field: total_exports_usd
+        operator: not_null
+        reliability: common
+      - field: total_exports_usd
+        operator: type
+        reliability: common
+        value: number
+      - field: total_exports_usd
         operator: gt
-        reliability: guaranteed
+        reliability: common
         value: -1
       - field: total_imports_usd
         operator: not_null
-        reliability: guaranteed
+        reliability: common
       - field: total_imports_usd
         operator: type
-        reliability: guaranteed
+        reliability: common
         value: number
       - field: total_imports_usd
         operator: gt
-        reliability: guaranteed
+        reliability: common
         value: -1
   health_check_input:
     year: 2025
@@ -144,15 +154,45 @@ test_fixtures:
 output_field_reliability:
   top_exports: guaranteed
   top_imports: guaranteed
-  total_exports_usd: guaranteed
-  total_imports_usd: guaranteed
-  trade_balance_usd: guaranteed
+  total_exports_usd: common
+  total_imports_usd: common
+  trade_balance_usd: common
+  totals_year: guaranteed
 limitations:
-  - title: Trade figures can lag by 6–12 months
-    text: Trade statistics based on AI knowledge — most recent data may lag 6-12 months behind actual trade flows
+  - title: Embedded figures are 2023 estimates, not updated
+    text: >-
+      The product and partner breakdown, and the totals whenever the World Bank does not supply
+      them, come from an embedded table of 2023 estimates that is not updated. When the totals
+      come from that table, totals_year is 2023 whatever year was requested.
     category: freshness
     severity: info
-    workaround: Cross-reference with UN Comtrade or national customs statistics for the most current trade figures
+    workaround: >-
+      Read totals_year before comparing years, and cross-reference UN Comtrade or national customs
+      statistics for current product and partner figures.
+  - title: World Bank outages fail without a charge
+    text: >-
+      Totals come from the World Bank for the requested year when it has both exports and imports.
+      When it has neither, the embedded 2023 estimates answer for both totals and data_source is
+      embedded-trade-data. When it has only one, the embedded estimates answer for both where the
+      country has an entry; for a country without one, the World Bank's single figure is returned
+      beside a null. The two sources are never mixed, and totals_year names the year the totals
+      are for; data_source is World Bank API when the country has no embedded entry. When the World
+      Bank does not answer (an error status, a timeout, an unreadable response or a rejected
+      request), the call fails with an error and is not billed.
+    category: availability
+    severity: info
+    workaround: >-
+      After a World Bank server error (5xx), a 429 or a timeout, retry after a short wait; any other
+      error status, and a rejected or unreadable answer, will not change on retry.
+  - title: Country names are read only from a short list
+    text: >-
+      The country is an ISO alpha-2 code, a name or alias on a short list (such as Sweden, UK or
+      USA), or the start of one of those names when it is at least four letters long and fits only
+      one country. Any other name, including one that contains a listed name (North Korea, or Hong
+      Kong, China), is refused and not billed.
+    category: coverage
+    severity: info
+    workaround: Send 'country_code' as an ISO alpha-2 code, such as 'SE', 'US' or 'CN'.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

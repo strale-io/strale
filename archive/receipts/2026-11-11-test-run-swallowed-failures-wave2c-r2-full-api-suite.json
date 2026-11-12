@@ -1,0 +1,30 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "f3518754d6034ed54f75b67c1fb3e6fc81cae3ad"
+  },
+  "at": "2026-11-11T23:09:57.216Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/r2/full-summary.json"
+  },
+  "summary": {
+    "ok": true,
+    "expected": "pass",
+    "total": 10954,
+    "passed": 10495,
+    "failed": 0,
+    "skipped": 459,
+    "code_at": "f3518754"
+  },
+  "topic": "swallowed-failures-wave2c-r2-full-api-suite",
+  "raw": {
+    "success": true,
+    "numTotalTests": 10954,
+    "numPassedTests": 10495,
+    "numFailedTests": 0,
+    "numPendingTests": 459,
+    "numTotalTestSuites": 1960,
+    "files": 535
+  }
+}

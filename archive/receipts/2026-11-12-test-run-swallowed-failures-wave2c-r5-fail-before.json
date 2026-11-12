@@ -1,0 +1,43 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "df5abdee0df1ef6d7a6dc938eba0068f311ae513"
+  },
+  "at": "2026-11-12T00:22:50.323Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/r5/fail-before-summary.json"
+  },
+  "summary": {
+    "tests_total": 105,
+    "tests_passed": 96,
+    "tests_failed": 9,
+    "source_commit": "10f87b51",
+    "tests_commit": "df5abdee"
+  },
+  "topic": "swallowed-failures-wave2c-r5-fail-before",
+  "raw": {
+    "summary": {
+      "phase": "fail-before",
+      "source_commit": "10f87b51",
+      "files": 1,
+      "tests_total": 105,
+      "tests_passed": 96,
+      "tests_failed": 9,
+      "tests_skipped": 0,
+      "suites_failed": 5,
+      "review_tests_failed": 8
+    },
+    "failed_tests": [
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: negative: country-trade-data keeps the World Bank's answers returns the World Bank's one figure beside a null when nothing is embedded for the country",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: country-trade-data does not read a two-letter code as part of a country name (review round 4, T3) names World Bank API alone as the source when nothing is embedded for the country (review round 5)",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: country-trade-data refuses a country it cannot name with certainty (review round 5) refuses Ukraine, unbilled, without asking the World Bank",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: country-trade-data refuses a country it cannot name with certainty (review round 5) refuses ITA, unbilled, without asking the World Bank",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: country-trade-data refuses a country it cannot name with certainty (review round 5) refuses North Korea, unbilled, without asking the World Bank",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: country-trade-data refuses a country it cannot name with certainty (review round 5) refuses Hong Kong, China, unbilled, without asking the World Bank",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: country-trade-data refuses a country it cannot name with certainty (review round 5) refuses the start of a name that more than one country shares",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: country-trade-data refuses a country it cannot name with certainty (review round 5) refuses the start of a name shorter than four letters",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: whois-lookup reads the registrar from the Registrar line (review round 4, T4) leaves the registrar unset when only registrar date lines mention it (review round 5)"
+    ]
+  }
+}

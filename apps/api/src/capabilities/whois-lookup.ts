@@ -1,13 +1,27 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { createConnection } from "node:net";
 import { MAX_WHOIS_RESPONSE_BYTES, createCappedTextSink } from "../lib/resource-limits.js";
+import { inputRefusal } from "../lib/capability-refusal.js";
+import { UpstreamUnavailableError } from "../lib/upstream-result.js";
+import { WHOIS_NOT_REGISTERED, WHOIS_RATE_LIMITED, WHOIS_REFUSED } from "./lib/whois-replies.js";
 
 // F-0-006 Bucket D: opens a WHOIS TCP connection to a HARDCODED server
 // (TLD map elsewhere in the file). The user domain is the query payload
 // only; the TCP target is never user-controlled.
 
-// IANA root WHOIS server — redirects to the correct TLD server
-const IANA_WHOIS = "whois.iana.org";
+// Upstream failures (2026-11-06 swallowed-failures audit, row 28). A WHOIS
+// reply is billed only when it is the registry's answer about the domain:
+//   - The TLD's registry server is asked and nothing else. There used to be
+//     a fallback to whois.iana.org, for a failed registry server and for any
+//     TLD missing below, but IANA answers about the TLD, not the domain, so
+//     its record (the TLD's own creation date, say) was billed as the
+//     domain's. A registry server that fails now throws, unbilled, and a TLD
+//     with no registry server here is a refusal (a coverage limit).
+//   - A reply with no field this parser reads that is a rate-limit or
+//     refusal notice is no answer and throws, unbilled. A "not registered"
+//     reply is the real negative and is returned as before. Any other reply
+//     with no parsed field is still returned, raw, because some registries
+//     (JPRS for .jp, say) answer in a format this parser does not split.
 
 const TLD_SERVERS: Record<string, string> = {
   com: "whois.verisign-grs.com",
@@ -50,27 +64,36 @@ const TLD_SERVERS: Record<string, string> = {
   biz: "whois.biz",
 };
 
+/** Keys (lower-cased) whose value is the registrar's name itself. */
+const REGISTRAR_NAME_KEYS = new Set(["registrar", "sponsoring registrar", "registrar name"]);
+
+/**
+ * Keys that mention the registrar but hold one of its details: its WHOIS
+ * server, URL, IANA id, abuse contact, or a date such as "Registrar
+ * Registration Expiration Date" (review round 5). Never the registrar's name.
+ */
+const REGISTRAR_DETAIL_KEY = /whois|server|url|abuse|iana|\bid\b|phone|email|contact|date|expir|creat|updat/;
+
 registerCapability("whois-lookup", async (input: CapabilityInput) => {
   const domain = ((input.domain as string) ?? (input.task as string) ?? "").trim().toLowerCase();
   if (!domain) {
     throw new Error("'domain' is required. Provide a domain name (e.g. example.com).");
   }
 
-  const cleaned = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/^www\./, "");
+  // A fully qualified name's trailing dot ("example.com.") would leave an
+  // empty TLD, so it is stripped with the scheme, path and www.
+  const cleaned = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/^www\./, "").replace(/\.$/, "");
   const tld = cleaned.split(".").pop() ?? "";
-  const server = TLD_SERVERS[tld] ?? IANA_WHOIS;
-
-  let rawText: string;
-  try {
-    rawText = await queryWhois(server, cleaned);
-  } catch (err) {
-    // If the TLD-specific server fails, fall back to IANA root
-    if (server !== IANA_WHOIS) {
-      rawText = await queryWhois(IANA_WHOIS, cleaned);
-    } else {
-      throw err;
-    }
+  const server = TLD_SERVERS[tld];
+  if (!server) {
+    throw inputRefusal(
+      `'domain' must be under a TLD Strale has a WHOIS registry server for; .${tld} is not one of them, so this domain cannot be looked up.`,
+      "domain",
+      "Send 'domain' under a TLD with a known registry server, such as .com, .net, .org, .io, .se, .de, .uk or .eu.",
+    );
   }
+
+  const rawText = await queryWhois(server, cleaned);
 
   // Parse common WHOIS fields
   const output: Record<string, unknown> = {
@@ -78,6 +101,12 @@ registerCapability("whois-lookup", async (input: CapabilityInput) => {
     raw_whois: rawText.slice(0, 3000),
   };
 
+  // The registrar is the value of the "Registrar" line itself. A .com or
+  // .net record lists "Registrar WHOIS Server" first, and taking the first
+  // key that merely contains "registrar" billed the registrar's WHOIS host
+  // name as the registrar (PR #1018 review round 4, T4). A key naming the
+  // registrar outright wins over any looser match, wherever it appears.
+  let registrarNamed = false;
   const lines = rawText.split("\n");
   for (const line of lines) {
     const [key, ...valueParts] = line.split(":");
@@ -86,7 +115,10 @@ registerCapability("whois-lookup", async (input: CapabilityInput) => {
     const v = valueParts.join(":").trim();
     if (!v) continue;
 
-    if (k.includes("registrar") && !k.includes("url") && !k.includes("abuse") && !output.registrar) {
+    if (REGISTRAR_NAME_KEYS.has(k)) {
+      if (!registrarNamed) output.registrar = v;
+      registrarNamed = true;
+    } else if (k.includes("registrar") && !REGISTRAR_DETAIL_KEY.test(k) && !output.registrar) {
       output.registrar = v;
     } else if ((k.includes("creation") || k.includes("created") || k === "registered") && !output.created) {
       output.created = v;
@@ -113,17 +145,39 @@ registerCapability("whois-lookup", async (input: CapabilityInput) => {
     if (regMatch) output.registrar = regMatch[1].trim();
   }
 
+  // Nothing parsed beyond the domain and the raw text, and the reply is not
+  // the "not registered" negative: a rate-limit or refusal notice is the
+  // registry declining to answer, not an answer.
+  const parsedAny = Object.keys(output).some((k) => k !== "domain" && k !== "raw_whois");
+  if (!parsedAny && !WHOIS_NOT_REGISTERED.test(rawText)) {
+    if (WHOIS_RATE_LIMITED.test(rawText)) {
+      throw new UpstreamUnavailableError(registry(server), "the registry is rate-limiting queries; retry shortly.", {
+        code: "rate_limited",
+      });
+    }
+    if (WHOIS_REFUSED.test(rawText)) {
+      throw new UpstreamUnavailableError(registry(server), "the registry refused the query.", {
+        code: "refused",
+        retryable: false,
+      });
+    }
+  }
+
   return {
     output,
     provenance: { source: `whois (${server})`, fetched_at: new Date().toISOString() },
   };
 });
 
+function registry(server: string): string {
+  return `WHOIS registry ${server}`;
+}
+
 function queryWhois(server: string, domain: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       socket.destroy();
-      reject(new Error(`WHOIS query to ${server} timed out.`));
+      reject(new UpstreamUnavailableError(registry(server), "timeout; retry shortly.", { code: "timeout" }));
     }, 10000);
 
     const socket = createConnection(43, server, () => {
@@ -145,14 +199,20 @@ function queryWhois(server: string, domain: string): Promise<string> {
       clearTimeout(timeout);
       const data = sink.value();
       if (!data.trim()) {
-        reject(new Error(`Empty WHOIS response from ${server} for ${domain}.`));
+        reject(new UpstreamUnavailableError(registry(server), "empty reply; retry shortly.", { code: "empty" }));
       } else {
         resolve(data);
       }
     });
-    socket.on("error", (err) => {
+    socket.on("error", (err: NodeJS.ErrnoException) => {
       clearTimeout(timeout);
-      reject(new Error(`WHOIS query failed: ${err.message}`));
+      const code = typeof err.code === "string" ? err.code : null;
+      reject(
+        new UpstreamUnavailableError(registry(server), `network error${code ? ` (${code})` : ""}; retry shortly.`, {
+          code,
+          cause: err,
+        }),
+      );
     });
   });
 }

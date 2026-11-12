@@ -88,8 +88,13 @@ export type FailureClass =
    */
   | "unattributed";
 
-/** Who is answerable. Drives the breaker and the quality floor, not billing. */
-export type Fault = "provider" | "strale" | "caller";
+/**
+ * Who is answerable. Drives the breaker and the quality floor, not billing.
+ * "target" is the site at a URL the caller chose (cookie-scan, page-exists,
+ * pricing-page-extract): neither a source Strale depends on nor the caller's
+ * malformed input, so it never counts against the capability.
+ */
+export type Fault = "provider" | "strale" | "caller" | "target";
 
 /**
  * What we can say about the value an executor handed back.
@@ -336,6 +341,22 @@ export function outcomeFromError(error: unknown): ExecutionOutcome {
   // taxonomy would file it `upstream` (or `timeout`) and the transient test
   // below would miss resolver codes such as ESERVFAIL, landing it in
   // provider_rejected and suppressing the retry the executor asked for.
+  //
+  // The caller's own target site failing (`targetFault`, set by
+  // targetUnavailable) is still provider_unavailable and unbilled, but it is
+  // not this capability's fault: a caller who points cookie-scan at a dead
+  // host must not push the capability under its quality floor (PR #1018
+  // review, S1).
+  if (error instanceof UpstreamUnavailableError && error.targetFault) {
+    return {
+      ...base,
+      failure_class: "provider_unavailable",
+      billable: false,
+      retryable: error.retryable,
+      fault: "target",
+      counts_against_capability: false,
+    };
+  }
   if (error instanceof UpstreamUnavailableError) {
     return {
       ...base,

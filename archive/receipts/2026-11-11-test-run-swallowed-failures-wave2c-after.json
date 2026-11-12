@@ -1,0 +1,638 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "3857496f420b22755465ff3939451f6492584a0a"
+  },
+  "at": "2026-11-11T22:24:02.249Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/w2c-after.json"
+  },
+  "summary": {
+    "ok": true,
+    "expected": "pass",
+    "total": 48,
+    "passed": 48,
+    "failed": 0,
+    "files": "apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts",
+    "executors_at": "3857496f",
+    "tests_at": "3857496f"
+  },
+  "topic": "swallowed-failures-wave2c-after",
+  "raw": {
+    "numTotalTestSuites": 15,
+    "numPassedTestSuites": 15,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 48,
+    "numPassedTests": 48,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794435488117,
+    "success": true,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "failure: pricing-page-extract does not bill a page that is not a pricing page"
+            ],
+            "fullName": "failure: pricing-page-extract does not bill a page that is not a pricing page throws when the model reports a cookie or login wall (page_error)",
+            "status": "passed",
+            "title": "throws when the model reports a cookie or login wall (page_error)",
+            "duration": 4.01176200000009,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: pricing-page-extract does not bill a page that is not a pricing page"
+            ],
+            "fullName": "failure: pricing-page-extract does not bill a page that is not a pricing page throws on an empty app shell without asking the model",
+            "status": "passed",
+            "title": "throws on an empty app shell without asking the model",
+            "duration": 1.1374869999999646,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: pricing-page-extract bills a real page"
+            ],
+            "fullName": "negative: pricing-page-extract bills a real page bills a real product page that publishes no prices",
+            "status": "passed",
+            "title": "bills a real product page that publishes no prices",
+            "duration": 2.0538720000000694,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: pricing-page-extract bills a real page"
+            ],
+            "fullName": "negative: pricing-page-extract bills a real page bills extracted plans",
+            "status": "passed",
+            "title": "bills extracted plans",
+            "duration": 1.3234820000000127,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "passthrough: pricing-page-extract keeps the fetch layer's own errors"
+            ],
+            "fullName": "passthrough: pricing-page-extract keeps the fetch layer's own errors rethrows a fetch error unchanged",
+            "status": "passed",
+            "title": "rethrows a fetch error unchanged",
+            "duration": 0.7272029999999177,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: gdpr-fine-lookup does not bill a tracker page without its fine table"
+            ],
+            "fullName": "failure: gdpr-fine-lookup does not bill a tracker page without its fine table throws, counted against the source, when the model reports page_error",
+            "status": "passed",
+            "title": "throws, counted against the source, when the model reports page_error",
+            "duration": 1.4868830000000344,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: gdpr-fine-lookup does not bill a tracker page without its fine table"
+            ],
+            "fullName": "failure: gdpr-fine-lookup does not bill a tracker page without its fine table throws UpstreamUnavailableError, not a plain error, on a near-empty render",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError, not a plain error, on a near-empty render",
+            "duration": 0.4144130000000814,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: gdpr-fine-lookup bills the tracker's answers"
+            ],
+            "fullName": "negative: gdpr-fine-lookup bills the tracker's answers bills a search with no matching fine",
+            "status": "passed",
+            "title": "bills a search with no matching fine",
+            "duration": 0.7599840000000313,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: gdpr-fine-lookup bills the tracker's answers"
+            ],
+            "fullName": "negative: gdpr-fine-lookup bills the tracker's answers bills listed fines",
+            "status": "passed",
+            "title": "bills listed fines",
+            "duration": 1.2385969999999134,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported"
+            ],
+            "fullName": "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported throws when one concept request fails with HTTP 503",
+            "status": "passed",
+            "title": "throws when one concept request fails with HTTP 503",
+            "duration": 367.14582099999996,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported"
+            ],
+            "fullName": "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported throws when one concept request fails with HTTP 403",
+            "status": "passed",
+            "title": "throws when one concept request fails with HTTP 403",
+            "duration": 600.5685129999999,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported"
+            ],
+            "fullName": "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported throws when one concept request fails with a network error",
+            "status": "passed",
+            "title": "throws when one concept request fails with a network error",
+            "duration": 604.6242689999999,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported"
+            ],
+            "fullName": "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported throws when one concept request fails with a timeout",
+            "status": "passed",
+            "title": "throws when one concept request fails with a timeout",
+            "duration": 601.8916649999996,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported"
+            ],
+            "fullName": "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported throws when one concept request fails with an unparseable body",
+            "status": "passed",
+            "title": "throws when one concept request fails with an unparseable body",
+            "duration": 602.0209449999998,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported"
+            ],
+            "fullName": "failure: company-fundamentals does not report a metric the SEC did not answer for as unreported throws an outage, not the caller-input refusal, when every concept request fails",
+            "status": "passed",
+            "title": "throws an outage, not the caller-input refusal, when every concept request fails",
+            "duration": 359.5177370000001,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: company-fundamentals keeps the SEC's real answers"
+            ],
+            "fullName": "negative: company-fundamentals keeps the SEC's real answers bills, naming the metric unreported, when the SEC has no such concept (404)",
+            "status": "passed",
+            "title": "bills, naming the metric unreported, when the SEC has no such concept (404)",
+            "duration": 1569.3532849999997,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: company-fundamentals keeps the SEC's real answers"
+            ],
+            "fullName": "negative: company-fundamentals keeps the SEC's real answers refuses the input when the registrant has no concept at all (every request 404)",
+            "status": "passed",
+            "title": "refuses the input when the registrant has no concept at all (every request 404)",
+            "duration": 1448.78917,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: country-trade-data does not answer from embedded estimates when the World Bank fails"
+            ],
+            "fullName": "failure: country-trade-data does not answer from embedded estimates when the World Bank fails throws on HTTP 503 for a country with embedded data",
+            "status": "passed",
+            "title": "throws on HTTP 503 for a country with embedded data",
+            "duration": 1.4138999999995576,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: country-trade-data does not answer from embedded estimates when the World Bank fails"
+            ],
+            "fullName": "failure: country-trade-data does not answer from embedded estimates when the World Bank fails throws on HTTP 429 for a country with embedded data",
+            "status": "passed",
+            "title": "throws on HTTP 429 for a country with embedded data",
+            "duration": 0.7930669999996098,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: country-trade-data does not answer from embedded estimates when the World Bank fails"
+            ],
+            "fullName": "failure: country-trade-data does not answer from embedded estimates when the World Bank fails throws on a network error for a country with embedded data",
+            "status": "passed",
+            "title": "throws on a network error for a country with embedded data",
+            "duration": 0.4305370000001858,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: country-trade-data does not answer from embedded estimates when the World Bank fails"
+            ],
+            "fullName": "failure: country-trade-data does not answer from embedded estimates when the World Bank fails throws on a timeout for a country with embedded data",
+            "status": "passed",
+            "title": "throws on a timeout for a country with embedded data",
+            "duration": 0.5527110000002722,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: country-trade-data does not answer from embedded estimates when the World Bank fails"
+            ],
+            "fullName": "failure: country-trade-data does not answer from embedded estimates when the World Bank fails throws on an unparseable body for a country with embedded data",
+            "status": "passed",
+            "title": "throws on an unparseable body for a country with embedded data",
+            "duration": 1.2652560000005906,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: country-trade-data does not answer from embedded estimates when the World Bank fails"
+            ],
+            "fullName": "failure: country-trade-data does not answer from embedded estimates when the World Bank fails throws when only one of the two indicators fails",
+            "status": "passed",
+            "title": "throws when only one of the two indicators fails",
+            "duration": 0.8945749999993495,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: country-trade-data does not answer from embedded estimates when the World Bank fails"
+            ],
+            "fullName": "failure: country-trade-data does not answer from embedded estimates when the World Bank fails throws an outage, not 'no trade data', for a country without embedded data",
+            "status": "passed",
+            "title": "throws an outage, not 'no trade data', for a country without embedded data",
+            "duration": 0.49278400000002875,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: country-trade-data keeps the World Bank's answers"
+            ],
+            "fullName": "negative: country-trade-data keeps the World Bank's answers bills the embedded estimates when the World Bank has no figure for the year",
+            "status": "passed",
+            "title": "bills the embedded estimates when the World Bank has no figure for the year",
+            "duration": 1.0947640000003958,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: country-trade-data keeps the World Bank's answers"
+            ],
+            "fullName": "negative: country-trade-data keeps the World Bank's answers bills live totals when the World Bank answers",
+            "status": "passed",
+            "title": "bills live totals when the World Bank answers",
+            "duration": 0.9110959999998158,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: country-trade-data keeps the World Bank's answers"
+            ],
+            "fullName": "negative: country-trade-data keeps the World Bank's answers still says there is no trade data when the World Bank rejects the code and nothing is embedded",
+            "status": "passed",
+            "title": "still says there is no trade data when the World Bank rejects the code and nothing is embedded",
+            "duration": 0.8180680000004941,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: whois-lookup bills only the registry's answer about the domain"
+            ],
+            "fullName": "failure: whois-lookup bills only the registry's answer about the domain throws when the registry server fails, instead of billing IANA's record for the TLD",
+            "status": "passed",
+            "title": "throws when the registry server fails, instead of billing IANA's record for the TLD",
+            "duration": 4.98867699999937,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: whois-lookup bills only the registry's answer about the domain"
+            ],
+            "fullName": "failure: whois-lookup bills only the registry's answer about the domain throws on an empty reply from the registry server",
+            "status": "passed",
+            "title": "throws on an empty reply from the registry server",
+            "duration": 0.930475999999544,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: whois-lookup bills only the registry's answer about the domain"
+            ],
+            "fullName": "failure: whois-lookup bills only the registry's answer about the domain throws on a rate-limit notice",
+            "status": "passed",
+            "title": "throws on a rate-limit notice",
+            "duration": 1.3068580000008296,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: whois-lookup bills only the registry's answer about the domain"
+            ],
+            "fullName": "failure: whois-lookup bills only the registry's answer about the domain throws on a refusal notice",
+            "status": "passed",
+            "title": "throws on a refusal notice",
+            "duration": 1.1284000000005108,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: whois-lookup bills only the registry's answer about the domain"
+            ],
+            "fullName": "failure: whois-lookup bills only the registry's answer about the domain refuses a TLD with no registry server here rather than billing IANA's TLD record",
+            "status": "passed",
+            "title": "refuses a TLD with no registry server here rather than billing IANA's TLD record",
+            "duration": 0.75425499999983,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: whois-lookup keeps the registry's answers"
+            ],
+            "fullName": "negative: whois-lookup keeps the registry's answers bills a parsed record",
+            "status": "passed",
+            "title": "bills a parsed record",
+            "duration": 1.077172000000246,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: whois-lookup keeps the registry's answers"
+            ],
+            "fullName": "negative: whois-lookup keeps the registry's answers bills the not-registered negative",
+            "status": "passed",
+            "title": "bills the not-registered negative",
+            "duration": 0.968618000000788,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: whois-lookup keeps the registry's answers"
+            ],
+            "fullName": "negative: whois-lookup keeps the registry's answers bills a reply in a format the parser does not split (no rate-limit or refusal text)",
+            "status": "passed",
+            "title": "bills a reply in a format the parser does not split (no rate-limit or refusal text)",
+            "duration": 1.008734999999433,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: page-exists never bills exists:null"
+            ],
+            "fullName": "failure: page-exists never bills exists:null refuses on HTTP 401 (the site blocks Strale)",
+            "status": "passed",
+            "title": "refuses on HTTP 401 (the site blocks Strale)",
+            "duration": 1.3290209999995568,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: page-exists never bills exists:null"
+            ],
+            "fullName": "failure: page-exists never bills exists:null refuses on HTTP 403 (the site blocks Strale)",
+            "status": "passed",
+            "title": "refuses on HTTP 403 (the site blocks Strale)",
+            "duration": 0.48350399999981164,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: page-exists never bills exists:null"
+            ],
+            "fullName": "failure: page-exists never bills exists:null refuses on HTTP 429 (the site blocks Strale)",
+            "status": "passed",
+            "title": "refuses on HTTP 429 (the site blocks Strale)",
+            "duration": 0.24835000000075524,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: page-exists never bills exists:null"
+            ],
+            "fullName": "failure: page-exists never bills exists:null throws, breaker-exempt, on a 5xx from the caller's site",
+            "status": "passed",
+            "title": "throws, breaker-exempt, on a 5xx from the caller's site",
+            "duration": 0.39796000000023923,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: page-exists never bills exists:null"
+            ],
+            "fullName": "failure: page-exists never bills exists:null throws on any other 4xx, as the site's own answer about the URL",
+            "status": "passed",
+            "title": "throws on any other 4xx, as the site's own answer about the URL",
+            "duration": 2.856348000000253,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: page-exists never bills exists:null"
+            ],
+            "fullName": "failure: page-exists never bills exists:null throws, breaker-exempt, on a timeout",
+            "status": "passed",
+            "title": "throws, breaker-exempt, on a timeout",
+            "duration": 0.7043089999997392,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: page-exists never bills exists:null"
+            ],
+            "fullName": "failure: page-exists never bills exists:null throws, breaker-exempt, on a network error",
+            "status": "passed",
+            "title": "throws, breaker-exempt, on a network error",
+            "duration": 0.42406799999935174,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: page-exists never bills exists:null"
+            ],
+            "fullName": "failure: page-exists never bills exists:null throws, breaker-exempt, on a DNS failure",
+            "status": "passed",
+            "title": "throws, breaker-exempt, on a DNS failure",
+            "duration": 0.5007430000005115,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "failure: page-exists never bills exists:null"
+            ],
+            "fullName": "failure: page-exists never bills exists:null throws, breaker-exempt, on a redirect loop",
+            "status": "passed",
+            "title": "throws, breaker-exempt, on a redirect loop",
+            "duration": 0.8391449999999168,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: page-exists bills its verdicts"
+            ],
+            "fullName": "negative: page-exists bills its verdicts bills a hard 404 as exists:false",
+            "status": "passed",
+            "title": "bills a hard 404 as exists:false",
+            "duration": 0.6350560000000769,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: page-exists bills its verdicts"
+            ],
+            "fullName": "negative: page-exists bills its verdicts bills a live page as exists:true",
+            "status": "passed",
+            "title": "bills a live page as exists:true",
+            "duration": 1.7657689999996364,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: page-exists bills its verdicts"
+            ],
+            "fullName": "negative: page-exists bills its verdicts bills a soft 404 as exists:false",
+            "status": "passed",
+            "title": "bills a soft 404 as exists:false",
+            "duration": 1.0142429999996239,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "passthrough: page-exists keeps input-safety refusals"
+            ],
+            "fullName": "passthrough: page-exists keeps input-safety refusals rethrows a restricted-address error on a redirect hop unchanged",
+            "status": "passed",
+            "title": "rethrows a restricted-address error on a redirect hop unchanged",
+            "duration": 0.48240099999929953,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794435489065,
+        "endTime": 1794435495266.4824,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-ae6d8c46f99a99be1/apps/api/src/capabilities/extraction-and-lookup.upstream-failures.test.ts"
+      }
+    ]
+  }
+}

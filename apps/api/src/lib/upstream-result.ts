@@ -34,17 +34,28 @@ export class UpstreamUnavailableError extends Error {
    * does not spend a second round of upstream calls on it.
    */
   readonly retryable: boolean;
+  /**
+   * True when the failing site is the caller's own target (a URL the caller
+   * chose), not a source Strale depends on. Still unbilled and still
+   * breaker-exempt by its wording, but outcomeFromError records it with
+   * fault "target" and counts_against_capability false, so one caller's
+   * broken site does not count against the capability's quality floor
+   * (PR #1018 review, S1). Set by targetUnavailable and by executors that
+   * build their own target-site error.
+   */
+  readonly targetFault: boolean;
 
   constructor(
     upstream: string,
     detail: string,
-    options: { code?: string | null; retryable?: boolean; cause?: unknown } = {},
+    options: { code?: string | null; retryable?: boolean; cause?: unknown; targetFault?: boolean } = {},
   ) {
     super(`Upstream unavailable: ${upstream}: ${detail}`, { cause: options.cause });
     this.name = "UpstreamUnavailableError";
     this.upstream = upstream;
     this.code = options.code ?? null;
     this.retryable = options.retryable ?? true;
+    this.targetFault = options.targetFault ?? false;
   }
 }
 
@@ -192,14 +203,53 @@ export function quotedLegCodes(failures: UpstreamUnavailableError[]): string {
 const AUTH_STATUS = /\b40[13]\b/;
 
 /**
+ * Errno codes a bare Error from node's resolver or socket layer carries when
+ * the host could not be reached. safe-fetch's robots.txt pre-check rethrows
+ * the resolver's own Error (`getaddrinfo ENOTFOUND host`, code ENOTFOUND)
+ * rather than undici's `TypeError: fetch failed` wrapper, so the code sits on
+ * the error itself, not on its cause (PR #1018 review, B1). ESSRFBLOCKED,
+ * our own SSRF refusal, is deliberately absent.
+ */
+const NETWORK_ERRNO = new Set([
+  "ENOTFOUND",
+  "EAI_AGAIN",
+  "EAI_FAIL",
+  "ECONNREFUSED",
+  "ECONNRESET",
+  "ECONNABORTED",
+  "ETIMEDOUT",
+  "EHOSTUNREACH",
+  "EHOSTDOWN",
+  "ENETUNREACH",
+  "ENETDOWN",
+  "EPIPE",
+]);
+
+/**
+ * Strale's own SSRF refusal (safe-fetch's connect-time lookup, code
+ * ESSRFBLOCKED), whether it arrives bare or as the cause of undici's
+ * `fetch failed`. It is an input-safety refusal, never network weather, so it
+ * is returned as itself and never worded "retry" (PR #1018 review round 2).
+ */
+export function ssrfBlocked(err: unknown): Error | null {
+  for (const e of [err, (err as { cause?: unknown } | null)?.cause]) {
+    if (e instanceof Error && (e as { code?: unknown }).code === "ESSRFBLOCKED") return e;
+  }
+  return null;
+}
+
+/**
  * The error for a request to an upstream that threw: a timeout, a network
- * error, or a body that did not parse. Anything else is returned unchanged:
+ * error (undici's `fetch failed` wrapper or a bare errno Error), or a body
+ * that did not parse. Anything else is returned unchanged:
  * Strale's own vendor-account state (`VendorUnavailableError`), a refusal, a
  * size cap or our own defect keeps its own class rather than being relabelled
  * as the upstream's outage.
  */
 export function fetchUnavailable(upstream: string, err: unknown): Error {
   if (err instanceof UpstreamUnavailableError) return err;
+  const ssrf = ssrfBlocked(err);
+  if (ssrf) return ssrf;
   const name = (err as { name?: unknown } | null)?.name;
   const message = err instanceof Error ? err.message : String(err);
   if (name === "TimeoutError" || name === "AbortError") {
@@ -210,8 +260,73 @@ export function fetchUnavailable(upstream: string, err: unknown): Error {
     const code = typeof cause?.code === "string" ? cause.code : null;
     return new UpstreamUnavailableError(upstream, `network error${code ? ` (${code})` : ""}; retry shortly.`, { code, cause: err });
   }
+  const errno = (err as { code?: unknown } | null)?.code;
+  if (err instanceof Error && typeof errno === "string" && NETWORK_ERRNO.has(errno)) {
+    return new UpstreamUnavailableError(upstream, `network error (${errno}); retry shortly.`, { code: errno, cause: err });
+  }
   if (err instanceof SyntaxError) {
     return new UpstreamUnavailableError(upstream, "the response did not parse.", { code: "unparseable", retryable: false, cause: err });
   }
   return err instanceof Error ? err : new Error(message);
 }
+
+/**
+ * The caller's own site failed: its 5xx or 408, a timeout, a network error,
+ * a host name that does not resolve (not retryable) or a redirect loop (not
+ * retryable). Still unbilled, but worded as the target's failure ("URL returned
+ * HTTP 5", "URL did not answer"), which the breaker's USER_INPUT_ERROR_PATTERNS
+ * in lib/circuit-breaker.ts recognise, as for url-to-markdown: one caller's
+ * broken site retried three times must not suspend the capability for
+ * everyone (PR #1015 review). Every error it builds carries `targetFault`, so
+ * it does not count against the capability's quality floor either (PR #1018
+ * review, S1). Called by cookie-scan and page-exists; pricing-page-extract
+ * builds its own target error (`unreadablePage`). Anything else passes
+ * through as fetchUnavailable leaves it.
+ */
+export function targetUnavailable(site: string, failure: number | unknown): Error {
+  if (typeof failure === "number") {
+    const what = failure === 408 ? "the site timed out the request" : "a server error on the site itself";
+    return new UpstreamUnavailableError(site, `URL returned HTTP ${failure}, ${what}; retry later.`, {
+      code: `HTTP ${failure}`,
+      retryable: true,
+      targetFault: true,
+    });
+  }
+  // safe-fetch reports a redirect loop as a plain Error. It is the caller's
+  // site, not ours and not an upstream we depend on (PR #1015 delta review).
+  if (failure instanceof Error && failure.message.startsWith("Too many redirects")) {
+    return new UpstreamUnavailableError(site, "URL did not answer (it kept redirecting).", {
+      code: "redirect loop",
+      retryable: false,
+      cause: failure,
+      targetFault: true,
+    });
+  }
+  const err = fetchUnavailable(site, failure);
+  if (!(err instanceof UpstreamUnavailableError)) return err;
+  // A name the resolver says does not resolve will not start resolving on a
+  // retry (Node reports NXDOMAIN and NODATA alike as ENOTFOUND).
+  if (err.code === "ENOTFOUND") {
+    return new UpstreamUnavailableError(site, "URL did not answer (ENOTFOUND): its host name does not resolve.", {
+      code: err.code,
+      retryable: false,
+      cause: failure,
+      targetFault: true,
+    });
+  }
+  if (!err.retryable) {
+    return new UpstreamUnavailableError(site, `URL did not answer with a readable response (${err.code ?? "error"}).`, {
+      code: err.code,
+      retryable: false,
+      cause: failure,
+      targetFault: true,
+    });
+  }
+  return new UpstreamUnavailableError(site, `URL did not answer (${err.code ?? "network error"}); retry later.`, {
+    code: err.code,
+    retryable: true,
+    cause: failure,
+    targetFault: true,
+  });
+}
+

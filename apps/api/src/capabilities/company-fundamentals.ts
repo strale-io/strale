@@ -1,5 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { readJsonWithLimit } from "../lib/resource-limits.js";
+import { discardBody } from "../lib/safe-fetch.js";
+import { fetchUnavailable, httpUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 // SEC XBRL company-concept API — the primary source for US filers' reported
 // financials, free and keyless. Preferred over a commercial aggregator under
@@ -13,6 +15,8 @@ import { readJsonWithLimit } from "../lib/resource-limits.js";
 const DATA = "https://data.sec.gov/api/xbrl/companyconcept";
 const TICKERS = "https://www.sec.gov/files/company_tickers.json";
 const USER_AGENT = "Strale/1.0 (support@strale.io)";
+/** Named in the error when a concept request fails. */
+const SEC_CONCEPTS = "SEC XBRL company-concept API";
 
 // Concept tags change as filers adopt new taxonomies: Apple stopped reporting
 // `Revenues` in 2018. Each metric therefore carries a fallback chain, tried in
@@ -183,23 +187,54 @@ registerCapability("company-fundamentals", async (input: CapabilityInput) => {
 
   for (let i = 0; i < METRICS.length; i += 5) {
     const batch = METRICS.slice(i, i + 5);
-    const settled = await Promise.all(
+    // allSettled, not all: when one metric throws, its siblings still finish
+    // reading (or discarding) their bodies before the call fails, so no
+    // request is left in flight after the error is returned.
+    const results = await Promise.allSettled(
       batch.map(async (metric) => {
         for (const tag of metric.tags) {
+          // Only a 404 moves on to the next tag. Any other failure means the
+          // SEC did not answer for this metric, and a metric left null would
+          // read as "not reported" in `metrics_unavailable` (2026-11-06
+          // swallowed-failures audit, row 20). So the whole call throws,
+          // unbilled, as a 429 already did.
           let res: Response;
           try {
             res = await secFetch(`${DATA}/CIK${cik}/us-gaap/${tag}.json`);
-          } catch {
-            continue;
+          } catch (err) {
+            throw fetchUnavailable(SEC_CONCEPTS, err);
           }
           // A 404 means this filer does not report under that tag — expected,
           // and the reason the fallback chain exists.
-          if (res.status === 404) continue;
-          if (res.status === 429) {
-            throw new Error("The SEC is rate-limiting requests right now. Retry shortly.");
+          if (res.status === 404) {
+            await discardBody(res, "company-fundamentals: concept not reported");
+            continue;
           }
-          if (!res.ok) continue;
-          const body = await readJsonWithLimit<ConceptResponse>(res).catch(() => null);
+          if (!res.ok) {
+            await discardBody(res, "company-fundamentals: concept request failed");
+            // The SEC answers a 403 when it throttles or blocks a client
+            // ("Request Rate Threshold Exceeded"). A "403" in the message
+            // reads to the breaker as expired credentials and opens it for 30
+            // minutes, and the SEC takes no credentials, so the status stays
+            // on `code` (PR #1018 review, S2). Not retryable: the SEC's block
+            // lasts about ten minutes, and an automatic resend of up to five
+            // concept requests a second later can extend it (review round 4,
+            // B3). The caller is told when to try again instead.
+            if (res.status === 403) {
+              throw new UpstreamUnavailableError(
+                SEC_CONCEPTS,
+                "the SEC is blocking or rate-limiting requests; retry in about ten minutes.",
+                { code: "HTTP 403", retryable: false },
+              );
+            }
+            throw httpUnavailable(SEC_CONCEPTS, res.status);
+          }
+          let body: ConceptResponse | null;
+          try {
+            body = await readJsonWithLimit<ConceptResponse>(res);
+          } catch (err) {
+            throw fetchUnavailable(SEC_CONCEPTS, err);
+          }
           if (!body?.units) continue;
           const picked = pickUnit(body.units);
           if (!picked) continue;
@@ -210,6 +245,9 @@ registerCapability("company-fundamentals", async (input: CapabilityInput) => {
         return { metric, tag: null, body: null, fact: null, unit: null };
       }),
     );
+    const failed = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+    if (failed) throw failed.reason;
+    const settled = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
 
     for (const r of settled) {
       if (r.fact && r.body) {

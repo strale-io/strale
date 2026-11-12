@@ -13,43 +13,10 @@ import {
 } from "./lib/browserless-extract.js";
 import type Anthropic from "@anthropic-ai/sdk";
 import { messageText } from "../lib/llm-response.js";
-import { fetchUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
+import { targetUnavailable } from "../lib/upstream-result.js";
 
 /** Named in unavailable_sources when the model's page analysis is unusable. */
 const PAGE_ANALYSIS = "page analysis";
-
-/**
- * The caller's own site failed: its 5xx, a timeout, a network error or a
- * redirect loop (not retryable). Still unbilled, but worded as the target's failure ("URL returned
- * HTTP 5", "URL did not answer"), which the breaker's USER_INPUT_ERROR_PATTERNS
- * in lib/circuit-breaker.ts recognise, as for url-to-markdown: one caller's
- * broken site retried three times must not suspend cookie-scan for everyone
- * (PR #1015 review). Anything else passes through as fetchUnavailable leaves it.
- */
-function targetUnavailable(site: string, failure: number | unknown): Error {
-  if (typeof failure === "number") {
-    return new UpstreamUnavailableError(site, `URL returned HTTP ${failure}, a server error on the site itself; retry later.`, {
-      code: `HTTP ${failure}`,
-      retryable: true,
-    });
-  }
-  // safe-fetch reports a redirect loop as a plain Error. It is the caller's
-  // site, not ours and not an upstream we depend on (PR #1015 delta review).
-  if (failure instanceof Error && failure.message.startsWith("Too many redirects")) {
-    return new UpstreamUnavailableError(site, "URL did not answer (it kept redirecting).", {
-      code: "redirect loop",
-      retryable: false,
-      cause: failure,
-    });
-  }
-  const err = fetchUnavailable(site, failure);
-  if (!(err instanceof UpstreamUnavailableError) || !err.retryable) return err;
-  return new UpstreamUnavailableError(site, `URL did not answer (${err.code ?? "network error"}); retry later.`, {
-    code: err.code,
-    retryable: true,
-    cause: failure,
-  });
-}
 
 // ─── Cookie scan — Browserless + HTTP fetch + Claude ─────────────────────────
 
@@ -181,8 +148,6 @@ registerCapability("cookie-scan", async (input: CapabilityInput) => {
   }
   // Per-source ToS policy gates every arbitrary-URL fetch path (P1 review, 2026-08-12).
   assertTargetAllowed(url);
-  // DEC-20261023-A: robots.txt before either request.
-  await assertRobotsAllowed(url);
 
   const parsedUrl = new URL(url);
   const domain = parsedUrl.hostname;
@@ -195,6 +160,13 @@ registerCapability("cookie-scan", async (input: CapabilityInput) => {
   const cookies: CookieInfo[] = [];
   let httpResponse: Response;
   try {
+    // DEC-20261023-A: robots.txt before either request. Inside this try: for
+    // a host that does not resolve, the robots pre-check rethrows the
+    // resolver's own ENOTFOUND or EAI_AGAIN, which is the caller's site
+    // failing and must not reach the breaker or quality floor as this
+    // capability's fault (PR #1018 review round 4, B1). Its refusals pass
+    // through unchanged.
+    await assertRobotsAllowed(url);
     httpResponse = await safeFetch(url, {
       method: "GET",
       // safeFetch follows up to 3 hops with per-hop re-validation
@@ -208,6 +180,7 @@ registerCapability("cookie-scan", async (input: CapabilityInput) => {
     });
   } catch (err) {
     // Refusals, URL validation and Strale's own states pass through unchanged.
+    if (isCapabilityRefusal(err)) throw err;
     throw targetUnavailable(site, err);
   }
   // Only the headers are read here; release the body (#428).

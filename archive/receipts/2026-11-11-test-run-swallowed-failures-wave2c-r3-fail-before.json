@@ -1,0 +1,50 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "332cbd8ab4f0f89714fd898a265b6a3c240181aa"
+  },
+  "at": "2026-11-11T23:35:15.410Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/r3/fb-summ.json"
+  },
+  "summary": {
+    "tests_total": 271,
+    "tests_passed": 254,
+    "tests_failed": 17,
+    "source_commit": "3b7a3d86",
+    "tests_commit": "332cbd8a"
+  },
+  "topic": "swallowed-failures-wave2c-r3-fail-before",
+  "raw": {
+    "summary": {
+      "phase": "fail-before: round-3 tests on round-2 sources (3b7a3d86)",
+      "source_commit": "332cbd8a",
+      "files": 4,
+      "tests_total": 271,
+      "tests_passed": 254,
+      "tests_failed": 17,
+      "suites_failed": 12,
+      "review_tests_failed": 17
+    },
+    "failed_tests": [
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: pricing-page-extract does not bill a page that is not a pricing page counts the model's page_error against the capability: it is a judgement, not the target's fault (review round 2, S-b)",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: negative: pricing-page-extract bills a real page bills that page as page_status 'pricing', never 'page_error' (review round 2, S-b)",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: country-trade-data never mixes a live total with an embedded one (review round 2) answers both totals from the embedded estimates when the World Bank has only one figure",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: country-trade-data never mixes a live total with an embedded one (review round 2) throws on a World Bank rejection other than 'Invalid value', unbilled and not retryable",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: page-exists bills dns_nxdomain only for the requested host (review round 2, S-a) does not bill exists:false on a redirect hop to another host",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: page-exists bills dns_nxdomain only for the requested host (review round 2, S-a) does not bill exists:false on a robots.txt redirect to another host, as the pre-check rethrows it",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: page-exists bills dns_nxdomain only for the requested host (review round 2, S-a) does not bill exists:false on an ENOTFOUND that names no host",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: page-exists review round 2 nits throws a retryable target failure on HTTP 408, not a 4xx verdict",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: page-exists review round 2 nits rethrows a connect-time SSRF refusal carried on undici's cause, never as 'retry later'",
+      "src/capabilities/page-exists-dns.test.ts :: page-exists, a live page that leads to a host that does not resolve (review round 2, S-a) does not bill exists:false when the live page redirects to a host that does not resolve",
+      "src/capabilities/page-exists-dns.test.ts :: page-exists, a live page that leads to a host that does not resolve (review round 2, S-a) does not bill exists:false when the live site's robots.txt redirects to a host that does not resolve",
+      "src/capabilities/web-and-lookup.upstream-failures.test.ts :: PR #1018 review round 2 nit: cookie-scan does not call an unresolvable host retryable the site's ENOTFOUND stays unbilled, the target's fault, and not retryable",
+      "src/lib/upstream-result.test.ts :: PR #1018 review round 2 nits ssrfBlocked finds the SSRF refusal bare or on undici's cause, and nothing else",
+      "src/lib/upstream-result.test.ts :: PR #1018 review round 2 nits fetchUnavailable returns an SSRF refusal on the cause as itself, never as 'retry shortly'",
+      "src/lib/upstream-result.test.ts :: PR #1018 review round 2 nits targetUnavailable returns an SSRF refusal on the cause as itself",
+      "src/lib/upstream-result.test.ts :: PR #1018 review round 2 nits targetUnavailable files an unresolvable host as not retryable, still the target's fault",
+      "src/lib/upstream-result.test.ts :: PR #1018 review round 2 nits targetUnavailable words HTTP 408 as the site timing out, retryable and breaker-exempt"
+    ]
+  }
+}

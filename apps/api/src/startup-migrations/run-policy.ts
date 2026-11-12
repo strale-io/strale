@@ -122,4 +122,5 @@ export const BLOCK_RUN_POLICY: Readonly<Record<string, { policy: BlockRunPolicy;
   runMigration0151_correctSanctionsLimitations: { policy: "once", reason: "corrects only the two sanctions-check rows matching the old limitation text; preserves later edits" },
   runMigration0152_businessSummaryDeliveries: { policy: "once", reason: "one CREATE TABLE IF NOT EXISTS; schema validation checks the table on later boots" },
   runMigration0153_withholdGdprFineLookup: { policy: "every_boot", reason: "returns normally with its work deferred when the boot sync has not cleared the capability yet; both steps are guarded on the withheld state and write only over no reason or a vendor: marker, so a re-run cannot undo a relisting or rewrite another deliberate reason" },
+  runMigration0154_narrowWhoisSolutionCopy: { policy: "once", reason: "guarded UPDATEs of five solutions' WHOIS and phishing copy, each on the exact text it replaces; a re-run must not undo a later edit" },
 };
