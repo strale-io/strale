@@ -462,11 +462,40 @@ tracks:
       Node's HTTP/1.1-only fetch could draw, is filed the same way; the scan
       covers top-level capability files only, not helpers in
       capabilities/lib or src/lib, and checks safeFetch only.
-      In flight: (45) to (48) on #1052.
+      (49) fixed on branch fix/render-preflight-transport: html-to-pdf and
+      screenshot-url take a plain look at the page before Chrome renders it,
+      and a transport failure of that look (a timeout, a reset, a refused
+      connection, a redirect loop) let the render go ahead. A PDF or PNG
+      cannot be read for a challenge page afterwards, so a challenge could
+      be rendered and billed. For these two routes a transport failure of
+      the look, or of reading the start of the page after its headers (a
+      reset, a stall past the 8 s signal), now ends the call through
+      targetUnavailable, unbilled. Attribution follows that function: a
+      timeout, reset, refusal or TLS error is the target's and retryable;
+      ENOTFOUND and a redirect loop are the target's and not retryable;
+      EAI_AGAIN and an uncoded network error are counted against the tool
+      under TARGET_NETWORK. Behaviour change: a site that does not deliver
+      its headers and the start of its page within 8 s (connect and
+      redirects included) now ends the call unbilled where it used to render.
+      Residual risk: failures only Node's client has still go on to render,
+      because Chrome opens those sites: legacy TLS (ERR_SSL_*), an
+      incomplete certificate chain, a malformed HTTP response, and a connect
+      where every address failed only for lack of the address family here
+      (EAFNOSUPPORT or ENETUNREACH; a leg the site refused ends the call). A
+      challenge behind one of them is not caught. In practice robots.txt is
+      read first on the same origin and refuses most of these as
+      robots_unavailable, except a cached robots verdict (up to 1 h) or a
+      redirect hop; the parser case on one page path is the one that
+      matters. company-enrich keeps the old default; it reads its HTML.
+      Found, not fixed: both routes bill a rendered page whatever its status
+      when it is not a block status (a 404 or 500 page becomes a billed PDF
+      or PNG), a (41)-class follow-up; and a failure on a redirect hop to
+      another host is reported under the starting host's name (a wording
+      nit, still unbilled). Regression tests in site-access-executors.test.ts
+      fail against the previous code. Independent same-provider review in a
+      separate context: GO; its body-read and refused-leg findings are fixed.
+      In flight: (45) to (48) on #1052; (51) on #1053.
       Open, found while doing (43) to (48):
-      (49) html-to-pdf and screenshot-url: after a preflight transport
-      failure the Chrome render is not checked for a challenge page, so a
-      challenge could be rendered and billed as the page.
       (50) domain-reputation grades and bills a 401, 403 or 429 from the
       caller's site. Its manifest is report-only (compliance), so the fix
       needs Petter's approval of the wording plus a startup block; it goes
@@ -479,7 +508,7 @@ tracks:
       its preflight (~line 883), then files a non-block 4xx, 406 included,
       as the target's answer with no further route: the class of (41),
       outside targetUnavailable and outside the guard's scan.
-      Next: (51), (49), (55), then the (50) recommendation; then measuring past
+      Next: (55), then the (50) recommendation; then measuring past
       billed calls from
       the affected paths since their earliest releases, deciding refunds per
       policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against

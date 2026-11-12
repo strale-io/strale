@@ -135,7 +135,9 @@ registerCapability("screenshot-url", async (input: CapabilityInput) => {
   await assertRobotsAllowed(fullUrl);
   // Chrome can get through a JavaScript challenge before the screenshot is
   // taken; a plain look first stops at the block instead (DEC-20261023-A).
-  await assertPlainPreflightAllowed(fullUrl);
+  // A PNG cannot be read for a challenge afterwards, so a site the plain look
+  // cannot reach ends the call unbilled (promise-audit T1 follow-up 49).
+  await assertPlainPreflightAllowed(fullUrl, { opaqueRender: true });
 
   const { url: blessUrl, key } = getBrowserlessConfig();
   // buildBrowserlessRequestUrl appends ?launch= per-request, required by
