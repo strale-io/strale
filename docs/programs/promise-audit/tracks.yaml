@@ -352,17 +352,20 @@ tracks:
       (44) fixed on branch fix/page-fetcher-block-status: meta-extract,
       link-extract and gdpr-website-check threw a non-2xx as a generic error
       naming the caller's URL and let a network error, a timeout or a body
-      dropped mid-read out raw, so a 401, 403 or 429 was not refused, and a
-      5xx, timeout or network error was counted against the capability with
-      the caller's URL in the message. Their page read now follows
-      og-image-check's: a 401, 403, 407 or 429 is refused (assertNotBlockStatus),
-      unbilled and not counted; any other status, a timeout or a coded
-      network error goes through targetUnavailable as the target's, unbilled
-      and not counted; EAI_AGAIN or an uncoded network error is counted under
-      fixed text with no host; a URL validation refusal and the size cap pass
-      through. Their custom user agents are removed, so safeFetch sends
-      Strale's honest one, and each manifest gains a limitation saying a page
-      that refuses or fails the request is not read and the call is unbilled.
+      dropped mid-read out raw. Before the fix a 5xx and a 429 were counted
+      against the capability with the caller's URL in the message, a timeout
+      was counted without it, a coded network error was unattributed and not
+      counted, and a 401, 403 or 404 was filed as the caller's input. None of
+      these paths was billed. Their page read now follows og-image-check's:
+      a 401, 403, 407 or 429 is refused (assertNotBlockStatus), unbilled and
+      not counted; any other status, a timeout or a coded network error goes
+      through targetUnavailable as the target's, unbilled and not counted;
+      EAI_AGAIN or an uncoded network error is now counted, under fixed text
+      with no host (the doctrine of (34)); a URL validation refusal and the
+      size cap pass through. Their dead custom user agents are removed
+      (safeFetch already replaced them), and each manifest gains a limitation
+      saying a page that refuses or fails the request is not read and the
+      call is unbilled; manifest-text-sync publishes it at boot.
       Next: (36), (33), (43), (44); then measuring past billed calls from
       the affected paths since their earliest releases, deciding refunds per
       policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against

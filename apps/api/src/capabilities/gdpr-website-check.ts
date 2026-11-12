@@ -22,10 +22,7 @@ registerCapability("gdpr-website-check", async (input: CapabilityInput) => {
   try {
     // F-0-006: safeFetch validates + re-validates on each redirect hop, and
     // sends Strale's honest user agent for a page read.
-    response = await safeFetch(url, {
-      headers: { Accept: "text/html,*/*" },
-      signal: AbortSignal.timeout(15000),
-    });
+    response = await safeFetch(url, { signal: AbortSignal.timeout(15000) });
   } catch (err) {
     // The caller's URL failing Strale's URL guard is their input, as before.
     if (err instanceof UrlValidationError || isCapabilityRefusal(err)) throw err;

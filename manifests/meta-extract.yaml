@@ -151,7 +151,7 @@ limitations:
     category: availability
     severity: info
     workaround: >-
-      Retry after a server error, a timeout or a network error. When robots.txt could not be fetched, wait at least
+      Retry after a server error, a timeout or a temporary network error. When robots.txt could not be fetched, wait at least
       5 minutes before trying again; any other block gets the same answer while the site keeps refusing.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).

@@ -167,6 +167,52 @@ describe.each(targets)("%s failure: a status from the caller's site is the targe
   });
 });
 
+describe.each(["meta-extract", "link-extract", "gdpr-website-check"])("follow-up 44: %s's other page-read failures", (slug) => {
+  const input = { url: `https://${HOST}/page` };
+
+  /** A 200 whose body drops after the first chunk with `error`. */
+  const dropsMidBody = (error: unknown) => async () => {
+    let sent = false;
+    const body = new ReadableStream<Uint8Array>({
+      pull(c) {
+        if (sent) return c.error(error);
+        sent = true;
+        c.enqueue(new Uint8Array(1024));
+      },
+    });
+    return new Response(body, { status: 200, headers: { "content-type": "text/html" } });
+  };
+
+  it("a body dropped mid-read with a network code is the target's failure, retryable", async () => {
+    site(dropsMidBody(Object.assign(new TypeError("terminated"), { cause: { code: "ECONNRESET" } })));
+    const err = await thrown(slug, input);
+    expectTargetFailure(err);
+    expect(err.retryable).toBe(true);
+  });
+
+  it("a body that times out mid-read is the target's failure, retryable", async () => {
+    site(dropsMidBody(timeout()));
+    const err = await thrown(slug, input);
+    expectTargetFailure(err);
+    expect(err.retryable).toBe(true);
+  });
+
+  it("a host that does not resolve (ENOTFOUND) is the target's answer, not retryable", async () => {
+    site(fail(() => networkError("ENOTFOUND")));
+    const err = await thrown(slug, input);
+    expectTargetFailure(err);
+    expect(err.retryable).toBe(false);
+  });
+
+  it("a redirect loop is never counted against the capability", async () => {
+    site(fail(() => new Error(`Too many redirects (>5) — refusing to follow further. Starting URL: https://${HOST}/page.`)));
+    const err = await thrown(slug, input);
+    expect(shouldCountAgainstCapability(err)).toBe(false);
+    expect(outcomeFromError(err)).toMatchObject({ billable: false });
+    expectBreakerSafe(err);
+  });
+});
+
 describe("follow-up 44: the page read sends no tool-specific user agent", () => {
   it.each(["meta-extract", "link-extract", "gdpr-website-check"])("%s leaves the user agent to safeFetch", async (slug) => {
     site(async () => status(200, "<html><head><title>t</title></head></html>", { "content-type": "text/html" }));
