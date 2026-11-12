@@ -58,6 +58,7 @@ registerCapability("paid-api-preflight", async (input: CapabilityInput) => {
     // swallowing it.
     await discardBody(res, "paid-api-preflight: status and headers only");
   } catch (err) {
+    // degraded-ok: an endpoint that cannot be reached, or whose TLS handshake or certificate fails, is this check's finding: is_reachable false, ssl_valid false, recommendation avoid, the cause in issues; refusals rethrow (paid-api-preflight.test.ts checks these shapes).
     if (isCapabilityRefusal(err)) throw err;
     const responseTimeMs = Date.now() - start;
     const msg = err instanceof Error ? err.message : String(err);

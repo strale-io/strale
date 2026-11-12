@@ -645,12 +645,6 @@
     },
     {
       "file": "apps/api/src/capabilities/paid-api-preflight.ts",
-      "fingerprint": "4678305da11fbba82b8be02f99d8a575784dc58e8af124ed135e91b4b4cf76b0",
-      "count": 1,
-      "line": 48
-    },
-    {
-      "file": "apps/api/src/capabilities/paid-api-preflight.ts",
       "fingerprint": "72408205a5cd48f529b8f648ca797c61b5a8e6f84b6f2c00ffc425c6411485f4",
       "count": 1,
       "line": 226
