@@ -43,7 +43,9 @@ registerCapability("paid-api-preflight", async (input: CapabilityInput) => {
     isReachable = true;
     // res.url is the hop that answered (safeFetch follows redirects itself);
     // a test double's Response has no url, so fall back to the request URL.
-    sslValid = (res.url || fullUrl).startsWith("https://");
+    // Both ends must be https: an http URL that redirects to https has already
+    // sent its first request, payment header included, in cleartext.
+    sslValid = httpsRequested && (res.url || fullUrl).startsWith("https://");
     if (httpsRequested && !sslValid) issues.push("Redirected from HTTPS to plain HTTP");
     responseHeaders = Object.fromEntries(res.headers.entries());
     server = res.headers.get("server");
@@ -60,7 +62,13 @@ registerCapability("paid-api-preflight", async (input: CapabilityInput) => {
     const responseTimeMs = Date.now() - start;
     const msg = err instanceof Error ? err.message : String(err);
     const tlsCode = tlsErrorCode(err);
-    if (tlsCode) issues.push(`TLS certificate rejected: ${tlsCode}`);
+    if (tlsCode) {
+      issues.push(
+        tlsCode.startsWith("ERR_SSL_")
+          ? `TLS handshake failed: ${tlsCode}`
+          : `TLS certificate rejected: ${tlsCode}`,
+      );
+    }
     return {
       output: {
         url: fullUrl,
@@ -170,7 +178,8 @@ registerCapability("paid-api-preflight", async (input: CapabilityInput) => {
 // ─── TLS failure detection ──────────────────────────────────────────────────
 
 // Node's TLS layer (and undici, which wraps it as the cause of "fetch failed")
-// reports certificate failures with these codes. Matching the codes rather
+// reports certificate failures with these codes, and handshake or protocol
+// failures with an ERR_SSL_ prefix. Matching the codes rather
 // than message text keeps a timeout or DNS failure from reading as a bad
 // certificate.
 const TLS_ERROR_CODES = new Set([
@@ -184,6 +193,15 @@ const TLS_ERROR_CODES = new Set([
   "UNABLE_TO_GET_ISSUER_CERT",
   "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
   "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+  "UNABLE_TO_DECRYPT_CERT_SIGNATURE",
+  "CERT_SIGNATURE_FAILURE",
+  "ERROR_IN_CERT_NOT_BEFORE_FIELD",
+  "ERROR_IN_CERT_NOT_AFTER_FIELD",
+  "HOSTNAME_MISMATCH",
+  "INVALID_CA",
+  "INVALID_PURPOSE",
+  "CERT_CHAIN_TOO_LONG",
+  "PATH_LENGTH_EXCEEDED",
   "ERR_TLS_CERT_ALTNAME_INVALID",
   "ERR_SSL_WRONG_VERSION_NUMBER",
 ]);

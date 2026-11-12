@@ -166,8 +166,10 @@ limitations:
     text: >-
       ssl_valid is true when the HTTPS connection to the answering URL completed with a certificate
       the runtime trusts (chain and host name verified). It does not check revocation, certificate
-      transparency, key strength or protocol versions. When no connection completed it is false;
-      a rejected certificate is named in issues, while a timeout or DNS failure is reported as
+      transparency or key strength, and does not report the protocol version (a server that offers
+      nothing newer than TLS 1.1 fails the handshake). A plain http URL is false even when it
+      redirects to https. When no connection completed it is false; a rejected certificate or a
+      failed handshake is named in issues, while a timeout or DNS failure is reported as
       unreachable.
     category: coverage
     severity: info

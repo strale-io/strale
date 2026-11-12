@@ -153,6 +153,32 @@ describe("paid-api-preflight ssl_valid reflects the TLS connection", () => {
     expect(result.output.issues).toContain("TLS certificate rejected: CERT_HAS_EXPIRED");
   });
 
+  it("is false when a plain http URL redirects to https", async () => {
+    const res = new Response("{}", { status: 200 });
+    Object.defineProperty(res, "url", { value: "https://seller.example/resource" });
+    fetchMock.mockResolvedValue(res);
+
+    const exec = getDirectExecutor("paid-api-preflight")!;
+    const result = await exec({ url: "http://seller.example/resource" });
+
+    expect(result.output.ssl_valid).toBe(false);
+    expect(result.output.recommendation).toBe("avoid");
+    expect(result.output.issues).toContain("Endpoint does not use HTTPS");
+  });
+
+  it("names a protocol failure as a failed handshake, not a rejected certificate", async () => {
+    const failure = new TypeError("fetch failed", {
+      cause: Object.assign(new Error("wrong version number"), { code: "ERR_SSL_WRONG_VERSION_NUMBER" }),
+    });
+    fetchMock.mockRejectedValue(failure);
+
+    const exec = getDirectExecutor("paid-api-preflight")!;
+    const result = await exec({ url: "https://plain-port.example/resource" });
+
+    expect(result.output.ssl_valid).toBe(false);
+    expect(result.output.issues).toContain("TLS handshake failed: ERR_SSL_WRONG_VERSION_NUMBER");
+  });
+
   it("is false when an https URL redirects to plain http", async () => {
     const res = new Response("{}", { status: 200 });
     Object.defineProperty(res, "url", { value: "http://plain.example/resource" });
