@@ -5,6 +5,8 @@ import { load } from "js-yaml";
 import { apiError, recoveryDetails } from "./errors.js";
 import { CapabilityRefusalError, refusalDetails } from "./capability-refusal.js";
 import { categorizeError } from "./quality-capture.js";
+import { anyStepRetryable, stepFailure, stepFailureEntries, type StepFailure } from "./solution-step-failure.js";
+import { targetUnavailable } from "./upstream-result.js";
 
 function source(file: string) {
   return ts.createSourceFile(file, readFileSync(new URL(`../${file}.ts`, import.meta.url), "utf8"), ts.ScriptTarget.Latest, true);
@@ -61,14 +63,44 @@ it("legacy caller-input execution errors are not retryable", () => {
   expect(apiError("execution_failed", "Execution failed.", { error: "Invalid email address" }).details).toMatchObject({ retryable: false, fix: "Correct the input per the tool's input_schema at GET /v1/capabilities/:slug and resend." });
 });
 
-it.each([true, false])("solution retry advice follows allFailed=%s", allFailed => {
+// Follow-up 42: the bundle is retryable only when it was refunded AND a retry
+// could change at least one failed step; each step keeps its own advice.
+function solutionDetails(refundRequired: boolean, outcomeRetryable: boolean, failures: StepFailure[]) {
   const src = source("routes/solution-execute");
-  const prop = nodes(src, ts.isPropertyAssignment).find(n => n.name.getText(src) === "details" && n.getText(src).includes("execResult.errors.map"))!;
-  const details = run(prop.initializer, src, { allFailed, execResult: { errors: ["tool: HTTP 503"] }, recoveryDetails, sanitizeFailureReason: (s: string) => s });
-  expect(details.retryable).toBe(allFailed);
+  const prop = nodes(src, ts.isPropertyAssignment).find(n => n.name.getText(src) === "details" && n.getText(src).includes("stepFailureEntries(execResult.failures)"))!;
+  const decl = nodes(src, ts.isVariableDeclaration).find(n => n.name.getText(src) === "bundleRetryable")!;
+  const execResult = { errors: failures.map(f => `${f.capability_slug}: x`), failures };
+  const bundleRetryable = run(decl.initializer!, src, { refundRequired, outcome: { retryable: outcomeRetryable }, anyStepRetryable, execResult });
+  return run(prop.initializer, src, { refundRequired, bundleRetryable, stepFailureEntries, execResult });
+}
+const transient = stepFailure("vat-validate", new Error("HTTP 503"));
+const siteRefusal = stepFailure("meta-extract", targetUnavailable("URL", 404));
+const inputFix = stepFailure("link-extract", new CapabilityRefusalError("'url' must be an absolute URL.", { field: "url", fix: "Send 'url' as an absolute https URL." }));
+it.each([true, false])("solution retry advice follows refundRequired=%s", refundRequired => {
+  const details = solutionDetails(refundRequired, true, [transient]);
+  expect(details.retryable).toBe(refundRequired);
+  const src = source("routes/solution-execute");
   const price = nodes(src, ts.isVariableDeclaration).find(n => n.name.getText(src) === "chargedPrice")!;
-  expect(run(price.initializer!, src, { refundRequired: allFailed, sol: { priceCents: 25 } })).toBe(allFailed ? 0 : 25);
-  expect(details.next_step).toMatch(allFailed ? /refund.*retry/i : /rerun.*charges the solution price again/i);
+  expect(run(price.initializer!, src, { refundRequired, sol: { priceCents: 25 } })).toBe(refundRequired ? 0 : 25);
+  expect(details.next_step).toMatch(refundRequired ? /refund.*retry/i : /rerun.*charges the solution price again/i);
+  expect(details.errors).toEqual([{ capability_slug: "vat-validate", ...transient.details }]);
+});
+it("a refunded bundle whose every step a retry cannot change is not retryable, and keeps each step's advice", () => {
+  const details = solutionDetails(true, true, [siteRefusal, inputFix]);
+  expect(details.retryable).toBe(false);
+  expect(details.next_step).toMatch(/refunded.*will not change/i);
+  expect(details.errors).toEqual([
+    expect.objectContaining({ capability_slug: "meta-extract", retryable: false }),
+    expect.objectContaining({ capability_slug: "link-extract", retryable: false, field: "url", fix: "Send 'url' as an absolute https URL." }),
+  ]);
+});
+it("one retryable step makes a refunded bundle retryable", () => {
+  expect(solutionDetails(true, true, [siteRefusal, transient]).retryable).toBe(true);
+});
+it("a refunded run the canonical outcome calls final (a tripped gate, a withheld step) is not retryable", () => {
+  const details = solutionDetails(true, false, [transient]);
+  expect(details.retryable).toBe(false);
+  expect(details.next_step).toMatch(/refunded/);
 });
 it("account spend cap advice points to support", () => {
   expect(apiError("spend_cap_exceeded", "Limit.").details?.fix).toBe("Wait until the rolling hourly spend is below 'limit_cents', or contact support to change the account limit.");

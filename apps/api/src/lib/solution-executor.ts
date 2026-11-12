@@ -26,6 +26,7 @@ import {
   BudgetExhaustedError,
 } from "../capabilities/guarded-executor.js";
 import { sanitizeFailureReason } from "./sanitize.js";
+import { stepFailure, type StepFailure } from "./solution-step-failure.js";
 import {
   outcomeFromError,
   outcomeFromOutput,
@@ -223,6 +224,12 @@ export interface StepTiming {
 export interface SolutionExecutionResult {
   steps: Record<string, unknown>;
   errors: string[];
+  /**
+   * One entry per entry of `errors`, in the same order: the step's own
+   * recovery advice, read from the error object when it was caught
+   * (promise-audit T1 follow-up 42).
+   */
+  failures: StepFailure[];
   latency_ms: number;
   step_count: number;
   stepTimings: StepTiming[];
@@ -401,6 +408,7 @@ export async function executeSolution(
   const startMs = Date.now();
   const stepResults: Record<string, unknown> = {};
   const stepErrors: string[] = [];
+  const stepFailures: StepFailure[] = [];
   let gated: SolutionExecutionResult["gated"] = undefined;
   // F-B-016: Preallocate by sorted-steps length and assign by each step's
   // index in the sorted array (stepOrder-sorted, see `orderBy` above).
@@ -499,11 +507,9 @@ export async function executeSolution(
 
       const executor = servable ? getExecutor(step.capabilitySlug) : undefined;
       if (!executor) {
-        stepErrors.push(
-          servable
-            ? `${step.capabilitySlug}: executor unavailable`
-            : `${step.capabilitySlug}: capability is not currently servable`,
-        );
+        const unavailable = servable ? "executor unavailable" : "capability is not currently servable";
+        stepErrors.push(`${step.capabilitySlug}: ${unavailable}`);
+        stepFailures.push(stepFailure(step.capabilitySlug, unavailable));
         // Money-integrity 2026-08-12: the step must still APPEAR — a bare
         // return made deactivated steps vanish from the audit trail entirely
         // (a solution advertising 14 steps audited 13 with no gap marker).
@@ -537,6 +543,7 @@ export async function executeSolution(
           err instanceof BudgetExhaustedError
         ) {
           stepErrors.push(`${step.capabilitySlug}: ${err.message}`);
+          stepFailures.push(stepFailure(step.capabilitySlug, err));
           // Same audit-visibility rule as the executor-unavailable branch.
           stepResults[step.capabilitySlug] = {
             unavailable: true,
@@ -640,6 +647,7 @@ export async function executeSolution(
             phase === "executor" ? outcomeFromError(err) : outcomeFromPlatformFault(err),
         });
         stepErrors.push(`${step.capabilitySlug}: ${msg.slice(0, 200)}`);
+        stepFailures.push(stepFailure(step.capabilitySlug, err));
         stepResults[step.capabilitySlug] = { error: sanitizeFailureReason(msg) };
         // F-B-016: on error, still mark the slot with an error marker so
         // downstream $steps[N] references see "completed with error" (the
@@ -689,6 +697,7 @@ export async function executeSolution(
   return {
     steps: stepResults,
     errors: stepErrors,
+    failures: stepFailures,
     latency_ms: latencyMs,
     step_count: steps.length,
     stepTimings,

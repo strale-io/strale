@@ -56,6 +56,7 @@ import { encodePaymentRequiredHeader } from "@x402/core/http";
 import { extractClientMeta, recordDiscoveryHit, hashX402Payer } from "../lib/attribution.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
+import { anyStepRetryable, stepFailureEntries } from "../lib/solution-step-failure.js";
 import { executeSolution, stepsThatRan } from "../lib/solution-executor.js";
 import * as settlementIntent from "../lib/x402-settlement-intent.js";
 import { isX402RailEligible } from "../lib/x402-eligibility.js";
@@ -1427,8 +1428,19 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
       logError("x402-solution-unbillable-record-failed", recordErr, { slug: sol.slug });
     }
 
+    // Promise-audit T1 follow-up 42. This answered retryable for every
+    // unbillable run, a tripped gate and an all-refusal run included, and
+    // dropped each step's own advice. A retry is advised only when one could
+    // change at least one failed step.
+    const retryable = outcome.retryable && anyStepRetryable(result.failures);
     return c.json(
-      { details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." },
+      { details: {
+          retryable,
+          next_step: retryable
+            ? "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog."
+            : "A retry with the same input gets the same answer; check the input (and each failed step's advice under 'errors'), or choose another enabled tool from GET /x402/catalog.",
+          ...(result.failures.length ? { errors: stepFailureEntries(result.failures) } : {}),
+        },
         error:
           outcome.failure_class === "gate_tripped"
             ? `Solution could not run: ${outcome.error_message}. No payment was taken.`
