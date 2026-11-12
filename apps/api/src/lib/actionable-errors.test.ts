@@ -29,6 +29,8 @@ function evaluate(n: ts.Expression, source: ts.SourceFile): any {
   if (name === "MIN_TOPUP_CENTS") return 100;
   if (name === "MAX_TOPUP_CENTS") return 10000;
   if (name.endsWith("retryAfterSeconds")) return 30;
+  // A computed retry flag (follow-up 42: the x402 bundle failure answer).
+  if (name === "bundleRetryable") return true;
   if (name === "assessment.message") return "Disposable email addresses are not accepted.";
   // Dynamic expressions don't execute during this source contract walk. Real
   // route tests below cover representative branches with concrete values.

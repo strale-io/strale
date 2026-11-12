@@ -83,6 +83,17 @@ describe("a source that blocks Strale is retryable only when waiting can clear t
     expect(source).toContain("`Source unavailable to Strale: the package registry refused the request (HTTP ${response.status}).");
   });
 
+  it("a bundle whose every step was blocked is not retryable, and a long host keeps its step's advice", async () => {
+    const { stepFailure, anyStepRetryable } = await import("./solution-step-failure.js");
+    const blockedSteps = [403, 401].map(status => stepFailure("x", blocked({ kind: "http", status })));
+    expect(anyStepRetryable(blockedSteps)).toBe(false);
+    expect(anyStepRetryable([...blockedSteps, stepFailure("y", blocked({ kind: "http", status: 429 }))])).toBe(true);
+    const longUrl = `https://${"a".repeat(60)}.${"b".repeat(60)}.example.org/entity/123`;
+    const err = asSourceBlocked(siteAccessRefusal(longUrl, { kind: "robots_unavailable", status: 503 }), longUrl);
+    expect(err.message.length).toBeGreaterThan(200);
+    expect(stepFailure("x", err).details).toMatchObject({ retryable: true, retry_after_seconds: 300 });
+  });
+
   it("leaves every other failure's advice as it was", () => {
     expect(sourceBlockDetails("Upstream timeout after 10s")).toBeUndefined();
     expect(sourceBlockDetails(new Error("boom"))).toBeUndefined();
