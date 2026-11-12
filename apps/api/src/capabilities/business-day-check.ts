@@ -53,8 +53,9 @@ const NAGER = "Nager.Date public-holiday API";
  * The two answers `getHolidays` gives for a country it has no calendar for:
  * a 404 (not a code it recognises) and a 204 (recognised, no data). They are
  * matched by their wording in holiday-calendar.ts, and only those two: a
- * wording change there makes this false, so the call throws (unbilled) rather
- * than answering without holidays. The business-day tests pin both wordings.
+ * wording change there makes this false, so the call is filed as a provider
+ * failure instead of a refusal; both are unbilled. The business-day tests pin
+ * both wordings.
  */
 function isUncoveredCountry(err: unknown): boolean {
   const message = err instanceof Error ? err.message : "";
@@ -120,6 +121,47 @@ function addDays(d: Date, n: number): Date {
   return result;
 }
 
+/** Days searched either side of the date for the next and previous business day. */
+const SEARCH_DAYS = 15;
+
+/**
+ * One year's public holidays for the country, or a throw that is never
+ * billed. A country Nager.Date holds no calendar for (its 404 and 204) is a
+ * refusal: the answer would check weekends only and could call a public
+ * holiday a business day, so it is not sold as a business-day check. It used
+ * to be answered weekends-only and billed (promise-audit T1).
+ */
+async function holidaysFor(countryCode: string, year: number, dateKey: string): Promise<any[]> {
+  let holidays: unknown;
+  try {
+    holidays = await getHolidays(countryCode, year);
+  } catch (err) {
+    // degraded-ok: every Nager.Date failure leaves here as a throw, unbilled: a refusal for the caller's input, otherwise a provider failure.
+    if (isYearOutOfRange(err, year)) {
+      const reach = dateKey.startsWith(`${year}-`) ? "" : `the search for the next or previous business day reaches ${year}, and `;
+      throw inputRefusal(
+        `'date' must be in a year the Nager.Date holiday calendar covers (about 50 years either side of the current year); ${reach}${year} is outside that range.`,
+        "date",
+        "Send 'date' as a YYYY-MM-DD date within about 50 years of the current year.",
+      );
+    }
+    if (isUncoveredCountry(err)) {
+      throw inputRefusal(
+        `'country_code' must be a country Strale holds a public-holiday calendar for, and the Nager.Date holiday source holds none for '${countryCode}', so Strale cannot say whether ${dateKey} is a business day.`,
+        "country_code",
+        "Send 'country_code' as a 2-letter code the holiday calendar covers (listed at https://date.nager.at/api/v3/AvailableCountries).",
+      );
+    }
+    throw holidayFailure(err);
+  }
+  // A 200 whose body parses but is not a holiday list is no answer either:
+  // without this it surfaced as a TypeError from `.map`.
+  if (!Array.isArray(holidays)) {
+    throw new UpstreamUnavailableError(NAGER, "the response was not a holiday list.", { code: "unparseable" });
+  }
+  return holidays;
+}
+
 registerCapability("business-day-check", async (input: CapabilityInput) => {
   const dateStr = ((input.date as string) ?? (input.task as string) ?? "").trim();
   if (!dateStr) {
@@ -136,36 +178,16 @@ registerCapability("business-day-check", async (input: CapabilityInput) => {
     throw inputRefusal("Invalid date format. Use YYYY-MM-DD.", "date", "Send 'date' as a valid calendar date in YYYY-MM-DD format.");
   }
 
-  const year = date.getUTCFullYear();
+  const dateKey = formatDate(date);
 
-  // Fetch holidays for this country+year
-  let holidays: any[] = [];
-  try {
-    holidays = await getHolidays(countryCode, year);
-  } catch (err) {
-    // degraded-ok: only Nager.Date's own no-calendar answers (404 and 204) fall through to a weekends-only result, its long-standing output for those countries; every other failure throws.
-    // A country Nager.Date does not hold is a real answer from it: there is no
-    // holiday calendar to apply, so only weekends are checked, as before. Any
-    // other failure used to land here too and answer `is_business_day: true`
-    // on a public holiday, billed (2026-11-06 swallowed-failures audit, row 17).
-    if (isYearOutOfRange(err, year)) {
-      throw inputRefusal(
-        `'date' must be in a year the Nager.Date holiday calendar covers (about 50 years either side of the current year); ${year} is outside that range.`,
-        "date",
-        "Send 'date' as a YYYY-MM-DD date within about 50 years of the current year.",
-      );
-    }
-    if (!isUncoveredCountry(err)) throw holidayFailure(err);
-  }
-  // A 200 whose body parses but is not a holiday list is no answer either:
-  // without this it surfaced as a TypeError from `.map` below.
-  if (!Array.isArray(holidays)) {
-    throw new UpstreamUnavailableError(NAGER, "the response was not a holiday list.", { code: "unparseable" });
-  }
+  // The next and previous business day are searched up to SEARCH_DAYS either
+  // side, which can cross into the adjacent year: its holidays count too.
+  const years = [...new Set([addDays(date, -SEARCH_DAYS), date, addDays(date, SEARCH_DAYS)].map((d) => d.getUTCFullYear()))];
+  const holidays: any[] = [];
+  for (const y of years) holidays.push(...(await holidaysFor(countryCode, y, dateKey)));
 
   const holidayDates = new Set(holidays.map((h: any) => h.date));
 
-  const dateKey = formatDate(date);
   const weekend = isWeekend(date, countryCode);
   const isHoliday = holidayDates.has(dateKey);
   const isBusinessDay = !weekend && !isHoliday;
@@ -179,14 +201,14 @@ registerCapability("business-day-check", async (input: CapabilityInput) => {
 
   // Find next business day
   let next = addDays(date, 1);
-  for (let i = 0; i < 14; i++) {
+  for (let i = 1; i < SEARCH_DAYS; i++) {
     if (!isWeekend(next, countryCode) && !holidayDates.has(formatDate(next))) break;
     next = addDays(next, 1);
   }
 
   // Find previous business day
   let prev = addDays(date, -1);
-  for (let i = 0; i < 14; i++) {
+  for (let i = 1; i < SEARCH_DAYS; i++) {
     if (!isWeekend(prev, countryCode) && !holidayDates.has(formatDate(prev))) break;
     prev = addDays(prev, -1);
   }

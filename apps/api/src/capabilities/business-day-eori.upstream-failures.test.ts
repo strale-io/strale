@@ -5,8 +5,8 @@
  * business-day-check answered `is_business_day: true` on a public holiday when
  * Nager.Date failed, and eori-validate answered `valid: null` (service down) or
  * `valid: false` (a reply it could not read), all billed. Each now throws,
- * unbilled. The real negatives (a country Nager.Date holds no calendar for; a
- * number the EORI service says is not valid) keep their output.
+ * unbilled. A number the EORI service says is not valid keeps its output; a
+ * country Nager.Date holds no calendar for is refused, unbilled (below).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CapabilityExecutor } from "./index.js";
@@ -129,27 +129,87 @@ describe("business-day-check: Nager.Date failures throw (row 17)", () => {
     expect(r.output).toMatchObject({ is_business_day: false, reason: "public_holiday: Christmas Day", next_business_day: "2026-12-28" });
   });
 
-  it("keeps the real negative: a country Nager.Date does not recognise (404) is checked for weekends only, as before", async () => {
+  // A country Nager.Date holds no calendar for used to get a weekends-only
+  // answer, billed: `is_business_day: true` on that country's public holidays.
+  // Both no-calendar answers are now refusals, unbilled and not counted
+  // against the capability (promise-audit T1, the Nager.Date no-calendar path).
+  async function expectNoCalendarRefusal(promise: Promise<unknown>): Promise<Error & { field?: unknown; fix?: unknown }> {
+    const err = (await promise.then(
+      (r) => {
+        throw new Error(`expected a refusal, got a billable result: ${JSON.stringify((r as { output?: unknown }).output)}`);
+      },
+      (e: unknown) => e,
+    )) as Error & { field?: unknown; fix?: unknown };
+    const { isCapabilityRefusal } = await import("../lib/capability-refusal.js");
+    expect(isCapabilityRefusal(err)).toBe(true);
+    expect(isCapabilityRefusal(err.message)).toBe(true);
+    const { outcomeFromError } = await import("../lib/execution-outcome.js");
+    expect(outcomeFromError(err)).toMatchObject({ billable: false, failure_class: "capability_refused", counts_against_capability: false });
+    return err;
+  }
+
+  it("refuses, unbilled, a country Nager.Date holds no calendar for (204), instead of a weekends-only answer", async () => {
+    fetchMock.mockImplementation(async () => new Response(null, { status: 204 }));
+    const exec = await load("business-day-check", "./business-day-check.js");
+    const err = await expectNoCalendarRefusal(exec({ date: "2026-12-25", country_code: "TH" }));
+    expect(err.message).toContain("TH");
+    expect(err.message).toMatch(/holds none for 'TH'/);
+    expect(err.message).toContain("2026-12-25");
+  });
+
+  it("refuses, unbilled, a country code Nager.Date does not recognise (404), such as ZZ", async () => {
     fetchMock.mockImplementation(async () => status(404));
     const exec = await load("business-day-check", "./business-day-check.js");
-    const r = await exec({ date: "2026-12-25", country_code: "XK" });
-    expect(r.output).toEqual({
-      date: "2026-12-25",
-      country_code: "XK",
-      is_business_day: true,
-      reason: null,
-      next_business_day: "2026-12-28",
-      previous_business_day: "2026-12-24",
-    });
+    const err = await expectNoCalendarRefusal(exec({ date: "2026-12-25", country_code: "ZZ" }));
+    expect(err.message).toContain("ZZ");
+    expect(err.message).not.toMatch(/retry/i);
+  });
+
+  it("refuses again from the negative cache: a second call for the same uncovered country is still unbilled", async () => {
+    fetchMock.mockImplementation(async () => new Response(null, { status: 204 }));
+    const exec = await load("business-day-check", "./business-day-check.js");
+    await expectNoCalendarRefusal(exec({ date: "2026-06-03", country_code: "TH" }));
+    await expectNoCalendarRefusal(exec({ date: "2026-06-04", country_code: "TH" }));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  // The next and previous business day can fall in the adjacent year; they
+  // used to be found with the date's own year's holidays only, so 31 December
+  // answered 1 January (a public holiday) as the next business day, billed.
+  const byYear = (lists: Record<string, unknown>) => async (url: string | URL | Request) => {
+    const year = /PublicHolidays\/(\d{4})\//.exec(String(url))?.[1] ?? "";
+    return year in lists ? new Response(JSON.stringify(lists[year]), { status: 200 }) : status(503);
+  };
+  const SE_2026 = [...SE_HOLIDAYS, { date: "2026-12-31", localName: "Nyårsafton", name: "New Year's Eve" }];
+  const SE_2027 = [{ date: "2027-01-01", localName: "Nyårsdagen", name: "New Year's Day" }, { date: "2027-01-06", localName: "Trettondedag jul", name: "Epiphany" }];
+
+  it("counts next year's holidays for the next business day: 30 Dec 2026 is followed by 4 Jan 2027, not 1 Jan", async () => {
+    fetchMock.mockImplementation(byYear({ 2026: SE_2026, 2027: SE_2027 }));
+    const exec = await load("business-day-check", "./business-day-check.js");
+    const r = await exec({ date: "2026-12-30", country_code: "SE" });
+    expect(r.output).toMatchObject({ is_business_day: true, next_business_day: "2027-01-04", previous_business_day: "2026-12-29" });
     await expectBillable("business-day-check", r.output);
   });
 
-  it("keeps the real negative: a country Nager.Date holds no data for (204) is checked for weekends only, as before", async () => {
-    fetchMock.mockImplementation(async () => new Response(null, { status: 204 }));
+  it("counts last year's holidays for the previous business day: 4 Jan 2027 is preceded by 30 Dec 2026, not 31 Dec", async () => {
+    fetchMock.mockImplementation(byYear({ 2026: SE_2026, 2027: SE_2027 }));
     const exec = await load("business-day-check", "./business-day-check.js");
-    const r = await exec({ date: "2026-12-26", country_code: "TH" });
-    expect(r.output).toMatchObject({ is_business_day: false, reason: "weekend" });
-    await expectBillable("business-day-check", r.output);
+    const r = await exec({ date: "2027-01-04", country_code: "SE" });
+    expect(r.output).toMatchObject({ is_business_day: true, previous_business_day: "2026-12-30", next_business_day: "2027-01-05" });
+  });
+
+  it("throws, unbilled, when the adjacent year's holidays do not arrive", async () => {
+    fetchMock.mockImplementation(byYear({ 2026: SE_2026 }));
+    const exec = await load("business-day-check", "./business-day-check.js");
+    const err = await expectUnbilledUpstreamFailure(exec({ date: "2026-12-30", country_code: "SE" }));
+    expect(err.message).toContain("Nager.Date public-holiday API");
+  });
+
+  it("asks for one year only when the search cannot leave it", async () => {
+    fetchMock.mockImplementation(byYear({ 2026: SE_2026 }));
+    const exec = await load("business-day-check", "./business-day-check.js");
+    await exec({ date: "2026-06-03", country_code: "SE" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 

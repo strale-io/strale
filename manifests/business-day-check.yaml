@@ -68,9 +68,10 @@ limitations:
   - title: Holiday data from Nager.Date
     text: >-
       Depends on the Nager.Date API for holiday data. If the API is unreachable, rate-limited or returns an
-      unreadable answer, the call fails and is not charged. For a country Nager.Date holds no holiday calendar for,
-      only weekends are checked. Nager.Date covers about 50 years either side of the current year; a date outside that window is
-      refused and not charged.
+      unreadable answer, the call fails and is not charged. A country Nager.Date holds no holiday calendar for (for example
+      Thailand), and a code it does not recognise, is refused and not charged, because weekends alone cannot say whether a day
+      is a business day. Nager.Date covers about 50 years either side of the current year; a date outside that window, or a
+      next or previous business day that would fall outside it, is refused and not charged.
     category: dependency
     severity: info
 
