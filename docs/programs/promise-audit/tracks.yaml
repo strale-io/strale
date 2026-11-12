@@ -349,7 +349,13 @@ tracks:
       completed over TLS with a trusted certificate; a rejected certificate is
       named in issues by its TLS code, a redirect to http is named and answers
       avoid, and the manifest documents what the field does and does not check.
-      Next: (36), (33), (43), (44); then measuring past billed calls from
+      (36) fixed on branch docs/site-block-limitations: 15 page-fetching
+      tools' manifests now say that a site which refuses automated requests
+      (a block status or a challenge page) is refused unbilled, naming what
+      each tool does with such a site; the boot text sync publishes them (no
+      tool is report-only), with (27)'s robots-txt-parse limitation.
+      Independent review NO-GO, its must-fixes applied, re-review GO.
+      Next: (33), (40), (44), (41), (42); then measuring past billed calls from
       the affected paths since their earliest releases, deciding refunds per
       policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against
       listed and dry-run prices (P-011, P-008). Do not assume the proposed

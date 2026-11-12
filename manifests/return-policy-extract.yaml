@@ -86,6 +86,12 @@ limitations:
     category: coverage
     severity: info
     workaround: Read the retailer’s full return policy directly for conditions that exceed the output limit.
+  - title: Sites that refuse automated requests are not read
+    text: >-
+      When the site answers HTTP 401, 403, 407 or 429, shows an anti-bot challenge page instead of the content, or disallows the page in robots.txt, or its robots.txt cannot be fetched (a network or server error), the call fails with an error and is not billed. Strale does not try another route around the block. Repeating the call gets the same answer while the site keeps refusing; when robots.txt could not be fetched, wait at least 5 minutes before trying again. Unless the path of the address you send contains "return", "refund" or "shipping", common policy paths are tried first: a candidate that robots.txt disallows is skipped, but one that answers HTTP 401, 403, 407 or 429, shows a challenge page or whose robots.txt cannot be fetched fails the whole call; if none is found, the page you sent is analysed, and policy_url names the page that was analysed.
+    category: availability
+    severity: info
+    workaround: Check policy_url, and send the return policy page's own address when it differs.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:
