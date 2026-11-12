@@ -3,7 +3,7 @@ import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { UrlValidationError, validateUrl } from "../lib/url-validator.js";
 import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { isBlockStatus, siteAccessRefusal } from "../lib/site-access.js";
-import { ssrfBlocked, targetUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
+import { ssrfBlocked, targetUnavailable } from "../lib/upstream-result.js";
 
 const SECURITY_HEADERS: Array<{
   header: string;
@@ -50,27 +50,21 @@ registerCapability("header-security-check", async (input: CapabilityInput) => {
     throw targetUnavailable(site, err);
   }
 
-  // A 401, 403 or 407 is the site refusing Strale (DEC-20261023-A: stop at the
-  // block), and the headers on a login wall or WAF page are not the site's
-  // policy, so it is refused unbilled instead of graded (follow-up 30). A 5xx,
-  // 408 or 429 means the site did not serve its page; grading those sold an F
+  // A 401, 403, 407 or 429 is the site refusing Strale (DEC-20261023-A: stop
+  // at the block), and the headers on a login wall, WAF or rate-limit page are
+  // not the site's policy, so it is refused unbilled instead of graded
+  // (follow-up 30). A 429 is refused like the other block statuses, as every
+  // other page fetcher does, not offered back as retryable (follow-up 38). A
+  // 5xx or 408 means the site did not serve its page; grading those sold an F
   // for an outage (promise-audit T1 wave 6). Any other answer, a 404
   // included, is the site's own response and is graded as it stands.
-  if (res.status !== 429 && isBlockStatus(res.status)) {
+  if (isBlockStatus(res.status)) {
     await discardBody(res, "header-security-check: refused");
     throw siteAccessRefusal(fullUrl, { kind: "http", status: res.status });
   }
   if (res.status >= 500 || res.status === 408) {
     await discardBody(res, "header-security-check: site unavailable");
     throw targetUnavailable(site, res.status);
-  }
-  if (res.status === 429) {
-    await discardBody(res, "header-security-check: rate-limited");
-    throw new UpstreamUnavailableError(site, "URL returned HTTP 429, the site is rate-limiting requests; retry later.", {
-      code: "HTTP 429",
-      retryable: true,
-      targetFault: true,
-    });
   }
 
   const present: Array<{ header: string; value: string; status: string }> = [];

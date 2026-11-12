@@ -4,6 +4,10 @@
  * there is nothing to grade: before promise-audit T1 follow-up (30) the first
  * was graded (an "F" for a login wall or a WAF page, billed) and the second
  * escaped as a raw error that counted against the capability's own health.
+ *
+ * A 429 is the site refusing Strale too, as everywhere else that reads
+ * isBlockStatus (follow-up 38): before, it alone was a retryable target fault
+ * here while url-to-markdown and the other page fetchers refused it.
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
 
@@ -40,7 +44,7 @@ async function failure(): Promise<unknown> {
 afterEach(() => vi.clearAllMocks());
 
 describe("header-security-check: a refusal is not graded", () => {
-  for (const status of [401, 403, 407]) {
+  for (const status of [401, 403, 407, 429]) {
     it(`HTTP ${status} fails the call unbilled as a site refusal, without retrying`, async () => {
       const cancel = vi.fn(async () => {});
       const res = new Response("denied", { status, headers: { "x-frame-options": "DENY" } });
