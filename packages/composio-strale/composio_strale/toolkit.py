@@ -21,6 +21,28 @@ def _client_version() -> str:
         return "unknown"
 
 
+def _matches(items: list, category: Optional[str]) -> list[dict]:
+    """Shape search hits for the agent, keep the category asked for, at most 10."""
+    out = []
+    for c in items:
+        if not isinstance(c, dict) or not c.get("slug"):
+            continue
+        if c.get("type", "capability") != "capability":
+            continue
+        if category and c.get("category") != category:
+            continue
+        out.append(
+            {
+                "slug": c.get("slug"),
+                "name": c.get("name"),
+                "description": (c.get("description") or "")[:120],
+                "price_cents": c.get("price_cents"),
+                "category": c.get("category"),
+            }
+        )
+    return out[:10]
+
+
 class StraleSearchInput(BaseModel):
     query: str = Field(..., description="Search keyword (e.g., 'sanctions', 'IBAN', 'company data')")
     category: Optional[str] = Field(
@@ -92,50 +114,38 @@ class StraleToolkit:
         @composio.tools.custom_tool(toolkit="strale")
         def strale_search(request: StraleSearchInput) -> dict:
             """Search Strale's available API capabilities. Returns matching capabilities with slugs, descriptions, and pricing. Use this first to discover available capabilities, then use strale_execute to run one."""
-            params = {"q": request.query, "limit": "10"}
-            if request.category:
-                params["category"] = request.category
+            # The typeahead endpoint returns its matches under "results" and
+            # takes no category filter, so the category is applied here.
+            # Solutions are left out: strale_execute runs capabilities only.
             resp = httpx.get(
                 f"{toolkit.base_url}/v1/suggest/typeahead",
-                params=params,
+                params={"q": request.query, "limit": "10", "type": "capability"},
                 headers=toolkit._headers(),
                 timeout=10,
             )
             if resp.status_code == 200:
-                data = resp.json()
-                return {
-                    "capabilities": [
-                        {
-                            "slug": c.get("slug"),
-                            "name": c.get("name"),
-                            "description": c.get("description", "")[:120],
-                            "price_cents": c.get("price_cents"),
-                            "category": c.get("category"),
-                        }
-                        for c in data.get("suggestions", data.get("capabilities", []))
-                    ]
-                }
-            # Fallback to keyword search
+                hits = resp.json().get("results")
+                return {"capabilities": _matches(hits if isinstance(hits, list) else [], request.category)}
+            # Fallback: the catalogue endpoint returns every capability and
+            # ignores search terms, so the query is matched here.
             resp2 = httpx.get(
                 f"{toolkit.base_url}/v1/capabilities",
-                params={"search": request.query},
                 headers=toolkit._headers(),
                 timeout=10,
             )
             if resp2.status_code != 200:
                 return {"error": f"Search failed: HTTP {resp2.status_code}"}
-            caps = resp2.json().get("capabilities", [])
-            return {
-                "capabilities": [
-                    {
-                        "slug": c["slug"],
-                        "name": c["name"],
-                        "description": c.get("description", "")[:120],
-                        "price_cents": c.get("price_cents"),
-                    }
-                    for c in caps[:10]
-                ]
-            }
+            terms = [t for t in request.query.lower().split() if t]
+            caps = [
+                c
+                for c in resp2.json().get("capabilities", [])
+                if terms
+                and all(
+                    t in " ".join(str(c.get(k) or "") for k in ("slug", "name", "description", "category")).lower()
+                    for t in terms
+                )
+            ]
+            return {"capabilities": _matches(caps, request.category)}
 
         @composio.tools.custom_tool(toolkit="strale")
         def strale_execute(request: StraleExecuteInput) -> dict:

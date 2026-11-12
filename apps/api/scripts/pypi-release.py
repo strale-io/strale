@@ -147,7 +147,10 @@ class _CatalogHandler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802 (stdlib name)
         _CatalogHandler.seen.append({"path": self.path, "headers": dict(self.headers)})
-        body = json.dumps({"capabilities": []}).encode()
+        # Serve each endpoint's real response shape. Answering typeahead with
+        # {"capabilities": []} let composio-strale read the wrong key for months.
+        key = "results" if self.path.startswith("/v1/suggest/typeahead") else "capabilities"
+        body = json.dumps({key: []}).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
@@ -209,7 +212,7 @@ def cmd_smoke(args: argparse.Namespace) -> None:
 
     if result != []:
         fail(f"list call returned {result!r}, expected []")
-    expected_path = "/v1/suggest/typeahead?q=smoke&limit=10" if pkg["module"] == "composio_strale" else "/v1/capabilities"
+    expected_path = "/v1/suggest/typeahead?q=smoke&limit=10&type=capability" if pkg["module"] == "composio_strale" else "/v1/capabilities"
     if len(_CatalogHandler.seen) != 1 or _CatalogHandler.seen[0]["path"] != expected_path:
         fail(f"expected one GET {expected_path}, saw {[s['path'] for s in _CatalogHandler.seen]}")
     header = _CatalogHandler.seen[0]["headers"].get("X-Strale-Client")

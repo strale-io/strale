@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "composio-strale"
-version = "0.1.5"
+version = "0.1.6"
 description = "Composio integration for Strale — pay-per-call tools as agent tools"
 readme = "README.md"
 license = "MIT"
