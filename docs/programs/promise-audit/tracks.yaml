@@ -146,13 +146,33 @@ tracks:
       reports NENALEZEN (the register's answer for an unknown DIČ, checked
       live 2026-11-12) as not registered, where it said registered, and
       throws on a reply with no status or no payer status, where it billed
-      \"not registered\". The 32 recordings are not the whole catalogue: a
+      \"not registered\". Two independent reviews (billing; data and copy)
+      returned GO and found five more, fixed in the same PR: domain-reputation
+      billed a site's refusal as \"HTTPS connection failed\"; youtube-summarize
+      rendered a watch page that had challenged it (a retry after a block);
+      cz-unreliable-vat-payer read a reply with no reliability flag as a
+      reliable payer, and its manifest typed as non-null the fields the
+      not-registered answer leaves null (they stay guaranteed: the key is
+      always present, and marking them common would have switched off three
+      known-answer checks, which the replay's skew perturbation now proves by
+      leaving the protocol status code alone); and the page-exists, og-image-check,
+      api-health-check and sitemap-parse manifests did not describe the
+      challenge stop. The 32 recordings are not the whole catalogue: a
       network executor with no recording is not covered yet. Fail-before and
       after receipts are in evidence. Found, not fixed: (18) robots-txt-parse
       reads an HTML soft 404 without challenge markers as an existing
       robots.txt with no rules; (19) a JSON executor answered with an HTML
       challenge mostly throws a parse error the outcome model files
-      unattributed (unbilled, but not counted against the provider).
+      unattributed (unbilled, but not counted against the provider); (20)
+      cz-unreliable-vat-payer drops published accounts that carry a
+      predcisli prefix, so it can undercount them and report \"no published
+      bank accounts\"; (21) the register's planned-outage and unavailable
+      codes (statusCode 2, 3) and its HTTP errors throw a plain error
+      carrying upstream text instead of a retryable UpstreamUnavailableError;
+      (22) the challenge markers now guard every page read, so a real page
+      carrying __cf_chl_ in its first 6,000 characters (a canonical URL) is
+      refused, unbilled; (23) domain-reputation still bills a timeout of its
+      own HTTPS probe as the finding https_works false.
       Next: once wave 3 merges and deploys, the Nager.Date no-calendar path
       (a weekends-only answer for countries such as TH, still billed) as a
       follow-up candidate; recordings for the network executors that have
@@ -192,6 +212,7 @@ tracks:
       - archive/receipts/2026-11-10-check-upstream-catch-guard.json
       - archive/receipts/2026-11-12-test-run-upstream-failure-replay-wave3-fail-before.json
       - archive/receipts/2026-11-12-test-run-upstream-failure-replay-wave3-after.json
+      - archive/receipts/2026-11-12-test-run-upstream-failure-replay-wave3-review-fixes.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-fail-before.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-after.json
       - archive/receipts/2026-11-11-check-upstream-catch-guard-wave2a.json
