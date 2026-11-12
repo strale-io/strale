@@ -1,7 +1,9 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
 import { validateUrl } from "../lib/url-validator.js";
-import { targetUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
+import { isBlockStatus, siteAccessRefusal } from "../lib/site-access.js";
+import { ssrfBlocked, targetUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 const SECURITY_HEADERS: Array<{
   header: string;
@@ -25,17 +27,37 @@ registerCapability("header-security-check", async (input: CapabilityInput) => {
   const fullUrl = url.startsWith("http") ? url : `https://${url}`;
   await validateUrl(fullUrl);
 
-  const res = await safeFetch(fullUrl, {
-    method: "GET",
-    signal: AbortSignal.timeout(10000),
-    // safeFetch follows up to 3 hops with per-hop re-validation
-  });
-
-  // A 5xx, 408 or 429 means the site did not serve its page, so its headers
-  // say nothing about the site's security policy; grading them sold an F for
-  // an outage (promise-audit T1 wave 6). Any other answer, a 404 included,
-  // is the site's own response and is graded as it stands.
   const site = new URL(fullUrl).hostname;
+  let res: Response;
+  try {
+    res = await safeFetch(fullUrl, {
+      method: "GET",
+      signal: AbortSignal.timeout(10000),
+      // safeFetch follows up to 3 hops with per-hop re-validation
+    });
+  } catch (err: unknown) {
+    // Strale's own refusals (robots.txt, a challenge page, the ToS blocklist)
+    // and SSRF refusals on a redirect hop fail the call as they stand. Any
+    // other failure is the site not answering: it served no headers to grade,
+    // and it is the caller's site, so it does not count against this
+    // capability (promise-audit T1 follow-up 30).
+    if (isCapabilityRefusal(err)) throw err;
+    const ssrf = ssrfBlocked(err);
+    if (ssrf) throw ssrf;
+    if (err instanceof Error && err.message.includes("restricted")) throw err;
+    throw targetUnavailable(site, err);
+  }
+
+  // A 401, 403 or 407 is the site refusing Strale (DEC-20261023-A: stop at the
+  // block), and the headers on a login wall or WAF page are not the site's
+  // policy, so it is refused unbilled instead of graded (follow-up 30). A 5xx,
+  // 408 or 429 means the site did not serve its page; grading those sold an F
+  // for an outage (promise-audit T1 wave 6). Any other answer, a 404
+  // included, is the site's own response and is graded as it stands.
+  if (res.status !== 429 && isBlockStatus(res.status)) {
+    await res.body?.cancel();
+    throw siteAccessRefusal(fullUrl, { kind: "http", status: res.status });
+  }
   if (res.status >= 500 || res.status === 408) {
     await res.body?.cancel();
     throw targetUnavailable(site, res.status);

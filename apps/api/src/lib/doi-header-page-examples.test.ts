@@ -87,6 +87,7 @@ it("the security-header illustration matches the executor and its grade counts p
       expect((await getExecutor("header-security-check")!(example.input)).output).toMatchObject({ score, grade });
     }
     fetcher.mockRejectedValueOnce(new DOMException("Timed out", "TimeoutError"));
-    await expect(getExecutor("header-security-check")!(example.input)).rejects.toThrow("Timed out");
+    // A timeout is the caller's site not answering (promise-audit T1 follow-up 30).
+    await expect(getExecutor("header-security-check")!(example.input)).rejects.toThrow("URL did not answer (timeout)");
   } finally { vi.clearAllMocks(); }
 });
