@@ -238,6 +238,85 @@ describe("business-day-check: Nager.Date failures throw (row 17)", () => {
   });
 });
 
+// ─── business-day-check: which Nager.Date entries are days off ──────────────
+
+// Nager.Date lists school-only, authority-only, optional and observance days
+// beside public and bank holidays; every entry used to count, so ordinary
+// working days were answered "not a business day", billed. Entries below are
+// copied from Nager.Date's 2026 answers (fields trimmed).
+describe("business-day-check: only public and bank holidays are days off", () => {
+  const nager = (list: unknown[]) => async () => new Response(JSON.stringify(list), { status: 200 });
+  const AT = [
+    { date: "2026-11-11", name: "Saint Martin's Day", global: false, counties: ["AT-1"], types: ["School"] },
+    { date: "2026-12-08", name: "Immaculate Conception", global: true, counties: null, types: ["Public"] },
+  ];
+  const NL = [
+    { date: "2026-04-03", name: "Good Friday", global: true, counties: null, types: ["School", "Authorities", "Observance"] },
+    { date: "2026-05-05", name: "Liberation Day", global: true, counties: null, types: ["School", "Authorities"] },
+  ];
+  const US = [
+    { date: "2026-02-12", name: "Lincoln's Birthday", global: false, counties: ["US-CA", "US-CT"], types: ["Observance"] },
+    { date: "2026-05-08", name: "Truman Day", global: false, counties: ["US-MO"], types: ["School", "Authorities"] },
+    { date: "2026-10-12", name: "Indigenous Peoples' Day", global: false, counties: ["US-AK", "US-AZ"], types: ["Public"] },
+    { date: "2026-10-12", name: "Columbus Day", global: true, counties: null, types: ["Bank"] },
+  ];
+  const PT = [{ date: "2026-02-17", name: "Carnival", global: true, counties: null, types: ["Optional"] }];
+  const DE = [
+    { date: "2026-06-04", name: "Corpus Christi", global: false, counties: ["DE-BW", "DE-BY", "DE-HE", "DE-NW", "DE-RP", "DE-SL"], types: ["Public"] },
+  ];
+  const GB = [
+    { date: "2026-01-01", name: "New Year's Day", global: false, counties: ["GB-ENG", "GB-NIR", "GB-SCT", "GB-WLS"], types: ["Public"] },
+  ];
+
+  it.each([
+    ["AT", "2026-11-11", AT],
+    ["NL", "2026-05-05", NL],
+    ["NL", "2026-04-03", NL],
+    ["US", "2026-05-08", US],
+    ["US", "2026-02-12", US],
+    ["PT", "2026-02-17", PT],
+  ] as const)("%s %s: a school, authority, optional or observance day is a business day", async (cc, date, list) => {
+    fetchMock.mockImplementation(nager([...list]));
+    const exec = await load("business-day-check", "./business-day-check.js");
+    const r = await exec({ date, country_code: cc });
+    expect(r.output).toMatchObject({ is_business_day: true, reason: null });
+  });
+
+  it("does not skip such a day when finding the next business day: after 10 Nov 2026 in Austria comes 11 Nov", async () => {
+    fetchMock.mockImplementation(nager(AT));
+    const exec = await load("business-day-check", "./business-day-check.js");
+    const r = await exec({ date: "2026-11-10", country_code: "AT" });
+    expect(r.output).toMatchObject({ next_business_day: "2026-11-11" });
+  });
+
+  it("counts a bank holiday, and names the nationwide entry when a regional one shares the date: Columbus Day, not Indigenous Peoples' Day", async () => {
+    fetchMock.mockImplementation(nager(US));
+    const exec = await load("business-day-check", "./business-day-check.js");
+    const r = await exec({ date: "2026-10-12", country_code: "US" });
+    expect(r.output).toMatchObject({ is_business_day: false, reason: "public_holiday: Columbus Day", next_business_day: "2026-10-13" });
+    await expectBillable("business-day-check", r.output);
+  });
+
+  it("still counts a public holiday kept in some regions only, for the whole country (documented)", async () => {
+    fetchMock.mockImplementation(nager([...DE, ...GB]));
+    const exec = await load("business-day-check", "./business-day-check.js");
+    expect((await exec({ date: "2026-06-04", country_code: "DE" })).output).toMatchObject({ is_business_day: false, reason: "public_holiday: Corpus Christi" });
+  });
+
+  it("counts New Year's Day in the UK, which Nager.Date lists per nation rather than nationwide", async () => {
+    fetchMock.mockImplementation(nager(GB));
+    const exec = await load("business-day-check", "./business-day-check.js");
+    expect((await exec({ date: "2026-01-01", country_code: "GB" })).output).toMatchObject({ is_business_day: false, reason: "public_holiday: New Year's Day" });
+  });
+
+  it("counts an entry that carries no type list, as before", async () => {
+    const { isDayOff } = await import("./business-day-check.js");
+    expect(isDayOff({})).toBe(true);
+    expect(isDayOff({ types: ["Bank", "Optional"] })).toBe(true);
+    expect(isDayOff({ types: ["Optional"] })).toBe(false);
+  });
+});
+
 // ─── eori-validate (row 19) ─────────────────────────────────────────────────
 
 const soap = (result: string) =>
