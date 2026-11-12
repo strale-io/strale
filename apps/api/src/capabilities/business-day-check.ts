@@ -138,11 +138,17 @@ async function holidaysFor(countryCode: string, year: number, dateKey: string): 
   } catch (err) {
     // degraded-ok: every Nager.Date failure leaves here as a throw, unbilled: a refusal for the caller's input, otherwise a provider failure.
     if (isYearOutOfRange(err, year)) {
-      const reach = dateKey.startsWith(`${year}-`) ? "" : `the search for the next or previous business day reaches ${year}, and `;
+      if (dateKey.startsWith(`${year}-`)) {
+        throw inputRefusal(
+          `'date' must be in a year the Nager.Date holiday calendar covers (about 50 years either side of the current year); ${year} is outside that range.`,
+          "date",
+          "Send 'date' as a YYYY-MM-DD date within about 50 years of the current year.",
+        );
+      }
       throw inputRefusal(
-        `'date' must be in a year the Nager.Date holiday calendar covers (about 50 years either side of the current year); ${reach}${year} is outside that range.`,
+        `'date' must be at least 15 days inside the years the Nager.Date holiday calendar covers (about 50 years either side of the current year); the search for the next or previous business day from ${dateKey} reaches ${year}, which is outside them.`,
         "date",
-        "Send 'date' as a YYYY-MM-DD date within about 50 years of the current year.",
+        "Send 'date' as a YYYY-MM-DD date at least 15 days inside that range.",
       );
     }
     if (isUncoveredCountry(err)) {
@@ -169,7 +175,7 @@ registerCapability("business-day-check", async (input: CapabilityInput) => {
   }
 
   const countryCode = ((input.country_code as string) ?? (input.country as string) ?? "").trim().toUpperCase();
-  if (!countryCode || countryCode.length !== 2) {
+  if (!/^[A-Z]{2}$/.test(countryCode)) {
     throw inputRefusal("'country_code' is required (ISO 2-letter code).", "country_code", "Send 'country_code' as a 2-letter ISO country code such as SE.");
   }
 

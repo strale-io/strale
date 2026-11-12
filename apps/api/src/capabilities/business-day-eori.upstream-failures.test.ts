@@ -114,6 +114,29 @@ describe("business-day-check: Nager.Date failures throw (row 17)", () => {
     },
   );
 
+  it.each([[`${NOW_YEAR + 50}-12-30`, NOW_YEAR + 51], [`${NOW_YEAR - 50}-01-05`, NOW_YEAR - 51]])(
+    "refuses %s, whose next or previous business day search reaches %s, outside Nager.Date's window: unbilled",
+    async (date, outside) => {
+      fetchMock.mockImplementation(async (url: string | URL | Request) =>
+        String(url).includes(`/${outside}/`) ? status(400) : new Response("[]", { status: 200 }));
+      const exec = await load("business-day-check", "./business-day-check.js");
+      const err = (await exec({ date, country_code: "SE" }).catch((e: unknown) => e)) as Error;
+      const { isCapabilityRefusal } = await import("../lib/capability-refusal.js");
+      expect(isCapabilityRefusal(err)).toBe(true);
+      expect(err.message).toContain(`reaches ${outside}`);
+      const { outcomeFromError } = await import("../lib/execution-outcome.js");
+      expect(outcomeFromError(err)).toMatchObject({ billable: false, failure_class: "capability_refused", counts_against_capability: false });
+    },
+  );
+
+  it.each(["1!", "Ö1", ".."])("refuses the country code %s before asking Nager.Date: unbilled", async (code) => {
+    const exec = await load("business-day-check", "./business-day-check.js");
+    const err = (await exec({ date: "2026-06-03", country_code: code }).catch((e: unknown) => e)) as Error;
+    const { outcomeFromError } = await import("../lib/execution-outcome.js");
+    expect(outcomeFromError(err)).toMatchObject({ billable: false, failure_class: "capability_refused", counts_against_capability: false });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("throws, unbilled, on a 400 for a year inside Nager.Date's window: the caller's date does not explain it", async () => {
     fetchMock.mockImplementation(async () => status(400));
     const exec = await load("business-day-check", "./business-day-check.js");

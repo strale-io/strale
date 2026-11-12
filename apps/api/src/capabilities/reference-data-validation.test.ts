@@ -19,7 +19,7 @@ import { getExecutor } from "./index.js";
 import { IBAN_LENGTHS, IBAN_REGISTRY_AS_OF } from "../lib/iban-registry.js";
 import "./iban-validate.js";
 import "./iban-to-bank.js";
-import "./business-day-check.js";
+import { FRI_ONLY_OFF, FRI_SAT_WEEKEND } from "./business-day-check.js";
 
 const ibanValidate = getExecutor("iban-validate")!;
 const ibanToBank = getExecutor("iban-to-bank")!;
@@ -61,22 +61,32 @@ describe("IBAN registry lengths", () => {
   });
 });
 
+// The UAE and Saudi Arabia themselves are refused: Nager.Date holds no holiday
+// calendar for either (checked 2026-11-12), so a weekends-only answer could
+// call a public holiday a business day (business-day-eori.upstream-failures.test.ts).
+// Their rows are pinned in the table; the executor is exercised on Bahrain, a
+// Friday-Saturday country Nager.Date does cover.
 describe("business-day-check weekends", () => {
-  it("treats a UAE Friday as a business day", async () => {
-    const { output } = await businessDay({ date: "2026-11-06", country_code: "AE" });
-    expect(output.is_business_day).toBe(true);
-    expect(output.reason).toBeNull();
+  it("holds the UAE as Saturday-Sunday and Saudi Arabia as Friday-Saturday", () => {
+    expect(FRI_SAT_WEEKEND.has("AE")).toBe(false);
+    expect(FRI_ONLY_OFF.has("AE")).toBe(false);
+    expect(FRI_SAT_WEEKEND.has("SA")).toBe(true);
   });
 
-  it("treats a UAE Sunday as a weekend day", async () => {
-    const { output } = await businessDay({ date: "2026-11-08", country_code: "AE" });
+  it("treats a Bahrain Friday as a weekend day", async () => {
+    const { output } = await businessDay({ date: "2026-11-06", country_code: "BH" });
     expect(output.is_business_day).toBe(false);
     expect(output.reason).toBe("weekend");
-    expect(output.next_business_day).toBe("2026-11-09");
+    expect(output.next_business_day).toBe("2026-11-08");
   });
 
-  it("keeps Saudi Arabia on a Friday-Saturday weekend", async () => {
-    const { output } = await businessDay({ date: "2026-11-06", country_code: "SA" });
+  it("treats a Bahrain Sunday as a business day", async () => {
+    const { output } = await businessDay({ date: "2026-11-08", country_code: "BH" });
+    expect(output.is_business_day).toBe(true);
+    expect(output.reason).toBeNull();
+    expect(output.previous_business_day).toBe("2026-11-05");
+  });
+});
     expect(output.is_business_day).toBe(false);
     expect(output.next_business_day).toBe("2026-11-08");
   });
