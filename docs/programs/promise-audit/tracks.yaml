@@ -1,7 +1,7 @@
 schema_version: 1
 program: promise-audit
 program_status: active
-updated: 2026-11-11
+updated: 2026-11-12
 tracks:
   - id: T1
     title: "T1: Money promises (charge only on success, refunds, caps)"
@@ -38,12 +38,20 @@ tracks:
       retryable; safe-fetch's ssrf-too-many-redirects warning logs the start
       URL with its query string (older than PR 1017). Wave 2c (rows 5
       pricing-page-extract, 20 company-fundamentals, 26 country-trade-data, 28
-      whois-lookup, 29 page-exists), branch fix/swallowed-failures-wave2c, is
-      done once its PR merges. Row 6 gdpr-fine-lookup moved out of wave 2c to
-      the separate PR that withholds the capability (Petter's decision: the
+      whois-lookup, 29 page-exists) merged in PR 1018 (8af89ad1) after two
+      independent review lenses returned GO on round 5; once live at 8af89ad1,
+      the public detail of all five solutions block 0154 edits (domain-trust,
+      domain-intel, vendor-risk-assess, lead-enrich, company-intelligence-sdr)
+      showed the narrowed WHOIS wording where a long description is served
+      (company-intelligence-sdr serves none), and domain-trust's example
+      registrar and phishing disclaimer matched (2026-11-12; the row-count
+      SQL needs database access). Row 6 gdpr-fine-lookup
+      moved out of wave 2c and closed with PR 1019 (59eccdb0), which withholds
+      the capability and its bundle ai-act-assess (Petter's decision: the
       enforcementtracker.com data is CC BY-NC-SA 4.0 with a TDM reservation,
-      and its substring match billed other companies' fines), and closes with
-      that PR. Wave 2c's receipts are in evidence, one set per coordinator
+      and its substring match billed other companies' fines); after its
+      deploy both were absent from /v1/capabilities, /v1/solutions and
+      /x402/catalog, and their detail routes answered 404 (2026-11-12). Wave 2c's receipts are in evidence, one set per coordinator
       round: the build (no suffix), then r2, r3, r4 and r5 for the fixes made in
       coordinator rounds 2 to 5 (a commit message names the review it
       answers, so r3's commit 332cbd8a says \"review round 2\"). Round 3 billed
@@ -85,7 +93,18 @@ tracks:
       restore them; until then the WHOIS step of those solutions refuses .xyz
       and .top); (7) optional: domain-trust's short description \"is this
       domain trustworthy?\" overstates what a WHOIS, SSL and header check
-      shows.
+      shows. Raised by the round-5 reviewers, not blocking: (8) \"for
+      domains under common TLDs\" still says more than the code (.xyz and
+      .top are refused); the follow-up copy block in (1) should say \"for
+      about 38 major TLDs\" and also correct the five rows block 0154
+      narrowed; (9) country-trade-data's retry advice names 5xx, 429 and
+      timeouts but not network errors, which are retryable; (10) the Fault
+      type comment in lib/execution-outcome.ts (~91-96) still lists
+      pricing-page-extract as a target capability; (11) on main before wave
+      2c: a non-string country_code throws a TypeError that is filed as the
+      provider's fault and counted, unless the route's schema check rejects
+      it first (unverified); (12) optional: World Bank message 120 with no
+      embedded entry could be an inputRefusal, so it is filed as the caller's.
       Next: wave 2d, rows 30, 31, 32, 33 and 35,
       reconciled first against later repairs such as customs PR999. Then wave 3; the Nager.Date
       no-calendar path (a weekends-only answer for countries such as TH, still
