@@ -54,7 +54,7 @@ This plan was rebuilt from `origin/main` 69c16913 and keeps the original order. 
 | A daily business-summary email as an API job: revenue, payers, top share, x402 volume, top tools, paid failures, free callers | Routines tied to one account miss most days. Item 1 of `2026-11-06-orchestrator-state.md` has not started | S | The heartbeat shows 5 of 7 days, the email equals `commercial-brief`, and production is checked (DEC-20260504-C) | REC:business-summary-email |
 | The overdue weekly review, and GOALS.md updated for weeks 10-26 and 11-02 | Last run 2026-08-23 | S | `last_run` is set and nothing is overdue | REC:weekly-review |
 | Due-list rows: a weekly free-caller read, a weekly listings read, and an FATF recheck after each plenary | dist T11; the FATF note in `2026-11-06-strale-master-takeover.md` | S | `handoff:test` passes | dist T11 |
-| The x402 settlement-drop alert, redesigned with a per-payer burst cap | #950 is in draft after three review rounds failed | S | The review passes, and a replayed outage still alerts | orchestrator state |
+| The x402 settlement-drop alert, redesigned with a per-payer burst cap | #950 was in draft after three review rounds failed. Merged on 2026-11-07; the first-week production receipt is due from 2026-11-14 | S | The review passes, and a replayed outage still alerts | orchestrator state |
 
 ### Week 2 (16 to 22 Nov): stop leaks
 
@@ -74,7 +74,7 @@ Decided items can land earlier; this week closes each one with a receipt. "Audit
 
 | Item | Why | Owner | Done when | Link |
 |---|---|---|---|---|
-| strale.dev to 301, and the Search Console change of address | It answers 302 (audit H) | P-click | curl shows 301 | D1, dist T2 |
+| strale.dev to 301, and the Search Console change of address | It answered 302 (audit H). The 301 is done: strale.dev answers 301 with path and query kept (curl, 2026-11-11). The Search Console change is not verified here | P-click | curl shows 301 | D1, dist T2 |
 | PyPI trusted publishers, then four releases (and composio in `release-pypi.yml`) | PyPI pages carry strale.dev, some with stale counts (audit rows 17 to 20) | P-click, then S | A smoke receipt for each | D2, dist T12 |
 | The first publish of `strale-ai-sdk` and `strale-cli`, then the vercel/ai registry PR | Fixes merged (#955); not on npm | P publishes, S tests | Smoke receipts | D3, dist T7 |
 | Zapier and n8n submissions | Both built | P-click | Submitted (n8n review takes up to 4 weeks) | D4, dist T6, T9 |

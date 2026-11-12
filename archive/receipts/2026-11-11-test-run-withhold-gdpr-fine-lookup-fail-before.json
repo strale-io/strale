@@ -1,0 +1,205 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "b38aa1245d57a7387b2f7e92ccb6ea75644ee37d"
+  },
+  "at": "2026-11-11T23:33:18.727Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/fail-before.json"
+  },
+  "summary": {
+    "total": 11,
+    "passed": 5,
+    "failed": 6,
+    "files": "apps/api/src/lib/startup-migration-0153.test.ts",
+    "source_at": "origin/main b38aa124 (DEACTIVATED, vendor-terms list and record, audit-helpers, manifest, BLOCKS and run policy as on main)",
+    "tests_at": "the uncommitted 0153 test, with the new block file present",
+    "passing_guards": "the five tests of the block 0153 SQL pass because the block file exists; every wiring test fails"
+  },
+  "topic": "withhold-gdpr-fine-lookup-fail-before",
+  "raw": {
+    "numTotalTestSuites": 3,
+    "numPassedTestSuites": 0,
+    "numFailedTestSuites": 3,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 11,
+    "numPassedTests": 5,
+    "numFailedTests": 6,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794439991340,
+    "success": false,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "gdpr-fine-lookup is withheld (Petter, 2026-11-11)"
+            ],
+            "fullName": "gdpr-fine-lookup is withheld (Petter, 2026-11-11) is in DEACTIVATED with the licence, the TDM reservation and the decision, so auto-register skips it",
+            "status": "failed",
+            "title": "is in DEACTIVATED with the licence, the TDM reservation and the decision, so auto-register skips it",
+            "duration": 3.762843999999859,
+            "failureMessages": [
+              "AssertionError: gdpr-fine-lookup must be in DEACTIVATED: expected undefined to be defined\n    at /home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/apps/api/src/lib/startup-migration-0153.test.ts:45:63\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2955:64"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "gdpr-fine-lookup is withheld (Petter, 2026-11-11)"
+            ],
+            "fullName": "gdpr-fine-lookup is withheld (Petter, 2026-11-11) the source host is a prohibited upstream, in both spellings the executor could use",
+            "status": "failed",
+            "title": "the source host is a prohibited upstream, in both spellings the executor could use",
+            "duration": 1.7116510000000744,
+            "failureMessages": [
+              "AssertionError: expected undefined to be 'CC BY-NC-SA 4.0; TDM reserved under §…' // Object.is equality\n    at /home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/apps/api/src/lib/startup-migration-0153.test.ts:53:73\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2955:64"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "gdpr-fine-lookup is withheld (Petter, 2026-11-11)"
+            ],
+            "fullName": "gdpr-fine-lookup is withheld (Petter, 2026-11-11) the vendor-terms record says resale is prohibited, with the licence page as evidence",
+            "status": "failed",
+            "title": "the vendor-terms record says resale is prohibited, with the licence page as evidence",
+            "duration": 0.4308300000000145,
+            "failureMessages": [
+              "AssertionError: no vendor-terms record for enforcementtracker.com: expected undefined to be defined\n    at /home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/apps/api/src/lib/startup-migration-0153.test.ts:61:73\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2955:64"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "gdpr-fine-lookup is withheld (Petter, 2026-11-11)"
+            ],
+            "fullName": "gdpr-fine-lookup is withheld (Petter, 2026-11-11) a new audit record no longer points at enforcementtracker.com",
+            "status": "failed",
+            "title": "a new audit record no longer points at enforcementtracker.com",
+            "duration": 0.6594410000000153,
+            "failureMessages": [
+              "AssertionError: expected 'https://www.enforcementtracker.com' to be null\n    at /home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/apps/api/src/lib/startup-migration-0153.test.ts:70:50\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2955:64"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "gdpr-fine-lookup is withheld (Petter, 2026-11-11)"
+            ],
+            "fullName": "gdpr-fine-lookup is withheld (Petter, 2026-11-11) the manifest says it is unavailable and names the licence",
+            "status": "failed",
+            "title": "the manifest says it is unavailable and names the licence",
+            "duration": 0.7275620000000345,
+            "failureMessages": [
+              "AssertionError: expected '# Auto-generated from database on 202…' to match /^description: \"Currently unavailable…/m\n    at /home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/apps/api/src/lib/startup-migration-0153.test.ts:75:22\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2955:64"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step is registered to run at startup, once",
+            "status": "failed",
+            "title": "is registered to run at startup, once",
+            "duration": 1.7925539999998819,
+            "failureMessages": [
+              "AssertionError: expected [ …(95) ] to include [AsyncFunction runMigration0153_withholdGdp…]\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/expect/dist/index.js:1319:15)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/chai/index.js:1700:25)\n    at /home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/apps/api/src/lib/startup-migration-0153.test.ts:82:20\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step writes the capability reason only once the boot sync has cleared all three flags",
+            "status": "passed",
+            "title": "writes the capability reason only once the boot sync has cleared all three flags",
+            "duration": 1.5434660000000804,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step switches off, on both rails and with a deliberate reason, the solutions that still have the step while the capability stays withheld",
+            "status": "passed",
+            "title": "switches off, on both rails and with a deliberate reason, the solutions that still have the step while the capability stays withheld",
+            "duration": 0.4535560000001624,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step cannot undo a relisting: it never sets a capability flag",
+            "status": "passed",
+            "title": "cannot undo a relisting: it never sets a capability flag",
+            "duration": 0.5581460000000789,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step is a no-op on a second run and binds no Date or Buffer",
+            "status": "passed",
+            "title": "is a no-op on a second run and binds no Date or Buffer",
+            "duration": 0.4255129999999099,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step covers every catalogue solution that has the step (ai-act-assess today)",
+            "status": "passed",
+            "title": "covers every catalogue solution that has the step (ai-act-assess today)",
+            "duration": 0.2696849999999813,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794439992599,
+        "endTime": 1794439992612.2698,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/apps/api/src/lib/startup-migration-0153.test.ts"
+      }
+    ]
+  }
+}

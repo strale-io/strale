@@ -1,0 +1,249 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "67e61dc11952b20af61423ff7a212aa4c19f271d"
+  },
+  "at": "2026-11-12T00:03:52.832Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/r3-fail-before.json"
+  },
+  "summary": {
+    "base": "67e61dc1 block 0153 and run-policy.ts (round 2), round-3 tests",
+    "expected": "the five round-3 guard tests fail: step 1 must guard on deactivation_reason IS NULL OR LIKE vendor:%, step 2 must key on all three capability flags false whatever the reason",
+    "passed": 10,
+    "failed": 5,
+    "total": 15
+  },
+  "topic": "withhold-gdpr-fine-lookup-round3-fail-before",
+  "raw": {
+    "numTotalTestSuites": 3,
+    "numPassedTestSuites": 1,
+    "numFailedTestSuites": 2,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 15,
+    "numPassedTests": 10,
+    "numFailedTests": 5,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794441826974,
+    "success": false,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "gdpr-fine-lookup is withheld (Petter, 2026-11-11)"
+            ],
+            "fullName": "gdpr-fine-lookup is withheld (Petter, 2026-11-11) is in DEACTIVATED with the licence, the TDM reservation and the decision, so auto-register skips it",
+            "status": "passed",
+            "title": "is in DEACTIVATED with the licence, the TDM reservation and the decision, so auto-register skips it",
+            "duration": 1.3615279999999075,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "gdpr-fine-lookup is withheld (Petter, 2026-11-11)"
+            ],
+            "fullName": "gdpr-fine-lookup is withheld (Petter, 2026-11-11) cites the rule it fails precisely: the checks-lane condition, never item 6 only by analogy",
+            "status": "passed",
+            "title": "cites the rule it fails precisely: the checks-lane condition, never item 6 only by analogy",
+            "duration": 3.9593489999999747,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "gdpr-fine-lookup is withheld (Petter, 2026-11-11)"
+            ],
+            "fullName": "gdpr-fine-lookup is withheld (Petter, 2026-11-11) the source host is a prohibited upstream, in both spellings the executor could use",
+            "status": "passed",
+            "title": "the source host is a prohibited upstream, in both spellings the executor could use",
+            "duration": 1.8364990000000034,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "gdpr-fine-lookup is withheld (Petter, 2026-11-11)"
+            ],
+            "fullName": "gdpr-fine-lookup is withheld (Petter, 2026-11-11) the vendor-terms record says resale is prohibited, with the licence page as evidence",
+            "status": "passed",
+            "title": "the vendor-terms record says resale is prohibited, with the licence page as evidence",
+            "duration": 0.31278900000006615,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "gdpr-fine-lookup is withheld (Petter, 2026-11-11)"
+            ],
+            "fullName": "gdpr-fine-lookup is withheld (Petter, 2026-11-11) a new audit record no longer points at enforcementtracker.com",
+            "status": "passed",
+            "title": "a new audit record no longer points at enforcementtracker.com",
+            "duration": 0.1640620000000581,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "gdpr-fine-lookup is withheld (Petter, 2026-11-11)"
+            ],
+            "fullName": "gdpr-fine-lookup is withheld (Petter, 2026-11-11) the manifest says it is unavailable and names the licence",
+            "status": "passed",
+            "title": "the manifest says it is unavailable and names the licence",
+            "duration": 0.2957769999998163,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step is registered to run at startup, on every boot",
+            "status": "passed",
+            "title": "is registered to run at startup, on every boot",
+            "duration": 0.5942190000000664,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step writes the capability reason only once the boot sync has cleared all three flags, and only over no reason or a vendor: marker",
+            "status": "failed",
+            "title": "writes the capability reason only once the boot sync has cleared all three flags, and only over no reason or a vendor: marker",
+            "duration": 6.511752999999999,
+            "failureMessages": [
+              "AssertionError: expected 'UPDATE capabilities SET deactivation_…' to be 'UPDATE capabilities SET deactivation_…' // Object.is equality\n    at /home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/apps/api/src/lib/startup-migration-0153.test.ts:116:34\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step leaves a different deliberate capability reason alone, so it never rewrites one on every boot",
+            "status": "failed",
+            "title": "leaves a different deliberate capability reason alone, so it never rewrites one on every boot",
+            "duration": 3.6146360000000186,
+            "failureMessages": [
+              "AssertionError: expected ' WHERE slug = $2 AND is_active = fals…' to contain '(deactivation_reason IS NULL OR deact…'\n    at /home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/apps/api/src/lib/startup-migration-0153.test.ts:133:19\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step switches off, on both rails and with a deliberate reason, the solutions that still have the step while the capability stays withheld",
+            "status": "failed",
+            "title": "switches off, on both rails and with a deliberate reason, the solutions that still have the step while the capability stays withheld",
+            "duration": 0.90830300000016,
+            "failureMessages": [
+              "AssertionError: expected 'UPDATE solutions SET is_active = fals…' to be 'UPDATE solutions SET is_active = fals…' // Object.is equality\n    at /home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/apps/api/src/lib/startup-migration-0153.test.ts:144:34\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step still withholds the bundles when the capability carries an unrelated non-vendor reason step 1 leaves alone",
+            "status": "failed",
+            "title": "still withholds the bundles when the capability carries an unrelated non-vendor reason step 1 leaves alone",
+            "duration": 5.192739999999958,
+            "failureMessages": [
+              "AssertionError: expected 'EXISTS ( SELECT 1 FROM capabilities W…' to contain 'is_active = false AND visible = false…'\n    at /home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/apps/api/src/lib/startup-migration-0153.test.ts:161:20\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step also takes a vendor-suspended bundle, so the vendor control tower cannot restore it to sale",
+            "status": "passed",
+            "title": "also takes a vendor-suspended bundle, so the vendor control tower cannot restore it to sale",
+            "duration": 0.3537170000001879,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step cannot undo a relisting: it never sets a capability flag, and both steps need all three flags false",
+            "status": "failed",
+            "title": "cannot undo a relisting: it never sets a capability flag, and both steps need all three flags false",
+            "duration": 1.1804299999998875,
+            "failureMessages": [
+              "AssertionError: expected 'update capabilities set deactivation_…' to contain 'and is_active = false and visible = f…'\n    at /home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/apps/api/src/lib/startup-migration-0153.test.ts:184:20\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step is a no-op on a second run and binds no Date or Buffer",
+            "status": "passed",
+            "title": "is a no-op on a second run and binds no Date or Buffer",
+            "duration": 0.42735399999992296,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step covers every catalogue solution that has the step (ai-act-assess today)",
+            "status": "passed",
+            "title": "covers every catalogue solution that has the step (ai-act-assess today)",
+            "duration": 0.2780290000000605,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794441828324,
+        "endTime": 1794441828351.4272,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/apps/api/src/lib/startup-migration-0153.test.ts"
+      }
+    ]
+  }
+}
