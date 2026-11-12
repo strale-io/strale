@@ -359,6 +359,7 @@ function targetStatusUnavailable(site: string, status: number): UpstreamUnavaila
   if (status >= 400) {
     return new UpstreamUnavailableError(site, `URL returned HTTP ${status}, a client error status, so there was no page to read.`, {
       code,
+      // Today's callers refuse a 429 first (assertNotBlockStatus); this guards a future caller.
       retryable: status === 429,
       targetFault: true,
     });

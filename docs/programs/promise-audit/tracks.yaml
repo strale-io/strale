@@ -300,13 +300,18 @@ tracks:
       now go through targetUnavailable, which takes any status the site
       answers that is not a block: a 4xx reads as the target's answer, not
       retryable, a 5xx or 408 as retryable, and an unfollowed redirect as
-      the target's with the status on the error code only; every message is
-      fixed text with no host. A 401 or 403 on og-image-check's page is now a
+      the target's with the status on the error code only. Every counted
+      message is fixed text with no host; the target's messages name the host
+      but are never counted. A 401 or 403 on og-image-check's page is now a
       refusal, as everywhere else. cookie-scan was checked: its page failure
-      is unattributed, never counted. Found, not fixed: (40) og-image-check's
-      page fetch reads no robots.txt and sends the older Strale-Bot/1.0 user
-      agent rather than STRALE_USER_AGENT.
-      Next: (35) to (38) and (32), (33), (40); then measuring past billed calls from
+      is unattributed, never counted. Found, not fixed: (40) og-image-check
+      still sets a Strale-Bot/1.0 user agent on its page and image fetches;
+      it is dead code, because safeFetch replaces it with STRALE_USER_AGENT
+      and checks robots.txt for a customer-directed fetch, and could be
+      removed; (41) a 4xx caused by Strale's own request (an Accept header the
+      site rejects) is also filed as the target's and never reaches the
+      breaker or the quality floor.
+      Next: (35) to (38) and (32), (33); then measuring past billed calls from
       the affected paths since their earliest releases, deciding refunds per
       policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against
       listed and dry-run prices (P-011, P-008). Do not assume the proposed
