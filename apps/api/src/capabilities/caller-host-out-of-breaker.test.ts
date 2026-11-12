@@ -47,6 +47,9 @@ import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { categorizeFailureReason, isRetryableFailure } from "../lib/trust-helpers.js";
 import "./domain-contact-extract.js";
 import "./og-image-check.js";
+import "./meta-extract.js";
+import "./link-extract.js";
+import "./gdpr-website-check.js";
 import "./website-carbon-estimate.js";
 
 /** A host name the breaker's substring categoriser would misread if it ever saw it. */
@@ -125,6 +128,11 @@ const notTheSite: Array<[string, () => Promise<Response>]> = [
 const targets: Array<[string, string, Record<string, unknown>]> = [
   ["domain-contact-extract's homepage", "domain-contact-extract", { domain: HOST }],
   ["og-image-check's own page", "og-image-check", { url: `https://${HOST}/page` }],
+  // Follow-up 44: the same page read in three more tools, which threw the
+  // status with the caller's URL and let network errors and timeouts out raw.
+  ["meta-extract's page", "meta-extract", { url: `https://${HOST}/page` }],
+  ["link-extract's page", "link-extract", { url: `https://${HOST}/page` }],
+  ["gdpr-website-check's page", "gdpr-website-check", { url: `https://${HOST}/page` }],
   ["website-carbon-estimate's page", "website-carbon-estimate", { url: `https://${HOST}/page` }],
 ];
 
@@ -157,11 +165,67 @@ describe.each(targets)("%s failure: a status from the caller's site is the targe
     expectCountedWithoutHost(await thrown(slug, input));
   });
 
-  it.each([401, 403])("HTTP %i is a refusal, never counted", async (code) => {
+  it.each([401, 403, 429])("HTTP %i is a refusal, never counted", async (code) => {
     site(async () => status(code));
     const err = await thrown(slug, input);
     expect(isCapabilityRefusal(err)).toBe(true);
     expect(shouldCountAgainstCapability(err)).toBe(false);
+  });
+});
+
+describe.each(["meta-extract", "link-extract", "gdpr-website-check"])("follow-up 44: %s's other page-read failures", (slug) => {
+  const input = { url: `https://${HOST}/page` };
+
+  /** A 200 whose body drops after the first chunk with `error`. */
+  const dropsMidBody = (error: unknown) => async () => {
+    let sent = false;
+    const body = new ReadableStream<Uint8Array>({
+      pull(c) {
+        if (sent) return c.error(error);
+        sent = true;
+        c.enqueue(new Uint8Array(1024));
+      },
+    });
+    return new Response(body, { status: 200, headers: { "content-type": "text/html" } });
+  };
+
+  it("a body dropped mid-read with a network code is the target's failure, retryable", async () => {
+    site(dropsMidBody(Object.assign(new TypeError("terminated"), { cause: { code: "ECONNRESET" } })));
+    const err = await thrown(slug, input);
+    expectTargetFailure(err);
+    expect(err.retryable).toBe(true);
+  });
+
+  it("a body that times out mid-read is the target's failure, retryable", async () => {
+    site(dropsMidBody(timeout()));
+    const err = await thrown(slug, input);
+    expectTargetFailure(err);
+    expect(err.retryable).toBe(true);
+  });
+
+  it("a host that does not resolve (ENOTFOUND) is the target's answer, not retryable", async () => {
+    site(fail(() => networkError("ENOTFOUND")));
+    const err = await thrown(slug, input);
+    expectTargetFailure(err);
+    expect(err.retryable).toBe(false);
+  });
+
+  it("a redirect loop is never counted against the capability", async () => {
+    site(fail(() => new Error(`Too many redirects (>5) — refusing to follow further. Starting URL: https://${HOST}/page.`)));
+    const err = await thrown(slug, input);
+    expect(shouldCountAgainstCapability(err)).toBe(false);
+    expect(outcomeFromError(err)).toMatchObject({ billable: false });
+    expectBreakerSafe(err);
+  });
+});
+
+describe("follow-up 44: the page read sends no tool-specific user agent", () => {
+  it.each(["meta-extract", "link-extract", "gdpr-website-check"])("%s leaves the user agent to safeFetch", async (slug) => {
+    site(async () => status(200, "<html><head><title>t</title></head></html>", { "content-type": "text/html" }));
+    await withAcquisitionMethod("customer_directed_fetch", () => getDirectExecutor(slug)!({ url: `https://${HOST}/page` }));
+    const page = safeFetchMock.mock.calls.find(([u]) => !String(u).endsWith("/robots.txt"));
+    const headers = new Headers((page?.[1] as RequestInit | undefined)?.headers);
+    expect(headers.get("user-agent")).toBeNull();
   });
 });
 
@@ -199,6 +263,20 @@ describe("negative: an answering homepage and page are unchanged, billed", () =>
       getDirectExecutor("og-image-check")!({ url: `https://${HOST}/page` }),
     )) as { output: Record<string, unknown> };
     expect(output.issues).toContain("Missing og:image meta tag");
+  });
+
+  it.each([
+    ["meta-extract", (o: Record<string, unknown>) => expect(o.title).toBe("t")],
+    ["link-extract", (o: Record<string, unknown>) => expect(o).toHaveProperty("links")],
+    ["gdpr-website-check", (o: Record<string, unknown>) => expect(o).toHaveProperty("findings")],
+  ] as const)("%s reads a page that answers", async (slug, check) => {
+    site(async () =>
+      status(200, '<html><head><title>t</title></head><body><a href="/about">About</a></body></html>', { "content-type": "text/html" }),
+    );
+    const { output } = (await withAcquisitionMethod("customer_directed_fetch", () =>
+      getDirectExecutor(slug)!({ url: `https://${HOST}/page` }),
+    )) as { output: Record<string, unknown> };
+    check(output);
   });
 
   it("website-carbon-estimate measures a page that answers", async () => {

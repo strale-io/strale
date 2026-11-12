@@ -369,6 +369,44 @@ tracks:
       each tool does with such a site; the boot text sync publishes them (no
       tool is report-only), with (27)'s robots-txt-parse limitation.
       Independent review NO-GO, its must-fixes applied, re-review GO.
+      (33) fixed on branch fix/alchemy-rpc-error-typing: Alchemy's rejected key
+      (HTTP 401/403 with a JSON-RPC body), its JSON-RPC 429 and -32005, and an
+      internal error (-32603) that does not say it reverted are typed, unbilled
+      provider failures; a revert stays the contract's answer whatever its
+      text. ens-resolve's avatar read no longer bills a provider failure as no
+      avatar, and the EVM stopping the avatar contract (out of gas, an invalid
+      opcode) stays no avatar. In ens-resolve, a failure of a name's offchain
+      (CCIP-read) gateway is the name's, unbilled and never counted, including
+      a lookup that hands off to a second gateway, while a provider failure on
+      a callback call stays Alchemy's. wallet-balance-lookup fails unbilled on
+      a provider failure in a token-name read (a rate limit, a rejected key, a
+      timeout, a server error) instead of billing Unknown names; a token whose
+      metadata Alchemy refuses with HTTP 400 still reads Unknown. A fetch error
+      that quotes the keyed URL is redacted. Found, not fixed: viem's offchain
+      gateway fetch has no timeout of its own, so a silent gateway holds the
+      call until the request deadline; ens-reverse-lookup's forward check goes
+      through the Universal Resolver, which turns a gateway failure into no
+      address, billed as verified false; a rejected key is recognised from
+      the wording of Alchemy's message, and node errors such as header not
+      found or missing trie node stay untyped; wallet-balance-lookup reads up
+      to 20 token names at once, so one rate limit fails the whole call.
+      (44) fixed on branch fix/page-fetcher-block-status: meta-extract,
+      link-extract and gdpr-website-check threw a non-2xx as a generic error
+      naming the caller's URL and let a network error, a timeout or a body
+      dropped mid-read out raw. Before the fix a 5xx and a 429 were counted
+      against the capability with the caller's URL in the message, a timeout
+      was counted without it, a coded network error was unattributed and not
+      counted, and a 401, 403 or 404 was filed as the caller's input. None of
+      these paths was billed. Their page read now follows og-image-check's:
+      a 401, 403, 407 or 429 is refused (assertNotBlockStatus), unbilled and
+      not counted; any other status, a timeout or a coded network error goes
+      through targetUnavailable as the target's, unbilled and not counted;
+      EAI_AGAIN or an uncoded network error is now counted, under fixed text
+      with no host (the doctrine of (34)); a URL validation refusal and the
+      size cap pass through. Their dead custom user agents are removed
+      (safeFetch already replaced them), and each manifest gains a limitation
+      saying a page that refuses or fails the request is not read and the
+      call is unbilled; manifest-text-sync publishes it at boot.
       (42) fixed on branch fix/bundle-all-failed-retryable: a refunded
       bundle answered retryable true whatever its steps' failures were, and
       each step's advice was rebuilt from its error text after the run, which
@@ -384,7 +422,7 @@ tracks:
       Billing is unchanged. Regression tests in
       solution-executor-retry.test.ts, actionable-errors-round2.test.ts and
       x402-settlement-characterization.test.ts fail against the previous code.
-      Next: (33), (44), (41); then measuring past billed calls from
+      Next: (41); then measuring past billed calls from
       the affected paths since their earliest releases, deciding refunds per
       policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against
       listed and dry-run prices (P-011, P-008). Do not assume the proposed

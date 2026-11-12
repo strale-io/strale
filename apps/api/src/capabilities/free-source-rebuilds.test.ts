@@ -15,6 +15,8 @@ import { fromSourcify, sourcifyRefusal } from "./contract-verify-check.js";
 import { recentTokens } from "./wallet-balance-lookup.js";
 import { franceTravailLocation, resetFranceTravailTokenForTests, usajobsSalary } from "./job-board-search.js";
 import { CHAINS, resolveChain, TRANSFER_CHAINS, type AssetTransfer } from "./lib/alchemy-client.js";
+import { UpstreamUnavailableError } from "../lib/upstream-result.js";
+import { outcomeFromError } from "../lib/execution-outcome.js";
 
 const W = "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe";
 let requests: { url: string; method?: string; params?: unknown[] }[] = [];
@@ -33,7 +35,9 @@ function mockUpstreams(rpc: Record<string, (params: unknown[]) => unknown>, othe
       requests.push({ url, method: body.method, params: body.params });
       const handler = rpc[body.method];
       if (!handler) return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, error: { message: "unmocked" } }));
-      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: handler(body.params) }));
+      const out = handler(body.params);
+      if (out instanceof Response) return out;
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: out }));
     }
     requests.push({ url });
     return other(url);
@@ -127,6 +131,43 @@ describe("wallet-balance-lookup (Alchemy)", () => {
       { name: "USD Coin", symbol: "USDC", address: "0xA0b8" },
       { name: "Unknown", symbol: "DAI", address: "0x6B17" },
     ]);
+  });
+  const twoTokens = (metadata: (address: string) => unknown) => mockUpstreams({
+    eth_getBalance: () => "0x0",
+    alchemy_getAssetTransfers: (p) => ({ transfers: (p[0] as { toAddress?: string }).toAddress
+      ? [tx({ category: "erc20", asset: "USDC", blockNum: "0x20", rawContract: { address: "0xA0b8" } })]
+      : [tx({ category: "erc20", asset: "DAI", blockNum: "0x10", rawContract: { address: "0x6B17" } })] }),
+    alchemy_getTokenMetadata: (p) => metadata(String(p[0])),
+  });
+  const rpcError = (code: number, message: string) => new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, error: { code, message } }));
+  it("failure: a rate limit on one token's name fails the call, unbilled, instead of billing 'Unknown' (promise-audit 33)", async () => {
+    twoTokens((a) => (a === "0x6B17" ? rpcError(429, "Your app has exceeded its compute units per second capacity.") : { name: "USD Coin" }));
+    const err = await run("wallet-balance-lookup", { address: W }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(UpstreamUnavailableError);
+    expect(outcomeFromError(err)).toMatchObject({ billable: false, fault: "provider" });
+    expect((err as UpstreamUnavailableError).retryable).toBe(true);
+  });
+  it("negative: a token Alchemy cannot name is 'Unknown', billed", async () => {
+    twoTokens((a) => (a === "0x6B17" ? rpcError(-32602, "invalid token contract") : { name: "USD Coin" }));
+    const r = await run("wallet-balance-lookup", { address: W });
+    expect(r.output.recent_tokens).toEqual([
+      { name: "USD Coin", symbol: "USDC", address: "0xA0b8" },
+      { name: "Unknown", symbol: "DAI", address: "0x6B17" },
+    ]);
+  });
+  it("negative: one token's metadata answering HTTP 400 reads 'Unknown', billed, not a failed call (promise-audit 33 review)", async () => {
+    twoTokens((a) => (a === "0x6B17" ? new Response("bad request", { status: 400 }) : { name: "USD Coin" }));
+    const r = await run("wallet-balance-lookup", { address: W });
+    expect(r.output.recent_tokens).toEqual([
+      { name: "USD Coin", symbol: "USDC", address: "0xA0b8" },
+      { name: "Unknown", symbol: "DAI", address: "0x6B17" },
+    ]);
+  });
+  it.each([401, 403, 503])("failure: one token's metadata answering HTTP %i fails the call, unbilled", async (status) => {
+    twoTokens((a) => (a === "0x6B17" ? new Response("", { status }) : { name: "USD Coin" }));
+    const err = await run("wallet-balance-lookup", { address: W }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(UpstreamUnavailableError);
+    expect(outcomeFromError(err)).toMatchObject({ billable: false });
   });
   it("dedupes tokens newest first", () => {
     const t = recentTokens([

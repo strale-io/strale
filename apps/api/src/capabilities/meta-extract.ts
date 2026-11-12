@@ -1,6 +1,10 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readPageHtml } from "../lib/resource-limits.js";
+import { assertNotBlockStatus } from "../lib/site-access.js";
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
+import { targetUnavailable } from "../lib/upstream-result.js";
+import { UrlValidationError } from "../lib/url-validator.js";
 
 // Extract metadata via HTTP GET — no Browserless needed
 registerCapability("meta-extract", async (input: CapabilityInput) => {
@@ -9,22 +13,40 @@ registerCapability("meta-extract", async (input: CapabilityInput) => {
 
   const fullUrl = url.startsWith("http") ? url : `https://${url}`;
 
-  // F-0-006: safeFetch validates + re-validates on redirect hops.
-  const response = await safeFetch(fullUrl, {
-    headers: {
-      "User-Agent": "Strale/1.0 (meta extractor; admin@strale.io)",
-      Accept: "text/html,*/*",
-    },
-    signal: AbortSignal.timeout(15000),
-  });
+  // The caller's own page. Its failures are the caller's target: unbilled and
+  // never counted against this capability; a site that refuses automated
+  // access (401, 403, 407, 429) is a refusal, as for og-image-check
+  // (promise-audit T1 follow-up 44).
+  const site = `website ${hostOf(fullUrl)}`;
+  let response: Response;
+  try {
+    // F-0-006: safeFetch validates + re-validates on each redirect hop, and
+    // sends Strale's honest user agent for a page read.
+    response = await safeFetch(fullUrl, {
+      headers: { Accept: "text/html,*/*" },
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch (err) {
+    // The caller's URL failing Strale's URL guard is their input, as before.
+    if (err instanceof UrlValidationError || isCapabilityRefusal(err)) throw err;
+    throw targetUnavailable(site, err);
+  }
 
   if (!response.ok) {
     // Nothing below reads the body (#434). Cancel it rather than leaving
     // it to pin the keep-alive connection until GC.
     await discardBody(response, "meta-extract: non-2xx");
-    throw new Error(`HTTP ${response.status} from ${fullUrl}.`);
+    assertNotBlockStatus(fullUrl, response.status);
+    throw targetUnavailable(site, response.status);
   }
-  const html = await readPageHtml(response);
+  let html: string;
+  try {
+    html = await readPageHtml(response);
+  } catch (err) {
+    // The connection dropped or timed out mid-body. A size cap is a refusal.
+    if (isCapabilityRefusal(err)) throw err;
+    throw targetUnavailable(site, err);
+  }
 
   const output: Record<string, unknown> = { url: fullUrl };
 
@@ -124,4 +146,8 @@ function resolveUrl(href: string, base: string): string {
   } catch {
     return href;
   }
+}
+
+function hostOf(url: string): string {
+  return URL.canParse(url) ? new URL(url).hostname.replace(/^www\./, "") : "unknown";
 }
