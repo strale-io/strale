@@ -1,0 +1,165 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "8b8cc5411e0f31f4098df596e777ad665efa3aa1"
+  },
+  "at": "2026-11-12T13:49:23.719Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/ppf2-before.json"
+  },
+  "summary": {
+    "numTotalTestSuites": 3,
+    "numPassedTestSuites": 1,
+    "numFailedTestSuites": 2,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 8,
+    "numPassedTests": 6,
+    "numFailedTests": 2,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "startTime": 1794491337804,
+    "success": false
+  },
+  "topic": "paid-api-preflight-http-to-https-fail-before",
+  "raw": {
+    "numTotalTestSuites": 3,
+    "numPassedTestSuites": 1,
+    "numFailedTestSuites": 2,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 8,
+    "numPassedTests": 6,
+    "numFailedTests": 2,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794491337804,
+    "success": false,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "paid-api-preflight output contract"
+            ],
+            "fullName": "paid-api-preflight output contract declares every executor-owned field and the two nullable fields",
+            "status": "passed",
+            "title": "declares every executor-owned field and the two nullable fields",
+            "duration": 5.26090499999998,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "paid-api-preflight output contract"
+            ],
+            "fullName": "paid-api-preflight output contract returns the complete contract for a reachable x402 endpoint",
+            "status": "passed",
+            "title": "returns the complete contract for a reachable x402 endpoint",
+            "duration": 4.22333900000001,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "paid-api-preflight output contract"
+            ],
+            "fullName": "paid-api-preflight output contract returns the complete contract when the target is unreachable",
+            "status": "passed",
+            "title": "returns the complete contract when the target is unreachable",
+            "duration": 1.0612679999999841,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "paid-api-preflight ssl_valid reflects the TLS connection"
+            ],
+            "fullName": "paid-api-preflight ssl_valid reflects the TLS connection is false, with the TLS code named, when the certificate is rejected",
+            "status": "passed",
+            "title": "is false, with the TLS code named, when the certificate is rejected",
+            "duration": 1.1445459999999912,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "paid-api-preflight ssl_valid reflects the TLS connection"
+            ],
+            "fullName": "paid-api-preflight ssl_valid reflects the TLS connection is false when a plain http URL redirects to https",
+            "status": "failed",
+            "title": "is false when a plain http URL redirects to https",
+            "duration": 4.514269000000013,
+            "failureMessages": [
+              "AssertionError: expected true to be false // Object.is equality\n    at /home/user/strale-wt-preflight/apps/api/src/capabilities/paid-api-preflight.test.ts:164:37\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-preflight/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "paid-api-preflight ssl_valid reflects the TLS connection"
+            ],
+            "fullName": "paid-api-preflight ssl_valid reflects the TLS connection names a protocol failure as a failed handshake, not a rejected certificate",
+            "status": "failed",
+            "title": "names a protocol failure as a failed handshake, not a rejected certificate",
+            "duration": 1.8229799999999727,
+            "failureMessages": [
+              "AssertionError: expected [ …(2) ] to include 'TLS handshake failed: ERR_SSL_WRONG_V…'\n    at Proxy.<anonymous> (file:///home/user/strale-wt-preflight/node_modules/@vitest/expect/dist/index.js:1319:15)\n    at Proxy.<anonymous> (file:///home/user/strale-wt-preflight/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale-wt-preflight/node_modules/chai/index.js:1700:25)\n    at /home/user/strale-wt-preflight/apps/api/src/capabilities/paid-api-preflight.test.ts:179:34\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-preflight/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "paid-api-preflight ssl_valid reflects the TLS connection"
+            ],
+            "fullName": "paid-api-preflight ssl_valid reflects the TLS connection is false when an https URL redirects to plain http",
+            "status": "passed",
+            "title": "is false when an https URL redirects to plain http",
+            "duration": 0.7070249999999874,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "paid-api-preflight ssl_valid reflects the TLS connection"
+            ],
+            "fullName": "paid-api-preflight ssl_valid reflects the TLS connection does not read a timeout or DNS failure as a certificate problem",
+            "status": "passed",
+            "title": "does not read a timeout or DNS failure as a certificate problem",
+            "duration": 0.4439079999999649,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794491338208,
+        "endTime": 1794491338227.4438,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale-wt-preflight/apps/api/src/capabilities/paid-api-preflight.test.ts"
+      }
+    ]
+  }
+}

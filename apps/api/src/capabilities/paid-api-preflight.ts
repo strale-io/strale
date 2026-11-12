@@ -11,8 +11,14 @@ registerCapability("paid-api-preflight", async (input: CapabilityInput) => {
   await validateUrl(fullUrl);
 
   const issues: string[] = [];
-  const sslValid = fullUrl.startsWith("https://");
-  if (!sslValid) issues.push("Endpoint does not use HTTPS");
+  // ssl_valid is true only when a TLS connection to the URL that answered
+  // completed with a certificate the runtime trusts (undici verifies the chain
+  // and host name by default). It used to be the URL's scheme alone, so an
+  // expired or self-signed certificate, or a redirect to plain http, still
+  // read as valid HTTPS (promise-audit T1 follow-up 32).
+  let sslValid = false;
+  const httpsRequested = fullUrl.startsWith("https://");
+  if (!httpsRequested) issues.push("Endpoint does not use HTTPS");
 
   const start = Date.now();
 
@@ -35,6 +41,12 @@ registerCapability("paid-api-preflight", async (input: CapabilityInput) => {
 
     statusCode = res.status;
     isReachable = true;
+    // res.url is the hop that answered (safeFetch follows redirects itself);
+    // a test double's Response has no url, so fall back to the request URL.
+    // Both ends must be https: an http URL that redirects to https has already
+    // sent its first request, payment header included, in cleartext.
+    sslValid = httpsRequested && (res.url || fullUrl).startsWith("https://");
+    if (httpsRequested && !sslValid) issues.push("Redirected from HTTPS to plain HTTP");
     responseHeaders = Object.fromEntries(res.headers.entries());
     server = res.headers.get("server");
 
@@ -46,16 +58,25 @@ registerCapability("paid-api-preflight", async (input: CapabilityInput) => {
     // swallowing it.
     await discardBody(res, "paid-api-preflight: status and headers only");
   } catch (err) {
+    // degraded-ok: an endpoint that cannot be reached, or whose TLS handshake or certificate fails, is this check's finding: is_reachable false, ssl_valid false, recommendation avoid, the cause in issues; refusals rethrow (paid-api-preflight.test.ts checks these shapes).
     if (isCapabilityRefusal(err)) throw err;
     const responseTimeMs = Date.now() - start;
     const msg = err instanceof Error ? err.message : String(err);
+    const tlsCode = tlsErrorCode(err);
+    if (tlsCode) {
+      issues.push(
+        tlsCode.startsWith("ERR_SSL_")
+          ? `TLS handshake failed: ${tlsCode}`
+          : `TLS certificate rejected: ${tlsCode}`,
+      );
+    }
     return {
       output: {
         url: fullUrl,
         is_reachable: false,
         response_time_ms: responseTimeMs,
         status_code: 0,
-        ssl_valid: sslValid,
+        ssl_valid: false,
         payment_protocol: "unknown",
         payment_details: {},
         payment_handshake_valid: false,
@@ -154,6 +175,49 @@ registerCapability("paid-api-preflight", async (input: CapabilityInput) => {
     provenance: { source: "http-request", fetched_at: new Date().toISOString() },
   };
 });
+
+// ─── TLS failure detection ──────────────────────────────────────────────────
+
+// Node's TLS layer (and undici, which wraps it as the cause of "fetch failed")
+// reports certificate failures with these codes, and handshake or protocol
+// failures with an ERR_SSL_ prefix. Matching the codes rather
+// than message text keeps a timeout or DNS failure from reading as a bad
+// certificate.
+const TLS_ERROR_CODES = new Set([
+  "CERT_HAS_EXPIRED",
+  "CERT_NOT_YET_VALID",
+  "CERT_REVOKED",
+  "CERT_UNTRUSTED",
+  "CERT_REJECTED",
+  "DEPTH_ZERO_SELF_SIGNED_CERT",
+  "SELF_SIGNED_CERT_IN_CHAIN",
+  "UNABLE_TO_GET_ISSUER_CERT",
+  "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+  "UNABLE_TO_DECRYPT_CERT_SIGNATURE",
+  "CERT_SIGNATURE_FAILURE",
+  "ERROR_IN_CERT_NOT_BEFORE_FIELD",
+  "ERROR_IN_CERT_NOT_AFTER_FIELD",
+  "HOSTNAME_MISMATCH",
+  "INVALID_CA",
+  "INVALID_PURPOSE",
+  "CERT_CHAIN_TOO_LONG",
+  "PATH_LENGTH_EXCEEDED",
+  "ERR_TLS_CERT_ALTNAME_INVALID",
+  "ERR_SSL_WRONG_VERSION_NUMBER",
+]);
+
+export function tlsErrorCode(err: unknown): string | null {
+  let current: unknown = err;
+  for (let depth = 0; depth < 4 && current && typeof current === "object"; depth++) {
+    const code = (current as { code?: unknown }).code;
+    if (typeof code === "string" && (TLS_ERROR_CODES.has(code) || code.startsWith("ERR_TLS_") || code.startsWith("ERR_SSL_"))) {
+      return code;
+    }
+    current = (current as { cause?: unknown }).cause;
+  }
+  return null;
+}
 
 // ─── Protocol parsers ───────────────────────────────────────────────────────
 

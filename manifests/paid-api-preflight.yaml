@@ -61,6 +61,10 @@ output_schema:
       type: integer
     ssl_valid:
       type: boolean
+      description: >-
+        True only when a TLS connection to the URL that answered completed with a certificate the
+        runtime trusts. False for plain http, a redirect to http, a rejected certificate, or no
+        connection at all.
     payment_protocol:
       type: string
       enum:
@@ -158,6 +162,20 @@ limitations:
     workaround: >-
       Pre-flight is most accurate for endpoints that gate on HTTP 402 without requiring a specific
       payload. For parameterized paywalls, verify the protocol docs directly.
+  - title: ssl_valid means the TLS connection succeeded, not a full certificate audit
+    text: >-
+      ssl_valid is true when the HTTPS connection to the answering URL completed with a certificate
+      the runtime trusts (chain and host name verified). It does not check revocation, certificate
+      transparency or key strength, and does not report the protocol version (a server that offers
+      nothing newer than TLS 1.1 fails the handshake). A plain http URL is false even when it
+      redirects to https. When no connection completed it is false; a rejected certificate or a
+      failed handshake is named in issues, while a timeout or DNS failure is reported as
+      unreachable.
+    category: coverage
+    severity: info
+    workaround: >-
+      For the certificate's issuer, validity dates, days to expiry, protocol and cipher, use
+      ssl-check on the host.
   - title: Facilitator reachability check uses HEAD with 2s timeout
     text: >-
       The x402 facilitator reachability check sends a HEAD request with a 2-second timeout.

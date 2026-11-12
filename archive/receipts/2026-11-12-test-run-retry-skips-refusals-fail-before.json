@@ -1,0 +1,151 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "c40a3f8ae4ce0319f0c13ffd4dcafafa83f81187"
+  },
+  "at": "2026-11-12T13:47:39.374Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/retry-before.json"
+  },
+  "summary": {
+    "numTotalTestSuites": 3,
+    "numPassedTestSuites": 1,
+    "numFailedTestSuites": 2,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 7,
+    "numPassedTests": 6,
+    "numFailedTests": 1,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "startTime": 1794491246479,
+    "success": false
+  },
+  "topic": "retry-skips-refusals-fail-before",
+  "raw": {
+    "numTotalTestSuites": 3,
+    "numPassedTestSuites": 1,
+    "numFailedTestSuites": 2,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 7,
+    "numPassedTests": 6,
+    "numFailedTests": 1,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794491246479,
+    "success": false,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "executeWithTransientRetry — the shared policy"
+            ],
+            "fullName": "executeWithTransientRetry — the shared policy serves a non-deterministic capability whose upstream said HTTP 429 once",
+            "status": "passed",
+            "title": "serves a non-deterministic capability whose upstream said HTTP 429 once",
+            "duration": 1163.571424,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "executeWithTransientRetry — the shared policy"
+            ],
+            "fullName": "executeWithTransientRetry — the shared policy retries once only: a second 429 fails with the original error",
+            "status": "passed",
+            "title": "retries once only: a second 429 fails with the original error",
+            "duration": 1074.9499230000001,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "executeWithTransientRetry — the shared policy"
+            ],
+            "fullName": "executeWithTransientRetry — the shared policy never retries a site's HTTP 429 refusal (promise-audit follow-up 43)",
+            "status": "failed",
+            "title": "never retries a site's HTTP 429 refusal (promise-audit follow-up 43)",
+            "duration": 1063.6895760000002,
+            "failureMessages": [
+              "AssertionError: expected \"vi.fn()\" to be called 1 times, but got 2 times\n    at /home/user/strale-wt-retry/apps/api/src/lib/retry.executor-parity.test.ts:63:22\n    at file:///home/user/strale-wt-retry/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "executeWithTransientRetry — the shared policy"
+            ],
+            "fullName": "executeWithTransientRetry — the shared policy never retries a refusal",
+            "status": "passed",
+            "title": "never retries a refusal",
+            "duration": 1.280601999999817,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "executeWithTransientRetry — the shared policy"
+            ],
+            "fullName": "executeWithTransientRetry — the shared policy never retries a deterministic capability",
+            "status": "passed",
+            "title": "never retries a deterministic capability",
+            "duration": 0.7509049999998751,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "both rails reach the executor only through the shared policy"
+            ],
+            "fullName": "both rails reach the executor only through the shared policy x402 gateway: no bare executor call; the capability handler uses the policy",
+            "status": "passed",
+            "title": "x402 gateway: no bare executor call; the capability handler uses the policy",
+            "duration": 0.8387330000000475,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "both rails reach the executor only through the shared policy"
+            ],
+            "fullName": "both rails reach the executor only through the shared policy POST /v1/do: no bare executor call or private retry; executeWithRetry uses the policy",
+            "status": "passed",
+            "title": "POST /v1/do: no bare executor call or private retry; executeWithRetry uses the policy",
+            "duration": 0.589701999999761,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794491246818,
+        "endTime": 1794491250124.5896,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale-wt-retry/apps/api/src/lib/retry.executor-parity.test.ts"
+      }
+    ]
+  }
+}
