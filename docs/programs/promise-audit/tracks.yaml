@@ -105,8 +105,31 @@ tracks:
       provider's fault and counted, unless the route's schema check rejects
       it first (unverified); (12) optional: World Bank message 120 with no
       embedded entry could be an inputRefusal, so it is filed as the caller's.
-      Next: wave 2d, rows 30, 31, 32, 33 and 35,
-      reconciled first against later repairs such as customs PR999. Then wave 3; the Nager.Date
+      Wave 2d merged as PR 1021 (rows 30, 31, 32, 33, 35; it also fixed (9)
+      and (10) above): port-check bills only refused (closed) and silent
+      (filtered) ports and throws on every other connect error;
+      og-image-check throws on an image host's 5xx, 408, timeout or network
+      error, refuses on a block, and bills a 4xx or an image URL that fails
+      the URL guard as a finding; domain-contact-extract throws when the
+      contact page fails and keeps the billed homepage answer for a 4xx or a
+      robots disallow; protocol-fees-lookup reads revenue from the working
+      dailyRevenue endpoint (the old one answered 500, so revenue was always
+      null and billed) and throws when either request fails;
+      ens-reverse-lookup throws on an RPC failure in the forward check. Four
+      reviews in separate contexts ended GO (PR 1021 body). Deploy check pending.
+      Found in wave 2d, not fixed there (none overcharges): (13) a 401, 403
+      or 429, or a robots disallow, on the og:image host refuses the whole
+      call, so a dead S3 image (S3 answers 403) loses its answer;
+      (14) port-check reads an AggregateError's code from its first attempt
+      only (happy-eyeballs), so a refused dual-stack port can throw instead
+      of billing closed; read err.errors; (15) protocol-fees-lookup files a
+      DeFi Llama 400 without "not found" as the provider's fault, though it
+      may be the caller's slug; (16) og-image-check's failsUrlGuard
+      re-resolves DNS with no timeout of its own and can disagree with
+      safeFetch's first lookup; (17) ESSRFBLOCKED classifies as
+      caller_input_invalid but isUserInputError is false for it, so it may
+      count toward the circuit breaker.
+      Next: wave 3; the Nager.Date
       no-calendar path (a weekends-only answer for countries such as TH, still
       billed) as a follow-up candidate; the perturbation replays (http_503,
       http_429, network_error, blocked_200, DNS ETIMEOUT) for every network
