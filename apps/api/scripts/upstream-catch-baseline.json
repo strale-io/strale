@@ -483,12 +483,6 @@
     },
     {
       "file": "apps/api/src/capabilities/lib/web-provider.ts",
-      "fingerprint": "255f07b5c6526a96db042e95388538c72cfbec1b63e6796185f3cf95b9a8a541",
-      "count": 1,
-      "line": 632
-    },
-    {
-      "file": "apps/api/src/capabilities/lib/web-provider.ts",
       "fingerprint": "cde53ab7ecdb5698026aff1c10627f3d8b2cdf497f57f7cf87f565739cc8cf57",
       "count": 1,
       "line": 395
@@ -816,12 +810,6 @@
       "fingerprint": "bf1f94cd281d3fc2768494b9fd37e1912d8a815af29a8577ff0a82d77dc27ab2",
       "count": 1,
       "line": 163
-    },
-    {
-      "file": "apps/api/src/capabilities/url-to-markdown.ts",
-      "fingerprint": "dcdf8f2dadbd7ab443d32eb239e8a1207a616a1667139648b33fb6ea7b5bcfda",
-      "count": 1,
-      "line": 143
     },
     {
       "file": "apps/api/src/capabilities/us-company-data-cobalt.ts",

@@ -526,12 +526,25 @@ tracks:
       caller's site. Its manifest is report-only (compliance), so the fix
       needs Petter's approval of the wording plus a startup block; it goes
       to him with a recommendation.
-      (55) capabilities/lib/web-provider.ts sends Accept text/html and
-      application/xhtml+xml with no */* on its plain fetch (~line 535) and
-      its preflight (~line 883), then files a non-block 4xx, 406 included,
-      as the target's answer with no further route: the class of (41),
-      outside targetUnavailable and outside the guard's scan.
-      Next: (55), then the (50) recommendation; then measuring past
+      (55) fixed: web-provider's plain fetch and preflight, url-to-markdown
+      and tech-stack-detect now add */*;q=0.8 to their Accept, so a 406 can
+      no longer be filed as the site's answer. The (41) guard also scans
+      capabilities/lib and selects a tool by asking the breaker and the
+      failure taxonomy whether any message it builds that names an HTTP
+      status is excused for a 406, not only by targetUnavailable; that adds
+      invoice-extract (no Accept, so */*). It fails against the previous
+      Accept values.
+      (56) Open: the breaker's 'returned a server error' entry, meant for a
+      target site's 5xx, also excuses a registry's 5xx (danish-company-data,
+      uk-filing-events), so a registry outage never trips its breaker.
+      (57) Open: linkedin-url-validate sends Accept text/html and reports
+      accessible: false with the site's status, a billed answer a 406 of
+      Strale's own making can produce.
+      (58) Open: after a 404 from KRS register P, polish-company-data
+      answers 'not found' for any non-2xx from its register S retry (~line
+      45), so a registry 5xx there is filed as the caller's input, the same
+      kind of misattribution as (56).
+      Next: the (50) recommendation; then measuring past
       billed calls from
       the affected paths since their earliest releases, deciding refunds per
       policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against

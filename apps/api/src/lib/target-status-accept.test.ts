@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
 import ts from "typescript";
+import { classifyTransactionFailure } from "./transaction-failure-taxonomy.js";
+import { isUserInputError } from "./circuit-breaker.js";
 
 // Promise-audit T1 follow-up 41. targetUnavailable(site, status) files a
 // site's 4xx as the target's answer: unbilled and never counted against the
@@ -19,9 +21,76 @@ import ts from "typescript";
 // direct call (an alias, .call, an element access, spread arguments). Both
 // functions are found through their import declarations, so importing under
 // another name or as a namespace is still seen.
-const dir = new URL("../capabilities/", import.meta.url);
+//
+// Follow-up 55: a tool can also file a site's 4xx as the target's in its own
+// words, without targetUnavailable. web-provider, url-to-markdown and
+// tech-stack-detect sent Accept text/html,application/xhtml+xml and built
+// messages ("URL returned HTTP n", "Check the URL is correct") that the
+// breaker and the failure taxonomy excuse whatever n is, so a 406 of Strale's
+// own making was filed as the site's. The guard therefore asks the two
+// classifiers themselves, not a copy of their phrases: every string or
+// template literal that names an HTTP status is read with 406 in place of each
+// interpolation, and a file whose message either classifier excuses is checked
+// the same way, and so is a file that sets `targetFault: true` itself. Every
+// folder under capabilities/ is scanned. Known limits: a message reads as
+// naming a status only when HTTP or status stands just before it, and only
+// safeFetch calls are checked (no selected file uses plain fetch today).
+const ROOT = new URL("../capabilities/", import.meta.url);
+/** capabilities/ and every folder under it, each with its relative path to src/lib. */
+function dirsUnder(dir: URL, prefix = "", lib = "../lib/"): { dir: URL; prefix: string; lib: string }[] {
+  const subdirs = readdirSync(dir, { withFileTypes: true }).filter(d => d.isDirectory() && !d.name.startsWith("__"));
+  return [{ dir, prefix, lib }, ...subdirs.flatMap(d => dirsUnder(new URL(`${d.name}/`, dir), `${prefix}${d.name}/`, `../${lib}`))];
+}
+const DIRS = dirsUnder(ROOT);
 
-/** Every capability that calls targetUnavailable today. A tool added or removed changes this list on purpose. */
+/** A status Strale's own Accept can draw, put in place of every interpolation. */
+const PROBE_STATUS = "406";
+const NAMES_STATUS = new RegExp(`(?:HTTP|status)\\W{0,3}${PROBE_STATUS}\\b`, "i");
+
+/** Is a failure with this message excused: not counted against the tool, and filed as the caller's or the target's? */
+function excused(message: string): boolean {
+  return classifyTransactionFailure(message) === "caller_input" || isUserInputError(message);
+}
+
+/** Does the file mark a failure as the target's directly (`targetFault: true`), the flag that leaves it unbilled? */
+function setsTargetFault(src: ts.SourceFile): boolean {
+  return nodes(src, ts.isPropertyAssignment).some(p => keyName(p.name) === "targetfault" && p.initializer.kind !== ts.SyntaxKind.FalseKeyword);
+}
+
+/** Every string or template literal in the file that names an HTTP status, with PROBE_STATUS for each interpolation. */
+function statusMessages(src: ts.SourceFile): string[] {
+  const out: string[] = [];
+  const walk = (n: ts.Node) => {
+    if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) out.push(n.text);
+    else if (ts.isTemplateExpression(n)) {
+      out.push(n.head.text + n.templateSpans.map(span => PROBE_STATUS + span.literal.text).join(""));
+    }
+    ts.forEachChild(n, walk);
+  };
+  walk(src);
+  return out.filter(m => NAMES_STATUS.test(m));
+}
+
+/**
+ * Messages the classifiers excuse for a 406 that can never carry one, by file,
+ * exactly as statusMessages reads them. An entry goes here only with its
+ * reason, after reading the branch that builds the message; the file's other
+ * messages are still checked.
+ */
+const DANISH_5XX = "The Danish business registry (cvrapi.dk) returned a server error (HTTP 406). This is usually transient — please try again in a few minutes.";
+const CH_5XX = "Companies House API returned a server error (HTTP 406). This is usually transient — please try again in a few minutes.";
+const NEVER_A_4XX: Record<string, { message: string; reason: string }[]> = {
+  // Both are a registry's 5xx branch; a 4xx there reads "unexpected
+  // response", which is counted against the tool. That the breaker excuses
+  // "returned a server error" from a registry at all is a separate matter,
+  // recorded as promise-audit follow-up (56).
+  "danish-company-data.ts": [{ message: DANISH_5XX, reason: "built only when status >= 500" }],
+  "uk-filing-events.ts": [{ message: CH_5XX, reason: "built only when status >= 500" }],
+};
+const exemptIn = (file: string) => new Set((NEVER_A_4XX[file] ?? []).map(e => e.message));
+
+
+/** Every capability that files a site's status as the target's today (targetUnavailable or its own words). A tool added or removed changes this list on purpose. */
 // How many direct safeFetch calls each file makes. Pinned so a call the
 // checker cannot see (through another module, or a pattern it does not parse)
 // shows up as a count that no longer matches; update a count only after
@@ -32,15 +101,19 @@ const EXPECTED_CALLS: Record<string, number> = {
   "domain-reputation.ts": 1,
   "gdpr-website-check.ts": 1,
   "header-security-check.ts": 1,
+  "invoice-extract.ts": 1,
   "link-extract.ts": 1,
   "meta-extract.ts": 1,
   "og-image-check.ts": 3,
+  "lib/web-provider.ts": 2,
   "page-exists.ts": 1,
   "port-check.ts": 0,
   "robots-txt-parse.ts": 1,
+  "tech-stack-detect.ts": 1,
+  "url-to-markdown.ts": 1,
   "website-carbon-estimate.ts": 1,
 };
-const EXPECTED_FILES = Object.keys(EXPECTED_CALLS);
+const EXPECTED_FILES = Object.keys(EXPECTED_CALLS).sort();
 
 function nodes<T extends ts.Node>(root: ts.Node, predicate: (n: ts.Node) => n is T): T[] {
   const found: T[] = [];
@@ -130,19 +203,40 @@ function acceptsAnything(accept: string): boolean {
   });
 }
 
-const files = readdirSync(dir).filter(f => f.endsWith(".ts") && !f.endsWith(".test.ts")).sort().flatMap(file => {
-  const src = ts.createSourceFile(file, readFileSync(new URL(file, dir), "utf8"), ts.ScriptTarget.Latest, true);
-  const target = importedAs(src, "../lib/upstream-result.js", "targetUnavailable");
-  const safeFetch = importedAs(src, "../lib/safe-fetch.js", "safeFetch");
-  const calls = nodes(src, ts.isCallExpression);
-  return calls.some(target.isCall)
-    ? [{ file, src, fetches: calls.filter(safeFetch.isCall), indirect: safeFetch.indirectUses(src) }]
-    : [];
-});
+const scanned = DIRS.flatMap(({ dir, prefix, lib }) =>
+  readdirSync(dir).filter(f => f.endsWith(".ts") && !f.endsWith(".test.ts")).map(name => {
+    const file = prefix + name;
+    const src = ts.createSourceFile(file, readFileSync(new URL(name, dir), "utf8"), ts.ScriptTarget.Latest, true);
+    const target = importedAs(src, `${lib}upstream-result.js`, "targetUnavailable");
+    const safeFetch = importedAs(src, `${lib}safe-fetch.js`, "safeFetch");
+    const calls = nodes(src, ts.isCallExpression);
+    const messages = statusMessages(src);
+    const selected = calls.some(target.isCall) || setsTargetFault(src)
+      || messages.some(m => excused(m) && !exemptIn(file).has(m));
+    return { file, src, messages, selected, fetches: calls.filter(safeFetch.isCall), indirect: safeFetch.indirectUses(src) };
+  }),
+).sort((a, b) => a.file.localeCompare(b.file));
+const files = scanned.filter(f => f.selected);
 
 describe("a tool that files a site's status as the target's sends an Accept the site cannot refuse", () => {
-  it("finds exactly the tools that call targetUnavailable", () => {
+  it("finds exactly the tools that file a site's status as the target's", () => {
     expect(files.map(f => f.file)).toEqual(EXPECTED_FILES);
+  });
+
+  it("keeps an exemption only while its message is still built and still excused", () => {
+    for (const [file, entries] of Object.entries(NEVER_A_4XX)) {
+      const messages = scanned.find(f => f.file === file)?.messages ?? [];
+      for (const { message } of entries) {
+        expect(messages, `${file}: exempted message no longer built`).toContain(message);
+        expect(excused(message), `${file}: exempted message no longer excused, so drop the exemption`).toBe(true);
+      }
+    }
+  });
+
+  it("reads a status message the way the classifiers do", () => {
+    expect(excused("URL returned HTTP 406. The server is reachable but returned an error.")).toBe(true);
+    expect(excused("Failed to fetch invoice from URL: HTTP 406")).toBe(true);
+    expect(excused("The registry returned an unexpected response (HTTP 406).")).toBe(false);
   });
 
   it("reads an Accept value the way a server does", () => {
