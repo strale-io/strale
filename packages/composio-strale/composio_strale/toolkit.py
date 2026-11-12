@@ -36,7 +36,6 @@ def _matches(items: list, category: Optional[str]) -> list[dict]:
                 "slug": c.get("slug"),
                 "name": c.get("name"),
                 "description": (c.get("description") or "")[:120],
-                "price_cents": c.get("price_cents"),
                 "category": c.get("category"),
             }
         )
@@ -47,7 +46,10 @@ class StraleSearchInput(BaseModel):
     query: str = Field(..., description="Search keyword (e.g., 'sanctions', 'IBAN', 'company data')")
     category: Optional[str] = Field(
         None,
-        description="Filter by category: compliance, validation, web3, company-data, finance, developer-tools",
+        description=(
+            "Exact category to filter by, e.g. data-extraction, developer-tools, validation, "
+            "data-processing, company-data, compliance, web3"
+        ),
     )
 
 
@@ -113,21 +115,27 @@ class StraleToolkit:
 
         @composio.tools.custom_tool(toolkit="strale")
         def strale_search(request: StraleSearchInput) -> dict:
-            """Search Strale's available API capabilities. Returns matching capabilities with slugs, descriptions, and pricing. Use this first to discover available capabilities, then use strale_execute to run one."""
-            # The typeahead endpoint returns its matches under "results" and
-            # takes no category filter, so the category is applied here.
-            # Solutions are left out: strale_execute runs capabilities only.
-            resp = httpx.get(
-                f"{toolkit.base_url}/v1/suggest/typeahead",
-                params={"q": request.query, "limit": "10", "type": "capability"},
-                headers=toolkit._headers(),
-                timeout=10,
-            )
-            if resp.status_code == 200:
-                hits = resp.json().get("results")
-                return {"capabilities": _matches(hits if isinstance(hits, list) else [], request.category)}
-            # Fallback: the catalogue endpoint returns every capability and
-            # ignores search terms, so the query is matched here.
+            """Search Strale's available API capabilities. Returns matching capabilities with slugs, names, descriptions and categories. Prices are not part of search results; max_price_cents on strale_execute caps what a call can cost. Use this first to discover available capabilities, then use strale_execute to run one."""
+            query = request.query.strip()
+            if len(query) < 2:
+                return {"error": "query must be at least 2 characters"}
+            if not request.category:
+                # The typeahead endpoint returns its matches under "results",
+                # capped at 10. Solutions are left out: strale_execute runs
+                # capabilities only.
+                resp = httpx.get(
+                    f"{toolkit.base_url}/v1/suggest/typeahead",
+                    params={"q": query, "limit": "10", "type": "capability"},
+                    headers=toolkit._headers(),
+                    timeout=10,
+                )
+                if resp.status_code == 200:
+                    hits = resp.json().get("results")
+                    return {"capabilities": _matches(hits if isinstance(hits, list) else [], None)}
+            # The catalogue path serves a category filter (typeahead takes none,
+            # and filtering its top 10 loses most matches) and stands in when
+            # typeahead fails. The catalogue ignores search terms, so the query
+            # is matched here.
             resp2 = httpx.get(
                 f"{toolkit.base_url}/v1/capabilities",
                 headers=toolkit._headers(),
@@ -135,11 +143,11 @@ class StraleToolkit:
             )
             if resp2.status_code != 200:
                 return {"error": f"Search failed: HTTP {resp2.status_code}"}
-            terms = [t for t in request.query.lower().split() if t]
+            terms = query.lower().split()
             caps = [
                 c
                 for c in resp2.json().get("capabilities", [])
-                if terms
+                if isinstance(c, dict)
                 and all(
                     t in " ".join(str(c.get(k) or "") for k in ("slug", "name", "description", "category")).lower()
                     for t in terms

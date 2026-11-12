@@ -56,17 +56,35 @@ def test_typeahead_results_are_returned_and_solutions_left_out():
     assert out["capabilities"][0] == {
         "slug": "iban-validate", "name": "IBAN Validation",
         "description": "Check an IBAN's format, length and checksum.",
-        "price_cents": None, "category": "validation",
+        "category": "validation",
     }
     assert get.call_args.kwargs["params"] == {"q": "iban", "limit": "10", "type": "capability"}
 
 
-def test_category_is_applied_to_typeahead_results():
+def test_category_uses_the_catalogue_so_matches_past_the_top_ten_are_kept():
     search = _search_tool()
     with patch("composio_strale.toolkit.httpx.get") as get:
-        get.return_value = Mock(status_code=200, json=lambda: TYPEAHEAD)
-        out = search(StraleSearchInput(query="iban", category="validation"))
-    assert [c["slug"] for c in out["capabilities"]] == ["iban-validate"]
+        get.return_value = Mock(status_code=200, json=lambda: CATALOGUE)
+        out = search(StraleSearchInput(query="check", category="compliance"))
+    assert [c["slug"] for c in out["capabilities"]] == ["vat-validate"]
+    assert get.call_count == 1
+    assert get.call_args.args[0].endswith("/v1/capabilities")
+
+
+def test_search_results_carry_no_price_on_either_path():
+    search = _search_tool()
+    with patch("composio_strale.toolkit.httpx.get") as get:
+        get.side_effect = [Mock(status_code=503), Mock(status_code=200, json=lambda: CATALOGUE)]
+        out = search(StraleSearchInput(query="iban"))
+    assert out["capabilities"] and all("price_cents" not in c for c in out["capabilities"])
+
+
+def test_a_query_under_two_characters_is_refused_without_a_request():
+    search = _search_tool()
+    with patch("composio_strale.toolkit.httpx.get") as get:
+        assert search(StraleSearchInput(query=" i ")) == {"error": "query must be at least 2 characters"}
+        assert search(StraleSearchInput(query="   ")) == {"error": "query must be at least 2 characters"}
+    get.assert_not_called()
 
 
 def test_fallback_matches_the_query_instead_of_returning_the_catalogue_head():
