@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { refusalDetails } from "./capability-refusal.js";
 import { recoveryDetails } from "./errors.js";
 import { sanitizeFailureReason } from "./sanitize.js";
@@ -54,6 +55,32 @@ describe("a source that blocks Strale is retryable only when waiting can clear t
     expect(refusalDetails(err)).toBeUndefined();
     expect(refusalDetails(err) ?? sourceBlockDetails(err)).toMatchObject({ retryable: false });
     expect(sourceBlockDetails(blocked({ kind: "robots_unavailable", status: 0 }))).toMatchObject({ retryable: true, retry_after_seconds: 300 });
+  });
+
+  it("the x402 response carries the advice, and both object rails pass the thrown error to it", async () => {
+    const { Hono } = await import("hono");
+    const { schemaBadRequest } = await import("../routes/x402-gateway-v2.js");
+    const app = new Hono();
+    for (const status of [403, 429]) {
+      const err = blocked({ kind: "http", status });
+      app.get(`/${status}`, c => schemaBadRequest(c, sanitizeFailureReason(err.message), null, "execution_failed", refusalDetails(err) ?? sourceBlockDetails(err)));
+    }
+    expect((await (await app.request("/403")).json()).details).toMatchObject({ retryable: false, next_step: expect.stringMatching(/Choose another tool/) });
+    expect((await (await app.request("/429")).json()).details).toMatchObject({ retryable: true, retry_after_seconds: 60 });
+    // The rails themselves: a revert of either call site fails here.
+    for (const file of ["../routes/x402-gateway-v2.ts", "./do/batch.ts"]) {
+      expect(readFileSync(new URL(file, import.meta.url), "utf8"), file).toMatch(/refusalDetails\(err\) \?\? sourceBlockDetails\(err\)/);
+    }
+  });
+
+  it("a package registry block reads as a source block on the string rails too", () => {
+    const err = new SourceBlockedError(
+      "Source unavailable to Strale: the package registry refused the request (HTTP 403). Strale does not bypass registry blocks.",
+      { kind: "http", status: 403 },
+    );
+    expect(advice(err)).toMatchObject({ retryable: false });
+    const source = readFileSync(new URL("../capabilities/package-docs.ts", import.meta.url), "utf8");
+    expect(source).toContain("`Source unavailable to Strale: the package registry refused the request (HTTP ${response.status}).");
   });
 
   it("leaves every other failure's advice as it was", () => {

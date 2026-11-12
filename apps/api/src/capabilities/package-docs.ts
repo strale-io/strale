@@ -78,7 +78,7 @@ async function registryJson<T>(url: string, versionRequested = false, packument 
     await response.body?.cancel();
     if (response.status === 404) return null;
     if (response.status === 403 || response.status === 429) {
-      throw new SourceBlockedError(`Package registry source unavailable (HTTP ${response.status}); retry later. Strale does not bypass registry blocks.`, { kind: "http", status: response.status });
+      throw new SourceBlockedError(`Source unavailable to Strale: the package registry refused the request (HTTP ${response.status}). Strale does not bypass registry blocks.`, { kind: "http", status: response.status });
     }
     throw new Error(`Package registry source returned HTTP ${response.status}; retry later.`);
   }
