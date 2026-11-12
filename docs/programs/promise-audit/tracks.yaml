@@ -526,9 +526,6 @@ tracks:
       caller's site. Its manifest is report-only (compliance), so the fix
       needs Petter's approval of the wording plus a startup block; it goes
       to him with a recommendation.
-      (51) SourceBlockedError is answered retryable (lib/errors.ts), where a
-      source's block repeats on retry; it should be retryable only for a
-      429 or an unreadable robots.txt. Seen in nta-corporate.
       (55) capabilities/lib/web-provider.ts sends Accept text/html and
       application/xhtml+xml with no */* on its plain fetch (~line 535) and
       its preflight (~line 883), then files a non-block 4xx, 406 included,
