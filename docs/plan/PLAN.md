@@ -6,13 +6,13 @@ Moved from `docs/plan/BASELINE-2026-11-11.md`, which keeps the full evidence, th
 
 Outcome: the first revenue bar in `docs/company/GOALS.md` (named M1 there; it is not this plan's milestone M1): two weeks in a row with at least 5 distinct external payers and no single payer above 60%, the target of the 2026-11-06 revenue plan; confidence is low.
 Outcome date: 2026-12-06
-As of: 2026-11-11   Last checked against code and production: 2026-11-11
+As of: 2026-11-12   Last checked against code and production: 2026-11-12
 Moat: not found yet; the candidate is the flagship of DEC-20261023-B, official-source company and compliance data where every call carries its provenance and an audit record. Nothing yet shows it is hard to copy.
 Distribution: agent-tool listings (MCP registries, framework packages, directories) plus pay-per-call over x402 with no signup; which of them brings payers is unmeasured until M3.
 
 ## Milestones
 
-Dates follow the growth-readiness triage proposal (strale-io/strale#1011), which still waits on the founder's yes (bus ask 6791877369); if he changes it, these dates change with it. The revenue plan's kill-or-continue checkpoints stay on 22 Nov and 6 Dec. M1 to M3 here are this plan's milestones, not the revenue bars of the same names in GOALS.md.
+Dates follow the growth-readiness triage (strale-io/strale#1011), which the founder approved and merged on 2026-11-11. The revenue plan's kill-or-continue checkpoints stay on 22 Nov and 6 Dec. M1 to M3 here are this plan's milestones, not the revenue bars of the same names in GOALS.md.
 
 | Id | Date | Milestone |
 |---|---|---|
@@ -26,7 +26,7 @@ Ids follow the baseline's section 4 (A launch blocker, B soon after, C nice to h
 
 | Id | Class | Milestone | Owner | Item | Done when | Status |
 |---|---|---|---|---|---|---|
-| A-1 | launch-blocker | M1 | fleet | Promise-audit T1 waves 2 and 3: listed paid tools that bill an answer when the upstream failed (audit rows 5-9, 15-17, 19-21, 23-24, 26, 28-33, 35). Wave 2a merged (#1014, rows 7, 8, 17, 19); wave 2b is rows 9, 15, 16, 21, 23, 24; then 2c (5, 6, 20, 26, 28, 29) and 2d (30-33, 35) | every row merged with fail-before receipts and the catch baseline shrunk by it | in-progress #1015 |
+| A-1 | launch-blocker | M1 | fleet | Promise-audit T1 waves 2 and 3: listed paid tools that bill an answer when the upstream failed (audit rows 5-9, 15-17, 19-21, 23-24, 26, 28-33, 35). Merged: 2a (#1014, rows 7, 8, 17, 19), 2b (#1015 and #1017, rows 9, 15, 16, 21, 23, 24), 2c (#1018, rows 5, 20, 26, 28, 29); row 6 closed by withholding gdpr-fine-lookup (#1019). Left: 2d (30-33, 35), then wave 3 | every row merged with fail-before receipts and the catch baseline shrunk by it | in-progress, wave 2d next |
 | A-2 | launch-blocker | M1 | fleet | domain-age-check billed "unknown" when WHOIS had no server or no creation date (row 27) | merged PR; baseline entry removed | done #1014 |
 | A-3 | launch-blocker | M1 | fleet | container-track billed a check-digit answer when the carrier page failed (row 34) | the call fails unbilled on a carrier failure, or the tool is delisted | done #1014 |
 | A-4 | launch-blocker | M1 | fleet | Public copy "a call that fails costs nothing" is untrue while A-1 is open | A-1 closed, or the copy narrowed (fleet authority, DEC-20260822-A) | open |
@@ -91,13 +91,13 @@ Ids follow the baseline's section 4 (A launch blocker, B soon after, C nice to h
 
 Ordered by what moves revenue first. Each line: the item, what only he can do, and its ask.
 
-1. Growth triage strale-io/strale#1011: yes or changes; it fixes the milestone dates (bus 6791877369).
-2. A-5 and A-4: approve the signup Terms wording, and say whether to narrow "a failed call costs nothing" until A-1 lands (about 10 minutes).
-3. A-9 then A-8: one npm session (strale-cli and strale-ai-sdk first publish, trusted publishers, n8n repoint), then the PyPI trusted publishers (bus 6503452948, 6791877924, 6506170239).
-4. A-10, A-11, B-17: fix the Smithery text, open the four directory submissions, claim 402 Index, fix mcp.so and Context7 (bus 6503454276).
-5. B-11, B-13, B-12, B-14, B-16, B-15, B-18: Claude connector, CDP address, x402scan wallet, Zapier, n8n portal, MCP registry dispatch, Search Console.
-6. A-7, B-3, B-5, B-6, B-27: one database session at the PC.
-7. B-27, B-30, B-23: go on DQ-48, approve the 24 compliance texts, sign off the Dilisense DPA and Privacy text.
-8. B-19, B-20, C-6: Better Stack sign-up, the enforce variable after seven clean days, BUS_GITHUB_TOKEN.
-9. C-11, C-10: DEC-20261024-A items 2 and 5, and the stale-branch word.
+1. A-5 and A-4: approve the signup Terms wording, and say whether to narrow "a failed call costs nothing" until A-1 lands (about 10 minutes).
+2. A-9 then A-8: one npm session (strale-cli and strale-ai-sdk first publish, trusted publishers, n8n repoint), then the PyPI trusted publishers (bus 6503452948, 6791877924, 6506170239).
+3. A-10, A-11, B-17: fix the Smithery text, open the four directory submissions, claim 402 Index, fix mcp.so and Context7 (bus 6503454276).
+4. B-11, B-13, B-12, B-14, B-16, B-15, B-18: Claude connector, CDP address, x402scan wallet, Zapier, n8n portal, MCP registry dispatch, Search Console.
+5. A-7, B-3, B-5, B-6, B-27: one database session at the PC.
+6. B-27, B-30, B-23: go on DQ-48, approve the 24 compliance texts, sign off the Dilisense DPA and Privacy text.
+7. B-19, B-20, C-6: Better Stack sign-up, the enforce variable after seven clean days, BUS_GITHUB_TOKEN.
+8. C-11, C-10: DEC-20261024-A items 2 and 5, and the stale-branch word.
+9. gdpr-fine-lookup (withheld, #1019): whether enforcementtracker.com is also a never-list aggregator and goes on the blocklist; recommendation no, since withholding already stops Strale calling it.
 10. Lower priority, no revenue effect: C-3 (HSTS, brand kit, wordmark), C-5 (Railway config), C-6 (NTA, audio, Clay), C-7 (DQ-27), D-8 (drop "archive wow-core").
