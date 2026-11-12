@@ -311,6 +311,19 @@ tracks:
       removed; (41) a 4xx caused by Strale's own request (an Accept header the
       site rejects) is also filed as the target's and never reaches the
       breaker or the quality floor.
+      (40) fixed on branch fix/og-carbon-site-failures: og-image-check's
+      dead Strale-Bot/1.0 user agent is removed from its page and image
+      fetches. website-carbon-estimate's page had the shape og-image-check's
+      had before (39): a non-2xx threw `HTTP <status> fetching <url>`, and a
+      network error, timeout or body that dropped mid-read went out raw and
+      was counted against the capability with the caller's URL in the
+      message. It now goes through targetUnavailable: a 4xx is the target's
+      answer, not retryable; a 5xx, 408, timeout or dropped body is the
+      target's, retryable; a 401, 403 or 429 is a refusal; the size cap
+      stays a refusal; EAI_AGAIN and uncoded network errors are counted
+      under fixed text with no host. Its user agent is safeFetch's honest
+      one. Regression tests in caller-host-out-of-breaker.test.ts fail
+      against the previous executor.
       (35) fixed on branch fix/url-validation-by-type: page-exists
       recognised the URL validator's own refusal on a redirect hop by the
       word \"restricted\" in an error's message, so a redirect loop under a
@@ -341,7 +354,7 @@ tracks:
       is fetched once); (44) meta-extract, gdpr-website-check and
       link-extract refuse no block status: a 401, 403 or 429 is a generic
       HTTP error, not a site refusal.
-      Next: (36) and (32), (33), (43), (44); then measuring past billed calls from
+      Next: (36) and (32), (33), (43), (41), (44); then measuring past billed calls from
       the affected paths since their earliest releases, deciding refunds per
       policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against
       listed and dry-run prices (P-011, P-008). Do not assume the proposed

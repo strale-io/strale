@@ -1,6 +1,10 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { MAX_MEASURED_TRANSFER_BYTES, countBodyBytes } from "../lib/resource-limits.js";
+import { assertNotBlockStatus } from "../lib/site-access.js";
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
+import { targetUnavailable } from "../lib/upstream-result.js";
+import { UrlValidationError } from "../lib/url-validator.js";
 
 // Constants from the Sustainable Web Design model / Website Carbon methodology
 const ENERGY_PER_GB_KWH = 0.81; // kWh per GB transferred
@@ -17,16 +21,31 @@ registerCapability("website-carbon-estimate", async (input: CapabilityInput) => 
 
   const url = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`;
 
-  // F-0-006: safeFetch validates + re-validates redirects.
-  const resp = await safeFetch(url, {
-    headers: {
-      "User-Agent": "Strale-Bot/1.0",
-      Accept: "text/html,application/xhtml+xml,*/*",
-    },
-    signal: AbortSignal.timeout(30000),
-  });
+  // The caller's own page. Its failures are the caller's target: unbilled and
+  // never counted against this capability. Before, a non-2xx was a plain
+  // error naming the URL and the status, and a timeout or network error went
+  // out raw; both were counted, and the breaker read a 404, a 403 or a URL
+  // containing either as a permanent failure (promise-audit T1 follow-up 40).
+  // The User-Agent is safeFetch's honest one: a page read sets it.
+  const site = `website ${hostOf(url)}`;
+  let resp: Response;
+  try {
+    // F-0-006: safeFetch validates + re-validates redirects.
+    resp = await safeFetch(url, {
+      headers: { Accept: "text/html,application/xhtml+xml,*/*" },
+      signal: AbortSignal.timeout(30000),
+    });
+  } catch (err) {
+    // The caller's URL failing Strale's URL guard is their input, as before.
+    if (err instanceof UrlValidationError || isCapabilityRefusal(err)) throw err;
+    throw targetUnavailable(site, err);
+  }
 
-  if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching ${url}.`);
+  if (!resp.ok) {
+    await discardBody(resp, "website-carbon-estimate: non-2xx");
+    assertNotBlockStatus(url, resp.status);
+    throw targetUnavailable(site, resp.status);
+  }
 
   // #426: counted, not buffered. This capability only ever needed the SIZE of
   // the page, so retaining the body was pure exposure — a caller URL pointing
@@ -35,12 +54,14 @@ registerCapability("website-carbon-estimate", async (input: CapabilityInput) => 
   // deliberately does NOT use the 4/8 MiB input caps: heavy pages are exactly
   // what a carbon estimator exists to measure, so the stop is a generous work
   // bound, not an input limit.
-  const transferSizeBytes = await countBodyBytes(
-    resp,
-    MAX_MEASURED_TRANSFER_BYTES,
-    "url",
-    "a page transferring",
-  );
+  let transferSizeBytes: number;
+  try {
+    transferSizeBytes = await countBodyBytes(resp, MAX_MEASURED_TRANSFER_BYTES, "url", "a page transferring");
+  } catch (err) {
+    // The connection dropped or timed out mid-body. The size cap is a refusal.
+    if (isCapabilityRefusal(err)) throw err;
+    throw targetUnavailable(site, err);
+  }
   const transferSizeKb = Math.round(transferSizeBytes / 1024);
 
   // Response headers
@@ -130,3 +151,7 @@ registerCapability("website-carbon-estimate", async (input: CapabilityInput) => 
     provenance: { source: "page-analysis", fetched_at: new Date().toISOString() },
   };
 });
+
+function hostOf(url: string): string {
+  return URL.canParse(url) ? new URL(url).hostname.replace(/^www\./, "") : "unknown";
+}

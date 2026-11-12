@@ -22,10 +22,7 @@ registerCapability("og-image-check", async (input: CapabilityInput) => {
   try {
     // F-0-006: safeFetch validates + re-validates redirects.
     resp = await safeFetch(url, {
-      headers: {
-        "User-Agent": "Strale-Bot/1.0",
-        Accept: "text/html,*/*",
-      },
+      headers: { Accept: "text/html,*/*" },
       signal: AbortSignal.timeout(15000),
     });
   } catch (err) {
@@ -240,13 +237,11 @@ async function probeImage(imageUrl: string): Promise<Headers | null | typeof NOT
     // F-0-006: the OG image URL came from the fetched page; treat as untrusted.
     resp = await safeFetch(imageUrl, {
       method: "HEAD",
-      headers: { "User-Agent": "Strale-Bot/1.0" },
       signal: AbortSignal.timeout(10000),
     });
     if (resp.status === 405 || resp.status === 501) {
       await discardBody(resp, "og-image-check: HEAD not supported");
       resp = await safeFetch(imageUrl, {
-        headers: { "User-Agent": "Strale-Bot/1.0" },
         signal: AbortSignal.timeout(10000),
       });
     }
