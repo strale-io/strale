@@ -172,7 +172,8 @@ limitations:
     category: coverage
     severity: info
     workaround: >-
-      For a full certificate audit, use ssl-check on the host.
+      For the certificate's issuer, validity dates, days to expiry, protocol and cipher, use
+      ssl-check on the host.
   - title: Facilitator reachability check uses HEAD with 2s timeout
     text: >-
       The x402 facilitator reachability check sends a HEAD request with a 2-second timeout.
