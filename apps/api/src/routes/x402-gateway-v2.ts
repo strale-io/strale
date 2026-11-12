@@ -1432,11 +1432,11 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     // unbillable run, a tripped gate and an all-refusal run included, and
     // dropped each step's own advice. A retry is advised only when one could
     // change at least one failed step.
-    const retryable = outcome.retryable && anyStepRetryable(result.failures);
+    const bundleRetryable = outcome.retryable && anyStepRetryable(result.failures);
     return c.json(
       { details: {
-          retryable,
-          next_step: retryable
+          retryable: bundleRetryable,
+          next_step: bundleRetryable
             ? "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog."
             : "A retry with the same input gets the same answer; check the input (and each failed step's advice under 'errors'), or choose another enabled tool from GET /x402/catalog.",
           ...(result.failures.length ? { errors: stepFailureEntries(result.failures) } : {}),
