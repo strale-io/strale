@@ -1,6 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { safeFetch } from "../lib/safe-fetch.js";
-import { validateUrl } from "../lib/url-validator.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
+import { UrlValidationError, validateUrl } from "../lib/url-validator.js";
 import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { isBlockStatus, siteAccessRefusal } from "../lib/site-access.js";
 import { ssrfBlocked, targetUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
@@ -44,7 +44,9 @@ registerCapability("header-security-check", async (input: CapabilityInput) => {
     if (isCapabilityRefusal(err)) throw err;
     const ssrf = ssrfBlocked(err);
     if (ssrf) throw ssrf;
-    if (err instanceof Error && err.message.includes("restricted")) throw err;
+    // The validator refuses a redirect hop to a restricted address with its
+    // own class; matching the word "restricted" would also catch a host name.
+    if (err instanceof UrlValidationError) throw err;
     throw targetUnavailable(site, err);
   }
 
@@ -55,15 +57,15 @@ registerCapability("header-security-check", async (input: CapabilityInput) => {
   // for an outage (promise-audit T1 wave 6). Any other answer, a 404
   // included, is the site's own response and is graded as it stands.
   if (res.status !== 429 && isBlockStatus(res.status)) {
-    await res.body?.cancel();
+    await discardBody(res, "header-security-check: refused");
     throw siteAccessRefusal(fullUrl, { kind: "http", status: res.status });
   }
   if (res.status >= 500 || res.status === 408) {
-    await res.body?.cancel();
+    await discardBody(res, "header-security-check: site unavailable");
     throw targetUnavailable(site, res.status);
   }
   if (res.status === 429) {
-    await res.body?.cancel();
+    await discardBody(res, "header-security-check: rate-limited");
     throw new UpstreamUnavailableError(site, "URL returned HTTP 429, the site is rate-limiting requests; retry later.", {
       code: "HTTP 429",
       retryable: true,

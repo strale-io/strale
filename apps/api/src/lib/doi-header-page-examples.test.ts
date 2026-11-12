@@ -10,8 +10,14 @@ const content = { exports: {} as { toolPages: Record<string, { example: { input:
 runInNewContext(compiled.outputText, content);
 const { toolPages } = content.exports;
 
-vi.mock("./safe-fetch.js", () => ({ safeFetch: vi.fn() }));
-vi.mock("./url-validator.js", () => ({ validateUrl: vi.fn(async () => {}) }));
+vi.mock("./safe-fetch.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./safe-fetch.js")>()),
+  safeFetch: vi.fn(),
+}));
+vi.mock("./url-validator.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./url-validator.js")>()),
+  validateUrl: vi.fn(async () => {}),
+}));
 import { safeFetch } from "./safe-fetch.js";
 import { validateUrl } from "./url-validator.js";
 import "../capabilities/header-security-check.js";

@@ -7,8 +7,14 @@
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
 
-vi.mock("../lib/safe-fetch.js", () => ({ safeFetch: vi.fn() }));
-vi.mock("../lib/url-validator.js", () => ({ validateUrl: vi.fn(async () => {}) }));
+vi.mock("../lib/safe-fetch.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../lib/safe-fetch.js")>()),
+  safeFetch: vi.fn(),
+}));
+vi.mock("../lib/url-validator.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../lib/url-validator.js")>()),
+  validateUrl: vi.fn(async () => {}),
+}));
 
 import { safeFetch } from "../lib/safe-fetch.js";
 import { getExecutor } from "./index.js";
@@ -16,6 +22,7 @@ import { outcomeFromError } from "../lib/execution-outcome.js";
 import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { siteAccessRefusal } from "../lib/site-access.js";
 import { UpstreamUnavailableError } from "../lib/upstream-result.js";
+import { UrlValidationError } from "../lib/url-validator.js";
 import "./header-security-check.js";
 
 const fetcher = vi.mocked(safeFetch);
@@ -63,6 +70,7 @@ describe("header-security-check: a site that does not answer is the site's fault
     ["a timeout", new DOMException("The operation was aborted due to timeout", "TimeoutError")],
     ["a host that does not resolve", Object.assign(new Error("getaddrinfo ENOTFOUND example.com"), { code: "ENOTFOUND" })],
     ["a redirect loop", new Error("Too many redirects (max 3)")],
+    ["a host whose name contains \"restricted\"", Object.assign(new Error("getaddrinfo ENOTFOUND restricted.example"), { code: "ENOTFOUND" })],
   ];
   for (const [label, thrown] of cases) {
     it(`${label} fails unbilled and does not count against the capability`, async () => {
@@ -89,8 +97,18 @@ describe("header-security-check: Strale's own refusals pass through unchanged", 
   });
 
   it("a redirect to a restricted address caught by the URL validator", async () => {
-    const restricted = new Error("URL resolves to a restricted address");
+    const restricted = new UrlValidationError("This URL resolves to a restricted address.");
     fetcher.mockRejectedValue(restricted);
     expect(await failure()).toBe(restricted);
+  });
+});
+
+describe("header-security-check: a bug of our own is not blamed on the site", () => {
+  it("a non-network error passes through and counts against the capability", async () => {
+    const bug = new TypeError("headers.get is not a function");
+    fetcher.mockRejectedValue(bug);
+    const err = await failure();
+    expect(err).toBe(bug);
+    expect(outcomeFromError(err)).toMatchObject({ counts_against_capability: true });
   });
 });
