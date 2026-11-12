@@ -291,7 +291,22 @@ tracks:
       port-check, og-image-check, domain-contact-extract,
       header-security-check, domain-reputation). ENOTFOUND and coded
       transport failures stay the target's.
-      Next: (35) to (38) and (32), (33); then measuring past billed calls from
+      (39), raised by the review of (34), fixed on branch
+      fix/caller-host-out-of-breaker: domain-contact-extract's homepage and
+      og-image-check's own page put the caller's host or URL in their error
+      messages, and three of those failures were counted against the
+      capability (a homepage timeout; a page 5xx or timeout), so a host
+      containing 403 or gone could suspend the capability on one call. Both
+      now go through targetUnavailable, which takes any status the site
+      answers that is not a block: a 4xx reads as the target's answer, not
+      retryable, a 5xx or 408 as retryable, and an unfollowed redirect as
+      the target's with the status on the error code only; every message is
+      fixed text with no host. A 401 or 403 on og-image-check's page is now a
+      refusal, as everywhere else. cookie-scan was checked: its page failure
+      is unattributed, never counted. Found, not fixed: (40) og-image-check's
+      page fetch reads no robots.txt and sends the older Strale-Bot/1.0 user
+      agent rather than STRALE_USER_AGENT.
+      Next: (35) to (38) and (32), (33), (40); then measuring past billed calls from
       the affected paths since their earliest releases, deciding refunds per
       policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against
       listed and dry-run prices (P-011, P-008). Do not assume the proposed
@@ -390,6 +405,8 @@ tracks:
       - archive/receipts/2026-11-12-test-run-swallowed-failures-wave2c-r5-fail-before.json
       - archive/receipts/2026-11-12-test-run-swallowed-failures-wave2c-r5-after.json
       - archive/receipts/2026-11-12-test-run-swallowed-failures-wave2c-r5-full-api-suite.json
+      - archive/receipts/2026-11-12-test-run-caller-host-out-of-breaker-fail-before.json
+      - archive/receipts/2026-11-12-test-run-caller-host-out-of-breaker-after.json
 
   - id: T2
     title: "T2: Compliance-answer correctness (reference answers)"

@@ -295,7 +295,8 @@ export function fetchUnavailable(upstream: string, err: unknown): Error {
 }
 
 /**
- * The caller's own site failed: its 5xx or 408, a timeout, a network error,
+ * The caller's own site failed: a status it cannot be read from (a 5xx or
+ * 408, or any other non-block status; see targetStatusUnavailable), a timeout, a network error,
  * a host name that does not resolve (not retryable) or a redirect loop (not
  * retryable). Still unbilled, but worded as the target's failure ("URL returned
  * HTTP 5", "URL did not answer"), which the breaker's USER_INPUT_ERROR_PATTERNS
@@ -326,15 +327,51 @@ export function fetchUnavailable(upstream: string, err: unknown): Error {
  */
 export const TARGET_NETWORK = "the network path to the requested site";
 
-export function targetUnavailable(site: string, failure: number | unknown): Error {
-  if (typeof failure === "number") {
-    const what = failure === 408 ? "the site timed out the request" : "a server error on the site itself";
-    return new UpstreamUnavailableError(site, `URL returned HTTP ${failure}, ${what}; retry later.`, {
-      code: `HTTP ${failure}`,
+/**
+ * The caller's site answered a status the capability cannot read a page from,
+ * after the caller has refused the block statuses (assertNotBlockStatus):
+ *
+ * - a 5xx or 408: the site failing for now, retryable;
+ * - another 4xx (404, 410, 400, ...): the site's own answer about that URL,
+ *   not retryable;
+ * - a 1xx or a 3xx that was not followed (no usable Location): not retryable,
+ *   and the status goes on `code` only, as page-exists does.
+ *
+ * Every one is the caller's target (`targetFault`), so it is unbilled and
+ * never reaches the breaker or the quality floor. The wording also opens with
+ * "URL returned HTTP" or "URL did not answer", which the breaker's
+ * USER_INPUT_ERROR_PATTERNS recognise if the message ever reaches it by string
+ * alone (promise-audit T1 follow-up 39). Before, domain-contact-extract and
+ * og-image-check threw a plain error naming the caller's host and the status,
+ * which was counted: a homepage answering 404 or 301 read as endpoint_gone or
+ * permanent_move and suspended the capability for everyone on one call.
+ */
+function targetStatusUnavailable(site: string, status: number): UpstreamUnavailableError {
+  const code = `HTTP ${status}`;
+  if (status >= 500 || status === 408) {
+    const what = status === 408 ? "the site timed out the request" : "a server error on the site itself";
+    return new UpstreamUnavailableError(site, `URL returned HTTP ${status}, ${what}; retry later.`, {
+      code,
       retryable: true,
       targetFault: true,
     });
   }
+  if (status >= 400) {
+    return new UpstreamUnavailableError(site, `URL returned HTTP ${status}, a client error status, so there was no page to read.`, {
+      code,
+      retryable: status === 429,
+      targetFault: true,
+    });
+  }
+  return new UpstreamUnavailableError(site, "URL did not answer with a page (a redirect without a usable location, or an informational status).", {
+    code,
+    retryable: false,
+    targetFault: true,
+  });
+}
+
+export function targetUnavailable(site: string, failure: number | unknown): Error {
+  if (typeof failure === "number") return targetStatusUnavailable(site, failure);
   // safe-fetch reports a redirect loop as a plain Error. It is the caller's
   // site, not ours and not an upstream we depend on (PR #1015 delta review).
   if (failure instanceof Error && failure.message.startsWith("Too many redirects")) {

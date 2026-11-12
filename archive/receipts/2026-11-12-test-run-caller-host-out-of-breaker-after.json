@@ -1,0 +1,1682 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "e7effd67fc44bd3544271e7c849abb0f37aee350"
+  },
+  "at": "2026-11-12T12:11:47.091Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/after.json"
+  },
+  "summary": {
+    "numTotalTestSuites": 18,
+    "numPassedTestSuites": 18,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 134,
+    "numPassedTests": 134,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "startTime": 1794485501734,
+    "success": true
+  },
+  "topic": "caller-host-out-of-breaker-after",
+  "raw": {
+    "numTotalTestSuites": 18,
+    "numPassedTestSuites": 18,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 134,
+    "numPassedTests": 134,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794485501734,
+    "success": true,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted HTTP 400 throws as the target's answer, not retryable",
+            "status": "passed",
+            "title": "HTTP 400 throws as the target's answer, not retryable",
+            "duration": 4.9280599999999595,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted HTTP 404 throws as the target's answer, not retryable",
+            "status": "passed",
+            "title": "HTTP 404 throws as the target's answer, not retryable",
+            "duration": 0.8793279999999868,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted HTTP 410 throws as the target's answer, not retryable",
+            "status": "passed",
+            "title": "HTTP 410 throws as the target's answer, not retryable",
+            "duration": 0.44353000000000975,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted an unfollowed HTTP 301 throws as the target's, with the status off the message",
+            "status": "passed",
+            "title": "an unfollowed HTTP 301 throws as the target's, with the status off the message",
+            "duration": 0.5742890000000216,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted an unfollowed HTTP 308 throws as the target's, with the status off the message",
+            "status": "passed",
+            "title": "an unfollowed HTTP 308 throws as the target's, with the status off the message",
+            "duration": 1.0421979999999849,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted HTTP 503 throws as the target's failure, retryable",
+            "status": "passed",
+            "title": "HTTP 503 throws as the target's failure, retryable",
+            "duration": 0.4979110000000446,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted HTTP 408 throws as the target's failure, retryable",
+            "status": "passed",
+            "title": "HTTP 408 throws as the target's failure, retryable",
+            "duration": 0.41978099999994356,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted a network error (ECONNRESET) throws as the target's failure, retryable",
+            "status": "passed",
+            "title": "a network error (ECONNRESET) throws as the target's failure, retryable",
+            "duration": 0.6146589999999605,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted a timeout throws as the target's failure, retryable",
+            "status": "passed",
+            "title": "a timeout throws as the target's failure, retryable",
+            "duration": 0.8098449999999957,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted EAI_AGAIN is counted under fixed text, with no host in the message",
+            "status": "passed",
+            "title": "EAI_AGAIN is counted under fixed text, with no host in the message",
+            "duration": 0.6695100000000593,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted a network error with no code is counted under fixed text, with no host in the message",
+            "status": "passed",
+            "title": "a network error with no code is counted under fixed text, with no host in the message",
+            "duration": 0.6268400000000156,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted HTTP 401 is a refusal, never counted",
+            "status": "passed",
+            "title": "HTTP 401 is a refusal, never counted",
+            "duration": 0.4783899999999903,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "domain-contact-extract's homepage failure: a status from the caller's site is the target's, never counted HTTP 403 is a refusal, never counted",
+            "status": "passed",
+            "title": "HTTP 403 is a refusal, never counted",
+            "duration": 0.28583800000001247,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check's own page failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "og-image-check's own page failure: a status from the caller's site is the target's, never counted HTTP 400 throws as the target's answer, not retryable",
+            "status": "passed",
+            "title": "HTTP 400 throws as the target's answer, not retryable",
+            "duration": 0.6814349999999649,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check's own page failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "og-image-check's own page failure: a status from the caller's site is the target's, never counted HTTP 404 throws as the target's answer, not retryable",
+            "status": "passed",
+            "title": "HTTP 404 throws as the target's answer, not retryable",
+            "duration": 0.36641999999994823,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check's own page failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "og-image-check's own page failure: a status from the caller's site is the target's, never counted HTTP 410 throws as the target's answer, not retryable",
+            "status": "passed",
+            "title": "HTTP 410 throws as the target's answer, not retryable",
+            "duration": 0.33677800000009483,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check's own page failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "og-image-check's own page failure: a status from the caller's site is the target's, never counted an unfollowed HTTP 301 throws as the target's, with the status off the message",
+            "status": "passed",
+            "title": "an unfollowed HTTP 301 throws as the target's, with the status off the message",
+            "duration": 0.25285699999994904,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check's own page failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "og-image-check's own page failure: a status from the caller's site is the target's, never counted an unfollowed HTTP 308 throws as the target's, with the status off the message",
+            "status": "passed",
+            "title": "an unfollowed HTTP 308 throws as the target's, with the status off the message",
+            "duration": 0.3013180000000375,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check's own page failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "og-image-check's own page failure: a status from the caller's site is the target's, never counted HTTP 503 throws as the target's failure, retryable",
+            "status": "passed",
+            "title": "HTTP 503 throws as the target's failure, retryable",
+            "duration": 0.20501200000001063,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check's own page failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "og-image-check's own page failure: a status from the caller's site is the target's, never counted HTTP 408 throws as the target's failure, retryable",
+            "status": "passed",
+            "title": "HTTP 408 throws as the target's failure, retryable",
+            "duration": 0.305753999999979,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check's own page failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "og-image-check's own page failure: a status from the caller's site is the target's, never counted a network error (ECONNRESET) throws as the target's failure, retryable",
+            "status": "passed",
+            "title": "a network error (ECONNRESET) throws as the target's failure, retryable",
+            "duration": 0.34604300000000876,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check's own page failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "og-image-check's own page failure: a status from the caller's site is the target's, never counted a timeout throws as the target's failure, retryable",
+            "status": "passed",
+            "title": "a timeout throws as the target's failure, retryable",
+            "duration": 0.39427100000000337,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check's own page failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "og-image-check's own page failure: a status from the caller's site is the target's, never counted EAI_AGAIN is counted under fixed text, with no host in the message",
+            "status": "passed",
+            "title": "EAI_AGAIN is counted under fixed text, with no host in the message",
+            "duration": 0.2805600000000368,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check's own page failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "og-image-check's own page failure: a status from the caller's site is the target's, never counted a network error with no code is counted under fixed text, with no host in the message",
+            "status": "passed",
+            "title": "a network error with no code is counted under fixed text, with no host in the message",
+            "duration": 0.2619600000000446,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check's own page failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "og-image-check's own page failure: a status from the caller's site is the target's, never counted HTTP 401 is a refusal, never counted",
+            "status": "passed",
+            "title": "HTTP 401 is a refusal, never counted",
+            "duration": 2.0186449999999923,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check's own page failure: a status from the caller's site is the target's, never counted"
+            ],
+            "fullName": "og-image-check's own page failure: a status from the caller's site is the target's, never counted HTTP 403 is a refusal, never counted",
+            "status": "passed",
+            "title": "HTTP 403 is a refusal, never counted",
+            "duration": 0.2838530000000219,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: an answering homepage and page are unchanged, billed"
+            ],
+            "fullName": "negative: an answering homepage and page are unchanged, billed domain-contact-extract reads a homepage that answers",
+            "status": "passed",
+            "title": "domain-contact-extract reads a homepage that answers",
+            "duration": 8.077274999999986,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "negative: an answering homepage and page are unchanged, billed"
+            ],
+            "fullName": "negative: an answering homepage and page are unchanged, billed og-image-check reads a page that answers",
+            "status": "passed",
+            "title": "og-image-check reads a page that answers",
+            "duration": 1.6802040000000034,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794485502609,
+        "endTime": 1794485502637.6802,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale-wt-host/apps/api/src/capabilities/caller-host-out-of-breaker.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ENOTFOUND as the answer",
+            "status": "passed",
+            "title": "treats ENOTFOUND as the answer",
+            "duration": 1.291170999999963,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ENODATA as the answer",
+            "status": "passed",
+            "title": "treats ENODATA as the answer",
+            "duration": 0.21263199999998506,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats EBADNAME as the answer",
+            "status": "passed",
+            "title": "treats EBADNAME as the answer",
+            "duration": 0.1063609999999926,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ETIMEOUT as no answer",
+            "status": "passed",
+            "title": "treats ETIMEOUT as no answer",
+            "duration": 0.13122299999997722,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ESERVFAIL as no answer",
+            "status": "passed",
+            "title": "treats ESERVFAIL as no answer",
+            "duration": 0.08381700000006731,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats EREFUSED as no answer",
+            "status": "passed",
+            "title": "treats EREFUSED as no answer",
+            "duration": 0.06548799999995936,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ECONNREFUSED as no answer",
+            "status": "passed",
+            "title": "treats ECONNREFUSED as no answer",
+            "duration": 0.09284200000001874,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats EAI_AGAIN as no answer",
+            "status": "passed",
+            "title": "treats EAI_AGAIN as no answer",
+            "duration": 0.06863899999996192,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ECANCELLED as no answer",
+            "status": "passed",
+            "title": "treats ECANCELLED as no answer",
+            "duration": 0.35380799999995816,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats EBADRESP as no answer",
+            "status": "passed",
+            "title": "treats EBADRESP as no answer",
+            "duration": 0.1316789999999628,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ESOMETHINGNEW as no answer",
+            "status": "passed",
+            "title": "treats ESOMETHINGNEW as no answer",
+            "duration": 0.10057599999993272,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats an error without a resolver code as no answer",
+            "status": "passed",
+            "title": "treats an error without a resolver code as no answer",
+            "duration": 0.0972189999999955,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull passes a successful answer through",
+            "status": "passed",
+            "title": "passes a successful answer through",
+            "duration": 0.9232470000000603,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull returns the empty answer for ENOTFOUND",
+            "status": "passed",
+            "title": "returns the empty answer for ENOTFOUND",
+            "duration": 0.23959100000001854,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull returns the empty answer for ENODATA",
+            "status": "passed",
+            "title": "returns the empty answer for ENODATA",
+            "duration": 0.23137199999996483,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ETIMEOUT",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ETIMEOUT",
+            "duration": 0.8063019999999597,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ESERVFAIL",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ESERVFAIL",
+            "duration": 0.32890500000007705,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for EREFUSED",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for EREFUSED",
+            "duration": 0.2679239999999936,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ECONNREFUSED",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ECONNREFUSED",
+            "duration": 0.15949100000000271,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for EAI_AGAIN",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for EAI_AGAIN",
+            "duration": 0.13237900000001446,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ECANCELLED",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ECANCELLED",
+            "duration": 0.15790900000001784,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for EBADRESP",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for EBADRESP",
+            "duration": 0.11055399999997917,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ESOMETHINGNEW",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ESOMETHINGNEW",
+            "duration": 0.09878600000001825,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull rethrows our own defect unchanged rather than blaming the resolver",
+            "status": "passed",
+            "title": "rethrows our own defect unchanged rather than blaming the resolver",
+            "duration": 0.19870900000000802,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "requireAnyLeg"
+            ],
+            "fullName": "requireAnyLeg returns the answering legs when at least one answered",
+            "status": "passed",
+            "title": "returns the answering legs when at least one answered",
+            "duration": 0.21736999999995987,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "requireAnyLeg"
+            ],
+            "fullName": "requireAnyLeg throws when every leg failed, naming the codes and never the legs' messages",
+            "status": "passed",
+            "title": "throws when every leg failed, naming the codes and never the legs' messages",
+            "duration": 0.16825100000005477,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "requireAnyLeg"
+            ],
+            "fullName": "requireAnyLeg treats no legs as no outage",
+            "status": "passed",
+            "title": "treats no legs as no outage",
+            "duration": 0.053923000000054344,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ETIMEOUT). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ETIMEOUT). This says nothing about the domain's records; retry shortly.",
+            "duration": 1.3516200000000254,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ESERVFAIL). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ESERVFAIL). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.7709280000000263,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (EREFUSED). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (EREFUSED). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.3541569999999865,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ECONNREFUSED). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ECONNREFUSED). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.16300799999999072,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (EAI_AGAIN). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (EAI_AGAIN). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.1321940000000268,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ECANCELLED). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ECANCELLED). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.10377799999992021,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (EBADRESP). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (EBADRESP). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.14243199999998524,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ESOMETHINGNEW). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ESOMETHINGNEW). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.08633799999995517,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: Companies House search API: HTTP 429; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: Companies House search API: HTTP 429; retry shortly.",
+            "duration": 0.13257800000008046,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: ESMA MiCA CASP register: no copy of the register could be read (2026-11: HTTP 404; 2026-10: HTTP 503). This is not an answer about the entity; retry later.",
+            "status": "passed",
+            "title": "Upstream unavailable: ESMA MiCA CASP register: no copy of the register could be read (2026-11: HTTP 404; 2026-10: HTTP 503). This is not an answer about the entity; retry later.",
+            "duration": 0.15467100000000755,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure carries a non-retryable verdict through to the outcome",
+            "status": "passed",
+            "title": "carries a non-retryable verdict through to the outcome",
+            "duration": 0.22869600000001356,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable HTTP 429 is an upstream failure, retryable true",
+            "status": "passed",
+            "title": "HTTP 429 is an upstream failure, retryable true",
+            "duration": 0.2829580000000078,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable HTTP 500 is an upstream failure, retryable true",
+            "status": "passed",
+            "title": "HTTP 500 is an upstream failure, retryable true",
+            "duration": 0.16968599999995604,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable HTTP 503 is an upstream failure, retryable true",
+            "status": "passed",
+            "title": "HTTP 503 is an upstream failure, retryable true",
+            "duration": 0.08793900000000576,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable HTTP 400 is an upstream failure, retryable false",
+            "status": "passed",
+            "title": "HTTP 400 is an upstream failure, retryable false",
+            "duration": 0.06728099999997994,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable HTTP 403 is an upstream failure, retryable false",
+            "status": "passed",
+            "title": "HTTP 403 is an upstream failure, retryable false",
+            "duration": 0.06765099999995527,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable HTTP 410 is an upstream failure, retryable false",
+            "status": "passed",
+            "title": "HTTP 410 is an upstream failure, retryable false",
+            "duration": 0.1282730000000356,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable a timeout is an upstream failure",
+            "status": "passed",
+            "title": "a timeout is an upstream failure",
+            "duration": 1.004739000000086,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable a network error is an upstream failure",
+            "status": "passed",
+            "title": "a network error is an upstream failure",
+            "duration": 0.23628499999995256,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable a body that did not parse is an upstream failure",
+            "status": "passed",
+            "title": "a body that did not parse is an upstream failure",
+            "duration": 1.3727739999999358,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "httpUnavailable / fetchUnavailable"
+            ],
+            "fullName": "httpUnavailable / fetchUnavailable returns Strale's own vendor-account state, refusals and our own defects unchanged",
+            "status": "passed",
+            "title": "returns Strale's own vendor-account state, refusals and our own defects unchanged",
+            "duration": 0.39051099999994676,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "the breaker reads a helper error the way its retryable flag says"
+            ],
+            "fullName": "the breaker reads a helper error the way its retryable flag says httpUnavailable 429 is retryable for the breaker too",
+            "status": "passed",
+            "title": "httpUnavailable 429 is retryable for the breaker too",
+            "duration": 0.32569499999999607,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "the breaker reads a helper error the way its retryable flag says"
+            ],
+            "fullName": "the breaker reads a helper error the way its retryable flag says httpUnavailable 500 is retryable for the breaker too",
+            "status": "passed",
+            "title": "httpUnavailable 500 is retryable for the breaker too",
+            "duration": 0.1149399999999332,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "the breaker reads a helper error the way its retryable flag says"
+            ],
+            "fullName": "the breaker reads a helper error the way its retryable flag says httpUnavailable 502 is retryable for the breaker too",
+            "status": "passed",
+            "title": "httpUnavailable 502 is retryable for the breaker too",
+            "duration": 0.05005200000005061,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "the breaker reads a helper error the way its retryable flag says"
+            ],
+            "fullName": "the breaker reads a helper error the way its retryable flag says httpUnavailable 503 is retryable for the breaker too",
+            "status": "passed",
+            "title": "httpUnavailable 503 is retryable for the breaker too",
+            "duration": 0.04213900000002013,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "the breaker reads a helper error the way its retryable flag says"
+            ],
+            "fullName": "the breaker reads a helper error the way its retryable flag says httpUnavailable 504 is retryable for the breaker too",
+            "status": "passed",
+            "title": "httpUnavailable 504 is retryable for the breaker too",
+            "duration": 0.03849999999999909,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "the breaker reads a helper error the way its retryable flag says"
+            ],
+            "fullName": "the breaker reads a helper error the way its retryable flag says httpUnavailable 520 is retryable for the breaker too",
+            "status": "passed",
+            "title": "httpUnavailable 520 is retryable for the breaker too",
+            "duration": 0.04007599999999911,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "the breaker reads a helper error the way its retryable flag says"
+            ],
+            "fullName": "the breaker reads a helper error the way its retryable flag says fetchUnavailable on a timeout is transient for the breaker",
+            "status": "passed",
+            "title": "fetchUnavailable on a timeout is transient for the breaker",
+            "duration": 0.08432200000004286,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "the breaker reads a helper error the way its retryable flag says"
+            ],
+            "fullName": "the breaker reads a helper error the way its retryable flag says fetchUnavailable on a network error is transient for the breaker",
+            "status": "passed",
+            "title": "fetchUnavailable on a network error is transient for the breaker",
+            "duration": 0.04487699999992856,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "the breaker reads a helper error the way its retryable flag says"
+            ],
+            "fullName": "the breaker reads a helper error the way its retryable flag says quotedLegCodes quotes only the retryable legs when any leg is retryable",
+            "status": "passed",
+            "title": "quotedLegCodes quotes only the retryable legs when any leg is retryable",
+            "duration": 0.16865500000005795,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "tail: quotedLegCodes quotes no 401 or 403 when a leg is retryable"
+            ],
+            "fullName": "tail: quotedLegCodes quotes no 401 or 403 when a leg is retryable a combined message from a retryable 403 leg and a 503 leg classifies transient",
+            "status": "passed",
+            "title": "a combined message from a retryable 403 leg and a 503 leg classifies transient",
+            "duration": 0.25154699999995955,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "tail: quotedLegCodes quotes no 401 or 403 when a leg is retryable"
+            ],
+            "fullName": "tail: quotedLegCodes quotes no 401 or 403 when a leg is retryable drops 401 and 403 whenever a leg is retryable",
+            "status": "passed",
+            "title": "drops 401 and 403 whenever a leg is retryable",
+            "duration": 0.16066799999998693,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "tail: quotedLegCodes quotes no 401 or 403 when a leg is retryable"
+            ],
+            "fullName": "tail: quotedLegCodes quotes no 401 or 403 when a leg is retryable tail2: keeps 401 and 403 when no leg is retryable",
+            "status": "passed",
+            "title": "tail2: keeps 401 and 403 when no leg is retryable",
+            "duration": 0.08292299999993702,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "tail2: with 401, 403, 404, 410 or 5xx legs, a combined error from quotedLegCodes reads the way its retryable flag says"
+            ],
+            "fullName": "tail2: with 401, 403, 404, 410 or 5xx legs, a combined error from quotedLegCodes reads the way its retryable flag says 503 + 403",
+            "status": "passed",
+            "title": "503 + 403",
+            "duration": 0.0988760000000184,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "tail2: with 401, 403, 404, 410 or 5xx legs, a combined error from quotedLegCodes reads the way its retryable flag says"
+            ],
+            "fullName": "tail2: with 401, 403, 404, 410 or 5xx legs, a combined error from quotedLegCodes reads the way its retryable flag says rate-limited 403 + 404",
+            "status": "passed",
+            "title": "rate-limited 403 + 404",
+            "duration": 0.1233710000000201,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "tail2: with 401, 403, 404, 410 or 5xx legs, a combined error from quotedLegCodes reads the way its retryable flag says"
+            ],
+            "fullName": "tail2: with 401, 403, 404, 410 or 5xx legs, a combined error from quotedLegCodes reads the way its retryable flag says rate-limited 403 alone",
+            "status": "passed",
+            "title": "rate-limited 403 alone",
+            "duration": 0.0590349999999944,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "tail2: with 401, 403, 404, 410 or 5xx legs, a combined error from quotedLegCodes reads the way its retryable flag says"
+            ],
+            "fullName": "tail2: with 401, 403, 404, 410 or 5xx legs, a combined error from quotedLegCodes reads the way its retryable flag says 401 + 403",
+            "status": "passed",
+            "title": "401 + 403",
+            "duration": 0.11590099999989434,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "tail2: with 401, 403, 404, 410 or 5xx legs, a combined error from quotedLegCodes reads the way its retryable flag says"
+            ],
+            "fullName": "tail2: with 401, 403, 404, 410 or 5xx legs, a combined error from quotedLegCodes reads the way its retryable flag says 403 alone",
+            "status": "passed",
+            "title": "403 alone",
+            "duration": 0.05055800000002364,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "tail2: with 401, 403, 404, 410 or 5xx legs, a combined error from quotedLegCodes reads the way its retryable flag says"
+            ],
+            "fullName": "tail2: with 401, 403, 404, 410 or 5xx legs, a combined error from quotedLegCodes reads the way its retryable flag says 403 + 404",
+            "status": "passed",
+            "title": "403 + 404",
+            "duration": 0.04603000000008706,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "tail2: with 401, 403, 404, 410 or 5xx legs, a combined error from quotedLegCodes reads the way its retryable flag says"
+            ],
+            "fullName": "tail2: with 401, 403, 404, 410 or 5xx legs, a combined error from quotedLegCodes reads the way its retryable flag says 410 + 404",
+            "status": "passed",
+            "title": "410 + 404",
+            "duration": 0.047196999999982836,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "retry policy honours the executor's verdict"
+            ],
+            "fullName": "retry policy honours the executor's verdict retries a retryable UpstreamUnavailableError once",
+            "status": "passed",
+            "title": "retries a retryable UpstreamUnavailableError once",
+            "duration": 4.329416999999921,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "retry policy honours the executor's verdict"
+            ],
+            "fullName": "retry policy honours the executor's verdict does not retry a non-retryable one",
+            "status": "passed",
+            "title": "does not retry a non-retryable one",
+            "duration": 0.3633109999999533,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review B1: fetchUnavailable converts a bare errno Error"
+            ],
+            "fullName": "PR #1018 review B1: fetchUnavailable converts a bare errno Error ENOTFOUND on the error itself is a retryable network error",
+            "status": "passed",
+            "title": "ENOTFOUND on the error itself is a retryable network error",
+            "duration": 0.19956600000000435,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review B1: fetchUnavailable converts a bare errno Error"
+            ],
+            "fullName": "PR #1018 review B1: fetchUnavailable converts a bare errno Error EAI_AGAIN on the error itself is a retryable network error",
+            "status": "passed",
+            "title": "EAI_AGAIN on the error itself is a retryable network error",
+            "duration": 0.0798930000000837,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review B1: fetchUnavailable converts a bare errno Error"
+            ],
+            "fullName": "PR #1018 review B1: fetchUnavailable converts a bare errno Error ECONNREFUSED on the error itself is a retryable network error",
+            "status": "passed",
+            "title": "ECONNREFUSED on the error itself is a retryable network error",
+            "duration": 0.1471199999999726,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review B1: fetchUnavailable converts a bare errno Error"
+            ],
+            "fullName": "PR #1018 review B1: fetchUnavailable converts a bare errno Error ECONNRESET on the error itself is a retryable network error",
+            "status": "passed",
+            "title": "ECONNRESET on the error itself is a retryable network error",
+            "duration": 0.06795599999998103,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review B1: fetchUnavailable converts a bare errno Error"
+            ],
+            "fullName": "PR #1018 review B1: fetchUnavailable converts a bare errno Error ETIMEDOUT on the error itself is a retryable network error",
+            "status": "passed",
+            "title": "ETIMEDOUT on the error itself is a retryable network error",
+            "duration": 0.06290999999998803,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review B1: fetchUnavailable converts a bare errno Error"
+            ],
+            "fullName": "PR #1018 review B1: fetchUnavailable converts a bare errno Error EHOSTUNREACH on the error itself is a retryable network error",
+            "status": "passed",
+            "title": "EHOSTUNREACH on the error itself is a retryable network error",
+            "duration": 0.059659000000010565,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review B1: fetchUnavailable converts a bare errno Error"
+            ],
+            "fullName": "PR #1018 review B1: fetchUnavailable converts a bare errno Error leaves Strale's own SSRF refusal (ESSRFBLOCKED) and unknown codes unchanged",
+            "status": "passed",
+            "title": "leaves Strale's own SSRF refusal (ESSRFBLOCKED) and unknown codes unchanged",
+            "duration": 0.09258099999999558,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review B1: fetchUnavailable converts a bare errno Error"
+            ],
+            "fullName": "PR #1018 review B1: fetchUnavailable converts a bare errno Error targetUnavailable words an errno failure as the target's and keeps it breaker-exempt",
+            "status": "passed",
+            "title": "targetUnavailable words an errno failure as the target's and keeps it breaker-exempt",
+            "duration": 0.2304749999999558,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's"
+            ],
+            "fullName": "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's targetUnavailable(Strale's resolver failing for now (EAI_AGAIN, bare errno)) is fault provider, counts true, retryable",
+            "status": "passed",
+            "title": "targetUnavailable(Strale's resolver failing for now (EAI_AGAIN, bare errno)) is fault provider, counts true, retryable",
+            "duration": 0.18258400000001984,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's"
+            ],
+            "fullName": "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's targetUnavailable(Strale's resolver failing for now (EAI_AGAIN, wrapped by fetch)) is fault provider, counts true, retryable",
+            "status": "passed",
+            "title": "targetUnavailable(Strale's resolver failing for now (EAI_AGAIN, wrapped by fetch)) is fault provider, counts true, retryable",
+            "duration": 0.09580700000003617,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's"
+            ],
+            "fullName": "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's targetUnavailable(a network error with no code) is fault provider, counts true, retryable",
+            "status": "passed",
+            "title": "targetUnavailable(a network error with no code) is fault provider, counts true, retryable",
+            "duration": 0.08684800000003179,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's"
+            ],
+            "fullName": "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's targetUnavailable(a stream cut off with no code) is fault provider, counts true, retryable",
+            "status": "passed",
+            "title": "targetUnavailable(a stream cut off with no code) is fault provider, counts true, retryable",
+            "duration": 0.08632000000000062,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's"
+            ],
+            "fullName": "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's a counted failure for website x403.example names no host, so the breaker reads it as transient",
+            "status": "passed",
+            "title": "a counted failure for website x403.example names no host, so the breaker reads it as transient",
+            "duration": 0.35523399999999583,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's"
+            ],
+            "fullName": "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's a counted failure for host gone.example names no host, so the breaker reads it as transient",
+            "status": "passed",
+            "title": "a counted failure for host gone.example names no host, so the breaker reads it as transient",
+            "duration": 0.2607670000001008,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's"
+            ],
+            "fullName": "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's a counted failure for https://moved301.example/ names no host, so the breaker reads it as transient",
+            "status": "passed",
+            "title": "a counted failure for https://moved301.example/ names no host, so the breaker reads it as transient",
+            "duration": 0.4002749999999651,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's"
+            ],
+            "fullName": "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's a counted failure for website unauthorized-404.example names no host, so the breaker reads it as transient",
+            "status": "passed",
+            "title": "a counted failure for website unauthorized-404.example names no host, so the breaker reads it as transient",
+            "duration": 0.25814900000000307,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's"
+            ],
+            "fullName": "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's an UpstreamUnavailableError passed in is not relabelled",
+            "status": "passed",
+            "title": "an UpstreamUnavailableError passed in is not relabelled",
+            "duration": 0.22002800000007028,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's"
+            ],
+            "fullName": "promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's a host that does not resolve (ENOTFOUND) is still the site's",
+            "status": "passed",
+            "title": "a host that does not resolve (ENOTFOUND) is still the site's",
+            "duration": 0.12560099999996055,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review S1: a target-site failure is unbilled and does not count against the capability"
+            ],
+            "fullName": "PR #1018 review S1: a target-site failure is unbilled and does not count against the capability targetUnavailable(a 5xx) is fault target, counts false",
+            "status": "passed",
+            "title": "targetUnavailable(a 5xx) is fault target, counts false",
+            "duration": 0.15496600000005856,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review S1: a target-site failure is unbilled and does not count against the capability"
+            ],
+            "fullName": "PR #1018 review S1: a target-site failure is unbilled and does not count against the capability targetUnavailable(a timeout) is fault target, counts false",
+            "status": "passed",
+            "title": "targetUnavailable(a timeout) is fault target, counts false",
+            "duration": 0.08536099999992075,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review S1: a target-site failure is unbilled and does not count against the capability"
+            ],
+            "fullName": "PR #1018 review S1: a target-site failure is unbilled and does not count against the capability targetUnavailable(a network error) is fault target, counts false",
+            "status": "passed",
+            "title": "targetUnavailable(a network error) is fault target, counts false",
+            "duration": 0.07294999999999163,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review S1: a target-site failure is unbilled and does not count against the capability"
+            ],
+            "fullName": "PR #1018 review S1: a target-site failure is unbilled and does not count against the capability targetUnavailable(a connection errno) is fault target, counts false",
+            "status": "passed",
+            "title": "targetUnavailable(a connection errno) is fault target, counts false",
+            "duration": 0.06565299999999752,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review S1: a target-site failure is unbilled and does not count against the capability"
+            ],
+            "fullName": "PR #1018 review S1: a target-site failure is unbilled and does not count against the capability targetUnavailable(a redirect loop) is fault target, counts false",
+            "status": "passed",
+            "title": "targetUnavailable(a redirect loop) is fault target, counts false",
+            "duration": 0.06520000000000437,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review S1: a target-site failure is unbilled and does not count against the capability"
+            ],
+            "fullName": "PR #1018 review S1: a target-site failure is unbilled and does not count against the capability targetUnavailable(a body that did not parse) is fault target, counts false",
+            "status": "passed",
+            "title": "targetUnavailable(a body that did not parse) is fault target, counts false",
+            "duration": 0.10719999999992069,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review S1: a target-site failure is unbilled and does not count against the capability"
+            ],
+            "fullName": "PR #1018 review S1: a target-site failure is unbilled and does not count against the capability a provider failure without the marker still counts",
+            "status": "passed",
+            "title": "a provider failure without the marker still counts",
+            "duration": 0.08093099999996411,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review S1: a target-site failure is unbilled and does not count against the capability"
+            ],
+            "fullName": "PR #1018 review S1: a target-site failure is unbilled and does not count against the capability the quality floor leaves target failures out of the denominator and counts provider failures",
+            "status": "passed",
+            "title": "the quality floor leaves target failures out of the denominator and counts provider failures",
+            "duration": 0.35802799999999024,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review round 2 nits"
+            ],
+            "fullName": "PR #1018 review round 2 nits ssrfBlocked finds the SSRF refusal bare or on undici's cause, and nothing else",
+            "status": "passed",
+            "title": "ssrfBlocked finds the SSRF refusal bare or on undici's cause, and nothing else",
+            "duration": 0.15682600000002367,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review round 2 nits"
+            ],
+            "fullName": "PR #1018 review round 2 nits fetchUnavailable returns an SSRF refusal on the cause as itself, never as 'retry shortly'",
+            "status": "passed",
+            "title": "fetchUnavailable returns an SSRF refusal on the cause as itself, never as 'retry shortly'",
+            "duration": 0.11695800000006784,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review round 2 nits"
+            ],
+            "fullName": "PR #1018 review round 2 nits targetUnavailable returns an SSRF refusal on the cause as itself",
+            "status": "passed",
+            "title": "targetUnavailable returns an SSRF refusal on the cause as itself",
+            "duration": 0.05563000000006468,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review round 2 nits"
+            ],
+            "fullName": "PR #1018 review round 2 nits targetUnavailable files an unresolvable host as not retryable, still the target's fault",
+            "status": "passed",
+            "title": "targetUnavailable files an unresolvable host as not retryable, still the target's fault",
+            "duration": 0.22984300000007352,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review round 2 nits"
+            ],
+            "fullName": "PR #1018 review round 2 nits targetUnavailable words HTTP 408 as the site timing out, retryable and breaker-exempt",
+            "status": "passed",
+            "title": "targetUnavailable words HTTP 408 as the site timing out, retryable and breaker-exempt",
+            "duration": 0.11511499999994612,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review round 2 nits"
+            ],
+            "fullName": "PR #1018 review round 2 nits targetUnavailable files HTTP 400 as the target's answer, not retryable",
+            "status": "passed",
+            "title": "targetUnavailable files HTTP 400 as the target's answer, not retryable",
+            "duration": 0.11853899999994155,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review round 2 nits"
+            ],
+            "fullName": "PR #1018 review round 2 nits targetUnavailable files HTTP 404 as the target's answer, not retryable",
+            "status": "passed",
+            "title": "targetUnavailable files HTTP 404 as the target's answer, not retryable",
+            "duration": 0.08338500000002114,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review round 2 nits"
+            ],
+            "fullName": "PR #1018 review round 2 nits targetUnavailable files HTTP 410 as the target's answer, not retryable",
+            "status": "passed",
+            "title": "targetUnavailable files HTTP 410 as the target's answer, not retryable",
+            "duration": 0.07976500000006581,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review round 2 nits"
+            ],
+            "fullName": "PR #1018 review round 2 nits targetUnavailable files an unfollowed HTTP 301 as the target's, with the status on code only",
+            "status": "passed",
+            "title": "targetUnavailable files an unfollowed HTTP 301 as the target's, with the status on code only",
+            "duration": 0.09881699999993998,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review round 2 nits"
+            ],
+            "fullName": "PR #1018 review round 2 nits targetUnavailable files an unfollowed HTTP 308 as the target's, with the status on code only",
+            "status": "passed",
+            "title": "targetUnavailable files an unfollowed HTTP 308 as the target's, with the status on code only",
+            "duration": 0.06419399999992947,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "PR #1018 review round 2 nits"
+            ],
+            "fullName": "PR #1018 review round 2 nits targetUnavailable files an unfollowed HTTP 304 as the target's, with the status on code only",
+            "status": "passed",
+            "title": "targetUnavailable files an unfollowed HTTP 304 as the target's, with the status on code only",
+            "duration": 0.06345999999996366,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794485502507,
+        "endTime": 1794485502535.0989,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale-wt-host/apps/api/src/lib/upstream-result.test.ts"
+      }
+    ]
+  }
+}
