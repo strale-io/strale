@@ -131,11 +131,32 @@ tracks:
       safeFetch's first lookup; (17) ESSRFBLOCKED classifies as
       caller_input_invalid but isUserInputError is false for it, so it may
       count toward the circuit breaker.
-      Next: wave 3; the Nager.Date
-      no-calendar path (a weekends-only answer for countries such as TH, still
-      billed) as a follow-up candidate; the perturbation replays (http_503,
-      http_429, network_error, blocked_200, DNS ETIMEOUT) for every network
-      executor with fail-before evidence; then measuring past billed calls from
+      Wave 3, branch test/promise-audit-wave3-failure-replays: the failure
+      replay (upstream-failure-replay.test.ts) runs each of the 32 recorded
+      network executors under a 503, a 429, a reset, a timeout, a DNS
+      ETIMEOUT and a Cloudflare challenge served with HTTP 200, with and
+      without cf-mitigated, and requires a throw or an unbillable answer
+      (api-health-check, an availability probe, must instead never report
+      a failure healthy). It found nine defects, all fixed: safeFetch now
+      stops a page read at a challenge page as at a 403 (base64-encode-url,
+      og-image-check, page-exists and website-carbon-estimate billed the
+      interstitial as the page), and so does robots-txt-parse;
+      sitemap-parse refuses HTML with no urlset or sitemapindex; api-health-
+      check no longer reports a challenge healthy; cz-unreliable-vat-payer
+      reports NENALEZEN (the register's answer for an unknown DIČ, checked
+      live 2026-11-12) as not registered, where it said registered, and
+      throws on a reply with no status or no payer status, where it billed
+      \"not registered\". The 32 recordings are not the whole catalogue: a
+      network executor with no recording is not covered yet. Fail-before and
+      after receipts are in evidence. Found, not fixed: (18) robots-txt-parse
+      reads an HTML soft 404 without challenge markers as an existing
+      robots.txt with no rules; (19) a JSON executor answered with an HTML
+      challenge mostly throws a parse error the outcome model files
+      unattributed (unbilled, but not counted against the provider).
+      Next: once wave 3 merges and deploys, the Nager.Date no-calendar path
+      (a weekends-only answer for countries such as TH, still billed) as a
+      follow-up candidate; recordings for the network executors that have
+      none; then measuring past billed calls from
       the affected paths since their earliest releases, deciding refunds per
       policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against
       listed and dry-run prices (P-011, P-008). Do not assume the proposed
@@ -169,6 +190,8 @@ tracks:
         the next inventory revision.
     evidence:
       - archive/receipts/2026-11-10-check-upstream-catch-guard.json
+      - archive/receipts/2026-11-12-test-run-upstream-failure-replay-wave3-fail-before.json
+      - archive/receipts/2026-11-12-test-run-upstream-failure-replay-wave3-after.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-fail-before.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-after.json
       - archive/receipts/2026-11-11-check-upstream-catch-guard-wave2a.json

@@ -859,6 +859,39 @@ export function readTextTruncated(
 }
 
 /**
+ * Read the first `maxChars` characters of a body WITHOUT consuming it: the
+ * prefix comes from a clone, so the caller still reads the whole body from
+ * `response` (promise-audit T1 wave 3, `isChallengeResponse`).
+ *
+ * Not built on `decodeStreaming`: that awaits the reader's cancel, and on a
+ * cloned (tee'd) body a branch's cancel settles only once the other branch is
+ * cancelled too, which the caller's read never does. The cancel here is
+ * started and not awaited. Returns null when the body cannot be peeked
+ * (bodyless, already used, or erroring); the caller's own read then meets the
+ * same condition.
+ */
+export async function peekTextPrefix(response: Response, maxChars: number): Promise<string | null> {
+  if (!response.body || response.bodyUsed) return null;
+  const reader = response.clone().body!.getReader();
+  const decoder = new TextDecoder();
+  let head = "";
+  try {
+    while (head.length < maxChars) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      head += decoder.decode(value, { stream: true });
+    }
+  } catch {
+    // degraded-ok: a peek, not the read: the caller reads the same body next and meets the same error there, so nothing is swallowed.
+    return null;
+  } finally {
+    // Not awaited (see above).
+    reader.cancel().catch(() => undefined);
+  }
+  return head.slice(0, maxChars);
+}
+
+/**
  * The shared robots.txt read (#432). Truncates at the crawler parse limit.
  */
 export function readRobotsTxt(response: Response, field = "url"): Promise<string> {

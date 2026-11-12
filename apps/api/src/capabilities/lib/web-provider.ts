@@ -102,33 +102,14 @@ import {
   SiteAccessRefusedError,
   asSourceBlocked,
   isBlockStatus,
+  looksLikeJsChallenge,
   siteAccessRefusal,
 } from "../../lib/site-access.js";
 import { ResourceLimitError, readErrorTextTruncated, readPageHtml } from "../../lib/resource-limits.js";
 import { bodyHasMoreTextThan } from "./stripped-text-length.js";
 
-/**
- * Detect JS-challenge / anti-bot interstitials that come back with HTTP 200
- * and enough bytes to pass the "substantial content" heuristics. Observed
- * live: EUR-Lex's "verify that you're not a robot … Enable JavaScript and
- * then reload" shell (2KB, HTTP 200/202). Under DEC-20261023-A a challenge is
- * a block: the fetch path refuses on it rather than handing it to a real
- * browser to solve. Markers are deliberately narrow —
- * a real article MENTIONING robots must not trip this — so each pattern
- * targets interstitial phrasing, not topic words.
- */
-export function looksLikeJsChallenge(html: string): boolean {
-  const head = html.slice(0, 6000);
-  // NOTE: no bare `_Incapsula_Resource` marker — Imperva injects that script
-  // tag into NORMALLY SERVED pages too, so it false-positives on good content
-  // (review M-1). `__cf_chl_` / `cf-browser-verification` are challenge-only.
-  return (
-    /verify that you'?re not a robot/i.test(head) ||
-    /enable javascript and then reload/i.test(head) ||
-    /checking your browser before accessing/i.test(head) ||
-    /__cf_chl_|cf-browser-verification/i.test(head)
-  );
-}
+/** Moved to `lib/site-access.ts` so `safeFetch` can stop at a challenge too; re-exported for existing importers. */
+export { looksLikeJsChallenge } from "../../lib/site-access.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 

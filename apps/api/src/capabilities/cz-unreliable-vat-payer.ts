@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 /**
  * MF ČR — Unreliable VAT payer + published bank accounts lookup.
@@ -10,6 +11,8 @@ import { registerCapability, type CapabilityInput } from "./index.js";
  * Source: SOAP web service "rozhraniCRPDPH" (Czech Ministry of Finance).
  * Auth: none. Free. No known rate limit.
  */
+
+const MFCR_SERVICE = "MF ČR unreliable-VAT register";
 
 const MFCR_SOAP_ENDPOINT =
   "https://adisrws.mfcr.cz/dpr/axis2/services/rozhraniCRPDPH.rozhraniCRPDPHSOAP";
@@ -75,11 +78,25 @@ function parseResponse(xml: string): {
     };
   }
 
+  // Only a reply whose status says OK carries a verdict. A maintenance page or
+  // a proxy's block page served with HTTP 200 has no status element, and
+  // reading it as "no statusPlatceDPH, so not registered" billed a wrong answer
+  // (promise-audit T1 wave 3).
+  if (!/<status\b[^>]*\bstatusCode="/.test(xml)) {
+    throw new UpstreamUnavailableError(MFCR_SERVICE, "the reply carried no status.", { code: "unparseable" });
+  }
+
   const generated = xml.match(/odpovedGenerovana="([^"]+)"/)?.[1] ?? null;
 
-  // No statusPlatceDPH element at all → DIČ not registered as VAT payer
-  const hasPlatceBlock = /<statusPlatceDPH[^/>]*/.test(xml);
-  if (!hasPlatceBlock) {
+  const platceBlock = xml.match(/<statusPlatceDPH\b[^>]*>/)?.[0];
+  if (!platceBlock) {
+    throw new UpstreamUnavailableError(MFCR_SERVICE, "the reply carried no payer status.", { code: "unparseable" });
+  }
+
+  // The register answers an unknown DIČ with nespolehlivyPlatce="NENALEZEN"
+  // ("not found"), checked live 2026-11-12. It was read as a registered payer
+  // whose reliability is unknown.
+  if (/\bnespolehlivyPlatce="NENALEZEN"/.test(platceBlock)) {
     return {
       dic: null,
       is_unreliable_payer: null,

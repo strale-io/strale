@@ -2,6 +2,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readRobotsTxt } from "../lib/resource-limits.js";
 import { validateUrl } from "../lib/url-validator.js";
+import { isChallengeResponse, siteAccessRefusal } from "../lib/site-access.js";
 
 registerCapability("robots-txt-parse", async (input: CapabilityInput) => {
   let url = ((input.url as string) ?? (input.domain as string) ?? (input.task as string) ?? "").trim();
@@ -31,6 +32,13 @@ registerCapability("robots-txt-parse", async (input: CapabilityInput) => {
     // it to pin the keep-alive connection until GC.
     await discardBody(response, "robots-txt-parse: non-2xx");
     throw new Error(`HTTP ${response.status} fetching robots.txt`);
+  }
+
+  // An availability probe, so safeFetch does not stop at a challenge itself.
+  // A challenge here is not a robots.txt with no rules (promise-audit T1 wave 3).
+  if (await isChallengeResponse(response)) {
+    await discardBody(response, "robots-txt-parse: anti-bot challenge page");
+    throw siteAccessRefusal(robotsUrl, { kind: "challenge" });
   }
 
   const text = await readRobotsTxt(response);
