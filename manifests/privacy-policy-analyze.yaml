@@ -106,6 +106,12 @@ limitations:
     category: coverage
     severity: info
     workaround: Read the original policy directly for details that exceed the output limit.
+  - title: Sites that refuse automated requests are not read
+    text: >-
+      When the site answers HTTP 401, 403, 407 or 429, shows an anti-bot challenge page instead of the content, or disallows the page in robots.txt, or its robots.txt cannot be fetched (a network or server error), the call fails with an error and is not billed. Strale does not retry through another route, so repeating the call does not change the answer. The policy page is looked for through the page's links and common paths; a candidate that robots.txt disallows is skipped. If no policy page is found, the page you sent is analysed when it has enough text, and source_url names the page that was analysed.
+    category: availability
+    severity: info
+    workaround: Check source_url, and send the policy page's own address when it differs.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

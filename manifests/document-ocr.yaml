@@ -194,3 +194,8 @@ limitations:
     text: Output is plain text per page in reading order. Tables, form fields, fonts and positions are not returned; use invoice-extract or pdf-extract for structured fields.
     category: scope
     severity: info
+  - title: Sites that refuse automated requests are not read
+    text: >-
+      With a url or image_urls, when the site answers HTTP 401, 403, 407 or 429, shows an anti-bot challenge page instead of the content, or disallows the page in robots.txt, or its robots.txt cannot be fetched (a network or server error), the call fails with an error and is not billed. Strale does not retry through another route, so repeating the call does not change the answer. One refused address in image_urls fails the whole call. A base64 upload is not fetched.
+    category: availability
+    severity: info

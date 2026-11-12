@@ -151,9 +151,10 @@ limitations:
     severity: warning
   - title: Sites that block automated access return a refusal
     text: >-
-      A site that answers with HTTP 401, 403 or 429, shows a bot-check page, or disallows the path in
-      robots.txt is not read, and the call returns a refusal instead of a result. Strale does not retry
-      through another route.
+      When the site answers HTTP 401, 403, 407 or 429, shows an anti-bot challenge page instead of the
+      content, or disallows the page in robots.txt, or its robots.txt cannot be fetched (a network or
+      server error), the call fails with an error and is not billed. Strale does not retry through
+      another route, so repeating the call does not change the answer.
     category: availability
     severity: warning
   - title: Only the homepage is read

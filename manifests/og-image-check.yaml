@@ -128,7 +128,7 @@ limitations:
     severity: info
   - title: A failed image check fails the call
     text: >-
-      The image URL is checked with a HEAD request (GET when the server does not support HEAD). A 404 or other client error is reported as the issue "og:image URL returns non-200 status" and is billed. When the image host blocks the check (401, 403, 407, 429, robots.txt or an anti-bot challenge page), answers a server error or 408, times out or cannot be reached, the call fails with an error and is not billed, because the image was not checked.
+      The image URL is checked with a HEAD request (GET when the server does not support HEAD). A 404 or other client error is reported as the issue "og:image URL returns non-200 status" and is billed. When the image host blocks the check (401, 403, 407, 429, robots.txt or an anti-bot challenge page), answers a server error or 408, times out or cannot be reached, the call fails with an error and is not billed, because the image was not checked. The same applies when the page itself blocks the request; the image may be on another host, whose block also fails the call.
     category: availability
     severity: info
     workaround: Retry after a server error, a timeout or a network error; a block will not change on retry.
