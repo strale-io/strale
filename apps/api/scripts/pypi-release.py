@@ -147,7 +147,18 @@ class _CatalogHandler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802 (stdlib name)
         _CatalogHandler.seen.append({"path": self.path, "headers": dict(self.headers)})
-        body = json.dumps({"capabilities": []}).encode()
+        # Serve each endpoint's real response shape. Typeahead answers with a
+        # capability and a solution under "results", so a client that reads the
+        # wrong key or keeps solutions fails the smoke (composio-strale 0.1.5
+        # read the wrong key and returned nothing for every search).
+        if self.path.startswith("/v1/suggest/typeahead"):
+            payload = {"results": [
+                {"type": "capability", "slug": "smoke-cap", "name": "Smoke", "description": "Smoke capability.", "category": "validation"},
+                {"type": "solution", "slug": "smoke-sol", "name": "Smoke solution", "description": "Smoke solution.", "category": "validation"},
+            ]}
+        else:
+            payload = {"capabilities": []}
+        body = json.dumps(payload).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
@@ -200,16 +211,17 @@ def cmd_smoke(args: argparse.Namespace) -> None:
 
             module.StraleToolkit(api_key="sk_smoke_fixture", base_url=base_url).register(Composio())
             request = importlib.import_module(f"{pkg['module']}.toolkit").StraleSearchInput(query="smoke")
-            result = tools["strale_search"](request)["capabilities"]
+            result = [c["slug"] for c in tools["strale_search"](request)["capabilities"]]
         else:
             client = importlib.import_module(f"{pkg['module']}.client").StraleClient(api_key="sk_smoke_fixture", base_url=base_url)
             result = client.list_capabilities()
     finally:
         server.shutdown()
 
-    if result != []:
-        fail(f"list call returned {result!r}, expected []")
-    expected_path = "/v1/suggest/typeahead?q=smoke&limit=10" if pkg["module"] == "composio_strale" else "/v1/capabilities"
+    expected_result = ["smoke-cap"] if pkg["module"] == "composio_strale" else []
+    if result != expected_result:
+        fail(f"list call returned {result!r}, expected {expected_result!r}")
+    expected_path = "/v1/suggest/typeahead?q=smoke&limit=10&type=capability" if pkg["module"] == "composio_strale" else "/v1/capabilities"
     if len(_CatalogHandler.seen) != 1 or _CatalogHandler.seen[0]["path"] != expected_path:
         fail(f"expected one GET {expected_path}, saw {[s['path'] for s in _CatalogHandler.seen]}")
     header = _CatalogHandler.seen[0]["headers"].get("X-Strale-Client")

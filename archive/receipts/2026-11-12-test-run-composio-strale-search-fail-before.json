@@ -1,0 +1,72 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "b5564fd20e5f0f9358ed8b8ee873125ce2b18623"
+  },
+  "at": "2026-11-12T08:35:49.405Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/composio-before.json"
+  },
+  "summary": {
+    "runner": "pytest",
+    "package": "packages/composio-strale",
+    "numTotalTests": 11,
+    "numFailedTests": 3,
+    "numPassedTests": 8
+  },
+  "topic": "composio-strale-search-fail-before",
+  "raw": {
+    "runner": "pytest",
+    "package": "packages/composio-strale",
+    "numTotalTests": 11,
+    "numFailedTests": 3,
+    "numPassedTests": 8,
+    "tests": [
+      {
+        "name": "tests.test_client_header::test_header_on_search_fallback_execute_and_balance",
+        "status": "passed"
+      },
+      {
+        "name": "tests.test_client_header::test_missing_distribution_metadata_keeps_header_without_auth",
+        "status": "passed"
+      },
+      {
+        "name": "tests.test_client_header::test_public_fallback_search_sends_no_authorization_without_a_key",
+        "status": "passed"
+      },
+      {
+        "name": "tests.test_search::test_typeahead_results_are_returned_and_solutions_left_out",
+        "status": "failed"
+      },
+      {
+        "name": "tests.test_search::test_category_is_applied_to_typeahead_results",
+        "status": "failed"
+      },
+      {
+        "name": "tests.test_search::test_fallback_matches_the_query_instead_of_returning_the_catalogue_head",
+        "status": "failed"
+      },
+      {
+        "name": "tests.test_search::test_fallback_failure_is_reported",
+        "status": "passed"
+      },
+      {
+        "name": "tests.test_toolkit.TestImport::test_import",
+        "status": "passed"
+      },
+      {
+        "name": "tests.test_toolkit.TestImport::test_toolkit_custom_url",
+        "status": "passed"
+      },
+      {
+        "name": "tests.test_toolkit.TestImport::test_toolkit_env_key",
+        "status": "passed"
+      },
+      {
+        "name": "tests.test_toolkit.TestImport::test_toolkit_init",
+        "status": "passed"
+      }
+    ]
+  }
+}
