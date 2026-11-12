@@ -200,6 +200,50 @@ describe("ens-resolve failure: an offchain gateway's failure is the name's, not 
   });
 });
 
+describe("ens-resolve: the EVM stopping the avatar contract is the contract's answer (follow-up 33 review)", () => {
+  it.each([
+    ["out of gas", { code: -32000, message: "out of gas" }],
+    ["an invalid opcode", { code: -32000, message: "invalid opcode: INVALID" }],
+    ["a stack underflow", { code: -32015, message: "VM execution error: stack underflow" }],
+  ] as const)("negative: %s on the avatar read is no avatar, billed", async (_label, error) => {
+    rpc[SEL.text] = () => ({ error: { ...error } });
+    const { output } = (await resolve()) as { output: Record<string, unknown> };
+    expect(output).toMatchObject({ resolved: true, address: OWNER, avatar_url: null });
+    expect(() => assertBillableOutput("ens-resolve", output)).not.toThrow();
+  });
+});
+
+describe("ens-resolve: a callback that hands off to a second gateway is classified by that lookup (follow-up 33 review)", () => {
+  it("the second gateway's HTTP 401 is the target's, not retryable", async () => {
+    let gatewayCalls = 0;
+    rpc[SEL.addr] = () => revertWith(offchainLookup());
+    rpc[SEL.callback] = () => revertWith(offchainLookup());
+    gateway = () => {
+      gatewayCalls++;
+      return gatewayCalls === 1
+        ? new Response(JSON.stringify({ data: "0x1234" }), { status: 200, headers: { "content-type": "application/json" } })
+        : new Response(JSON.stringify({ error: "unauthorised" }), { status: 401, headers: { "content-type": "application/json" } });
+    };
+    const err = await failure();
+    expect(gatewayCalls).toBe(2);
+    expectGatewayFailure(err);
+    expect(err.message).toContain("HTTP 401");
+    expect(err.retryable).toBe(false);
+  });
+
+  it("an Alchemy rate limit on the second callback stays Alchemy's 429, retryable", async () => {
+    let callbacks = 0;
+    rpc[SEL.addr] = () => revertWith(offchainLookup());
+    rpc[SEL.callback] = () => (++callbacks === 1 ? revertWith(offchainLookup()) : { status: 429 });
+    gateway = () => new Response(JSON.stringify({ data: "0x1234" }), { status: 200, headers: { "content-type": "application/json" } });
+    const err = await failure();
+    expect(err).toBeInstanceOf(UpstreamUnavailableError);
+    expect(err.message).not.toContain(ENS_OFFCHAIN_GATEWAY);
+    expect(outcomeFromError(err)).toMatchObject({ billable: false, fault: "provider" });
+    expect(err.retryable).toBe(true);
+  });
+});
+
 describe("ens-resolve failure: an internal error (-32603) on the avatar read is the provider's", () => {
   it("one that does not say it reverted throws, unbilled and retryable", async () => {
     rpc[SEL.text] = () => ({ error: { code: -32603, message: "internal error" } });

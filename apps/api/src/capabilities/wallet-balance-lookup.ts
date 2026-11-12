@@ -39,11 +39,15 @@ registerCapability("wallet-balance-lookup", async (input: CapabilityInput) => {
   const names = await Promise.allSettled(
     tokens.map((t) => alchemyRpc<{ name?: string | null }>(chain, "alchemy_getTokenMetadata", [t.address])),
   );
-  // A token Alchemy has no name for reads "Unknown". A provider failure (a
-  // rate limit, a rejected key, a timeout) fails the call, unbilled, rather
-  // than billing names it never read (promise-audit T1 follow-up 33).
+  // A token Alchemy has no name for, or rejects (HTTP 400), reads "Unknown". A
+  // provider failure (a rate limit, a rejected key, a timeout, a server error)
+  // fails the call, unbilled, rather than billing names it never read
+  // (promise-audit T1 follow-up 33).
   const providerFailure = names.find(
-    (r): r is PromiseRejectedResult => r.status === "rejected" && r.reason instanceof UpstreamUnavailableError,
+    (r): r is PromiseRejectedResult =>
+      r.status === "rejected" &&
+      r.reason instanceof UpstreamUnavailableError &&
+      (r.reason.retryable || r.reason.code === "HTTP 401" || r.reason.code === "HTTP 403"),
   );
   if (providerFailure) throw providerFailure.reason;
 

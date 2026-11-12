@@ -155,6 +155,20 @@ describe("wallet-balance-lookup (Alchemy)", () => {
       { name: "Unknown", symbol: "DAI", address: "0x6B17" },
     ]);
   });
+  it("negative: one token's metadata answering HTTP 400 reads 'Unknown', billed, not a failed call (promise-audit 33 review)", async () => {
+    twoTokens((a) => (a === "0x6B17" ? new Response("bad request", { status: 400 }) : { name: "USD Coin" }));
+    const r = await run("wallet-balance-lookup", { address: W });
+    expect(r.output.recent_tokens).toEqual([
+      { name: "USD Coin", symbol: "USDC", address: "0xA0b8" },
+      { name: "Unknown", symbol: "DAI", address: "0x6B17" },
+    ]);
+  });
+  it.each([401, 403, 503])("failure: one token's metadata answering HTTP %i fails the call, unbilled", async (status) => {
+    twoTokens((a) => (a === "0x6B17" ? new Response("", { status }) : { name: "USD Coin" }));
+    const err = await run("wallet-balance-lookup", { address: W }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(UpstreamUnavailableError);
+    expect(outcomeFromError(err)).toMatchObject({ billable: false });
+  });
   it("dedupes tokens newest first", () => {
     const t = recentTokens([
       tx({ asset: "A", blockNum: "0x1", rawContract: { address: "0xaa" } }),

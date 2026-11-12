@@ -19,7 +19,7 @@
  * Polygon, Arbitrum and Optimism only. Each served chain also has its own
  * known_answer suite, so production proves every chain separately.
  */
-import { jsonRpcUnavailable, NO_LICENSED_ETH_RPC, redactRpcSecrets } from "../../lib/eth-rpc-endpoints.js";
+import { jsonRpcUnavailable, NO_LICENSED_ETH_RPC, redactRpcSecrets, withoutCause } from "../../lib/eth-rpc-endpoints.js";
 import { readJsonWithLimit } from "../../lib/resource-limits.js";
 import { fetchUnavailable, httpUnavailable, UpstreamUnavailableError } from "../../lib/upstream-result.js";
 
@@ -85,11 +85,11 @@ export function requireAddress(raw: unknown, field: string): string {
  * fetchUnavailable returns an error it cannot type unchanged, and that error's
  * message can quote the request URL, which carries the API key ("Failed to
  * parse URL from https://…/v2/<key>"). Such an error is rebuilt from its
- * redacted message, with no cause.
+ * redacted message, with no cause; a typed one also loses its cause.
  */
 function rpcFetchFailure(upstream: string, err: unknown): Error {
   const typed = fetchUnavailable(upstream, err);
-  if (typed instanceof UpstreamUnavailableError) return typed;
+  if (typed instanceof UpstreamUnavailableError) return withoutCause(typed);
   return new Error(`${upstream} request failed: ${redactRpcSecrets(err instanceof Error ? err.message : String(err))}`);
 }
 

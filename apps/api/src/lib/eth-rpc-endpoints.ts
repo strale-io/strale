@@ -89,9 +89,15 @@ export function isContractAnswer(err: unknown): boolean {
     if (isInternalRpcError(e) && !/revert/i.test(rpcText(e))) return false;
     if (typeof name === "string" && /Revert|ZeroData|AbiDecoding/.test(name)) answer = true;
     if ((e as { code?: unknown }).code === 3) answer = true;
+    // The EVM stopping the contract (out of gas, an invalid opcode such as an
+    // old Solidity assert, a bad jump or stack) is the contract's answer too;
+    // nodes report it as a JSON-RPC error with the reason in its text.
+    if (typeof (e as { code?: unknown }).code === "number" && VM_EXECUTION_ERROR.test(rpcText(e))) answer = true;
   }
   return answer;
 }
+
+const VM_EXECUTION_ERROR = /out of gas|invalid opcode|stack (?:under|over)flow|invalid jump/i;
 
 function isInternalRpcError(e: unknown): boolean {
   return (e as { code?: unknown }).code === -32603;
@@ -135,6 +141,9 @@ function offchainGatewayFailure(lookup: unknown): UpstreamUnavailableError | nul
       targetFault: true,
     });
   const cause = (lookup as { cause?: unknown }).cause;
+  // The callback reverted with a second OffchainLookup and that lookup failed:
+  // classify the inner one, whose failure may be the provider's.
+  if ((cause as { name?: unknown } | undefined)?.name === "OffchainLookupError") return offchainGatewayFailure(cause);
   if ((cause as { name?: unknown } | undefined)?.name === "CallExecutionError") {
     return isContractAnswer(cause) ? unusable("CallbackReverted") : null;
   }
@@ -231,7 +240,7 @@ function safeRpcMessage(err: unknown): string {
   return redactRpcSecrets(text).replace(/0x[0-9a-f]{16,}/gi, "0x…");
 }
 
-function withoutCause(err: Error): Error {
+export function withoutCause(err: Error): Error {
   // The classified message never quotes the URL; the cause (viem's error)
   // does, so it is dropped rather than carried into logs.
   if ("cause" in err) {
