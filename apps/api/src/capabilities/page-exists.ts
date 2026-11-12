@@ -205,8 +205,8 @@ registerCapability("page-exists", async (input: CapabilityInput) => {
     // weather: they fail the call exactly like the pre-flight validateUrl.
     const ssrf = ssrfBlocked(err);
     if (ssrf) throw ssrf;
-    // The validator's own refusal on a redirect hop (a restricted address, a
-    // scheme other than http(s), an invalid Location), recognised by its type:
+    // The validator's own refusal on a redirect hop (a restricted address or a
+    // scheme other than http(s)), recognised by its type:
     // matching the word "restricted" also caught a redirect loop, whose
     // message names its starting URL (promise-audit T1 follow-up 35).
     if (err instanceof UrlValidationError) throw err;
