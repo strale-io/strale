@@ -190,7 +190,7 @@ export async function validateUrl(urlString: string): Promise<void> {
       }
     }
   } catch (err) {
-    if (err instanceof Error && err.message.includes("restricted")) throw err;
+    if (err instanceof UrlValidationError) throw err;
     // DNS resolution failed — let the actual fetch handle it
   }
 }
@@ -246,7 +246,7 @@ export async function validateHost(hostname: string): Promise<void> {
       }
     }
   } catch (err) {
-    if (err instanceof Error && err.message.includes("restricted")) throw err;
+    if (err instanceof UrlValidationError) throw err;
   }
   // c-ares (dns.resolve*) is not what a raw socket uses. net.connect resolves
   // with getaddrinfo, which also accepts shorthand IPv4 (`127.1`,
