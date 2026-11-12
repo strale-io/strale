@@ -182,7 +182,7 @@ limitations:
     category: availability
     severity: info
     workaround: >-
-      After a World Bank server error (5xx), a 429 or a timeout, retry after a short wait; any other
+      After a World Bank server error (5xx), a 429, a timeout or a network error, retry after a short wait; any other
       error status, and a rejected or unreadable answer, will not change on retry.
   - title: Country names are read only from a short list
     text: >-

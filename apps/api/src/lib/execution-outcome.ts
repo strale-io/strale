@@ -90,9 +90,11 @@ export type FailureClass =
 
 /**
  * Who is answerable. Drives the breaker and the quality floor, not billing.
- * "target" is the site at a URL the caller chose (cookie-scan, page-exists,
- * pricing-page-extract): neither a source Strale depends on nor the caller's
- * malformed input, so it never counts against the capability.
+ * "target" is the site or host the caller chose (cookie-scan, page-exists,
+ * port-check, og-image-check, domain-contact-extract): neither a source
+ * Strale depends on nor the caller's malformed input, so it never counts
+ * against the capability. pricing-page-extract is deliberately not one: its
+ * unreadable-page errors count against it (see `unreadablePage` there).
  */
 export type Fault = "provider" | "strale" | "caller" | "target";
 

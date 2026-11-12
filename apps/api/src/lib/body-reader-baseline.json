@@ -70,7 +70,6 @@
     "capabilities/pep-check.ts": 1,
     "capabilities/polish-company-data.ts": 2,
     "capabilities/postal-code-lookup.ts": 1,
-    "capabilities/protocol-fees-lookup.ts": 2,
     "capabilities/protocol-tvl-lookup.ts": 3,
     "capabilities/providers/latvian-company-data-sdda.ts": 2,
     "capabilities/providers/swiss-company-data.ts": 3,

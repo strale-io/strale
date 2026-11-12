@@ -1,8 +1,51 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { readErrorTextTruncated, readJsonWithLimit } from "../lib/resource-limits.js";
+import { fetchUnavailable, httpUnavailable } from "../lib/upstream-result.js";
 
-// DeFi Llama — Fees & Revenue API (free, no key required)
-const FEES_API = "https://api.llama.fi/summary/fees";
-const REVENUE_API = "https://api.llama.fi/summary/revenue";
+// DeFi Llama — Fees & Revenue API (free, no key required). Fees and revenue
+// are the same endpoint with a different dataType; the charts are excluded
+// because only the totals are read (with them, Uniswap's answer is 1.5 MB).
+const SUMMARY_API = "https://api.llama.fi/summary/fees";
+const FEES = "DeFi Llama fees API";
+const REVENUE = "DeFi Llama revenue API";
+
+type Summary = {
+  name?: string;
+  defillamaId?: string;
+  total24h?: number | null;
+  total48hto24h?: number | null;
+  total7d?: number | null;
+  total30d?: number | null;
+  totalAllTime?: number | null;
+};
+
+/**
+ * One dataType's summary, or null when DeFi Llama has no such series for the
+ * slug. It answers that with HTTP 400 and "Fees for <slug> not found" (404
+ * too, for safety); checked live on 2026-11-12, for a made-up slug and for
+ * protocols it tracks fees but not revenue for. Every other failure throws.
+ */
+async function summary(slug: string, dataType: "dailyFees" | "dailyRevenue", upstream: string): Promise<Summary | null> {
+  const url =
+    `${SUMMARY_API}/${encodeURIComponent(slug)}?dataType=${dataType}` +
+    "&excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true";
+  let resp: Response;
+  try {
+    resp = await fetch(url, { headers: { "User-Agent": "Strale/1.0" }, signal: AbortSignal.timeout(15000) });
+  } catch (err) {
+    throw fetchUnavailable(upstream, err);
+  }
+  if (!resp.ok) {
+    const body = await readErrorTextTruncated(resp);
+    if (resp.status === 404 || (resp.status === 400 && /\bnot found\b/i.test(body))) return null;
+    throw httpUnavailable(upstream, resp.status);
+  }
+  try {
+    return await readJsonWithLimit<Summary>(resp);
+  } catch (err) {
+    throw fetchUnavailable(upstream, err);
+  }
+}
 
 registerCapability("protocol-fees-lookup", async (input: CapabilityInput) => {
   const protocol = (
@@ -11,37 +54,30 @@ registerCapability("protocol-fees-lookup", async (input: CapabilityInput) => {
     (input.slug as string) ??
     ""
   ).trim();
-  if (!protocol) throw new Error("'protocol' is required. Provide a DeFi protocol name (e.g., 'uniswap', 'aave-v3').");
+  if (!protocol) throw new Error("'protocol' is required. Provide a DeFi protocol name (e.g., 'aave-v3', 'uniswap').");
   if (protocol.length < 2) throw new Error("'protocol' must be at least 2 characters.");
 
   const slug = protocol.toLowerCase().replace(/\s+/g, "-");
 
-  // Fetch fees and revenue in parallel
-  const [feesResp, revenueResp] = await Promise.all([
-    fetch(`${FEES_API}/${encodeURIComponent(slug)}?dataType=dailyFees`, {
-      headers: { "User-Agent": "Strale/1.0" },
-      signal: AbortSignal.timeout(15000),
-    }),
-    fetch(`${REVENUE_API}/${encodeURIComponent(slug)}?dataType=dailyRevenue`, {
-      headers: { "User-Agent": "Strale/1.0" },
-      signal: AbortSignal.timeout(15000),
-    }).catch(() => null), // Revenue endpoint is optional — not all protocols have it
+  // Both legs in parallel; settled, so an unknown protocol is reported as
+  // such whichever leg finishes first.
+  const [fees, revenue] = await Promise.allSettled([
+    summary(slug, "dailyFees", FEES),
+    summary(slug, "dailyRevenue", REVENUE),
   ]);
 
-  if (!feesResp.ok) {
-    if (feesResp.status === 404) {
-      throw new Error(`Protocol "${protocol}" not found on DeFi Llama. Use the slug format (e.g., 'aave-v3', 'uniswap').`);
-    }
-    throw new Error(`DeFi Llama fees API returned HTTP ${feesResp.status}`);
+  if (fees.status === "rejected") throw fees.reason;
+  const feesData = fees.value;
+  if (feesData === null) {
+    throw new Error(`Protocol "${protocol}" not found on DeFi Llama. Use the slug format (e.g., 'aave-v3', 'uniswap').`);
   }
-
-  const feesData = (await feesResp.json()) as any;
+  // The revenue leg failing is not "no revenue" (2026-11-06 swallowed-failures
+  // audit, row 33): before, any failure here, and the retired /summary/revenue
+  // path that answered 500 for every protocol, returned billed nulls. Only
+  // DeFi Llama's own "no such series" (null) leaves the revenue fields null.
+  if (revenue.status === "rejected") throw revenue.reason;
+  const revenueData = revenue.value;
   const now = new Date().toISOString();
-
-  let revenueData: any = null;
-  if (revenueResp && revenueResp.ok) {
-    revenueData = await revenueResp.json();
-  }
 
   return {
     output: {

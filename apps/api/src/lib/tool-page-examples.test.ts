@@ -65,14 +65,15 @@ it("the Latvian guide name search picks a source record without a termination da
 });
 
 it("the protocol fees example preserves USD totals and optional revenue without inventing breakdowns", async () => {
-  const data = { name: "Uniswap", defillamaId: "parent#uniswap", total24h: 1100432, total7d: 7424515, total30d: 39302873, totalDataChartBreakdown: ["not exposed"] };
-  let revenue: number | null = null;
-  const fetcher = vi.fn(async (url: unknown) => String(url).includes("/revenue/") ? revenue === null ? new Response("not available", { status: 404 }) : new Response(JSON.stringify({ total24h: revenue })) : new Response(JSON.stringify(data)));
+  const data = { name: "Uniswap", defillamaId: "parent#uniswap", total24h: 1564082, total7d: 13435356, total30d: 76015351, totalDataChartBreakdown: ["not exposed"] };
+  let revenue: number | null = 183026;
+  const fetcher = vi.fn(async (url: unknown) => String(url).includes("dataType=dailyRevenue") ? revenue === null ? new Response("Fees for uniswap not found", { status: 400 }) : new Response(JSON.stringify({ total24h: revenue })) : new Response(JSON.stringify(data)));
   vi.stubGlobal("fetch", fetcher);
   try {
     const example = toolPages["protocol-fees-lookup"]!.example;
     const result = await getExecutor("protocol-fees-lookup")!(example.input);
-    expect(fetcher.mock.calls.map(([url]) => url)).toEqual(["https://api.llama.fi/summary/fees/uniswap?dataType=dailyFees", "https://api.llama.fi/summary/revenue/uniswap?dataType=dailyRevenue"]);
+    const totalsOnly = "&excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true";
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([`https://api.llama.fi/summary/fees/uniswap?dataType=dailyFees${totalsOnly}`, `https://api.llama.fi/summary/fees/uniswap?dataType=dailyRevenue${totalsOnly}`]);
     expect(result.output).toMatchObject(example.output);
     expect(result.output).not.toHaveProperty("totalDataChartBreakdown");
     expect(result.output.fees_all_time_usd).toBeNull();
@@ -80,7 +81,10 @@ it("the protocol fees example preserves USD totals and optional revenue without 
     const zero = await getExecutor("protocol-fees-lookup")!(example.input);
     expect(zero.output.revenue_24h_usd).toBe(0);
     expect(zero.output.revenue_7d_usd).toBeNull();
-    fetcher.mockResolvedValueOnce(new Response("not found", { status: 404 }));
+    revenue = null;
+    const untracked = await getExecutor("protocol-fees-lookup")!(example.input);
+    expect(untracked.output.revenue_24h_usd).toBeNull();
+    fetcher.mockResolvedValueOnce(new Response("Fees for unknown-protocol not found", { status: 400 }));
     await expect(getExecutor("protocol-fees-lookup")!({ protocol: "unknown-protocol" })).rejects.toThrow("not found");
   } finally { vi.unstubAllGlobals(); }
 });

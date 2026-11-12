@@ -69,7 +69,8 @@ test("Latvian company and protocol fees pages explain their examples and retain 
     } else {
       assert.equal(input.protocol, "uniswap");
       assert.equal(output.protocol, "Uniswap");
-      assert.equal(output.revenue_24h_usd, null);
+      assert.equal(typeof output.revenue_24h_usd, "number");
+      assert.match(text, /If either request fails, the call fails and is not charged/);
       assert.match(text, /not current Uniswap totals/);
       assert.match(text, /without chain or product breakdowns/);
       assert.doesNotMatch(text, /with available breakdowns/);

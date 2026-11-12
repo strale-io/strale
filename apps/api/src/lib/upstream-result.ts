@@ -40,8 +40,8 @@ export class UpstreamUnavailableError extends Error {
    * breaker-exempt by its wording, but outcomeFromError records it with
    * fault "target" and counts_against_capability false, so one caller's
    * broken site does not count against the capability's quality floor
-   * (PR #1018 review, S1). Set by targetUnavailable and by executors that
-   * build their own target-site error.
+   * (PR #1018 review, S1). Set by targetUnavailable and by page-exists for a
+   * redirect it cannot follow.
    */
   readonly targetFault: boolean;
 
@@ -279,9 +279,11 @@ export function fetchUnavailable(upstream: string, err: unknown): Error {
  * broken site retried three times must not suspend the capability for
  * everyone (PR #1015 review). Every error it builds carries `targetFault`, so
  * it does not count against the capability's quality floor either (PR #1018
- * review, S1). Called by cookie-scan and page-exists; pricing-page-extract
- * builds its own target error (`unreadablePage`). Anything else passes
- * through as fetchUnavailable leaves it.
+ * review, S1). Called by cookie-scan, page-exists, port-check, og-image-check
+ * and domain-contact-extract. pricing-page-extract's `unreadablePage` keeps
+ * the target wording but is deliberately not target-marked, so it counts
+ * against that capability. Anything else passes through as fetchUnavailable
+ * leaves it.
  */
 export function targetUnavailable(site: string, failure: number | unknown): Error {
   if (typeof failure === "number") {

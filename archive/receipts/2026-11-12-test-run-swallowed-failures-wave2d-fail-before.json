@@ -1,0 +1,964 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "b680af906d948c0095d1d268421441fd46ee2516"
+  },
+  "at": "2026-11-12T01:44:30.128Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/w2d/fb.json"
+  },
+  "summary": {
+    "ok": true,
+    "expected": "fail",
+    "total": 67,
+    "passed": 23,
+    "failed": 44,
+    "files": "apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts, apps/api/src/capabilities/raw-socket-rebinding.test.ts",
+    "executors_at": "820099d1",
+    "tests_at": "b680af90",
+    "note": "every failure test fails against the origin/main executors of port-check, og-image-check, domain-contact-extract, protocol-fees-lookup and ens-reverse-lookup; every negative test passes before and after"
+  },
+  "topic": "swallowed-failures-wave2d-fail-before",
+  "raw": {
+    "numTotalTestSuites": 16,
+    "numPassedTestSuites": 6,
+    "numFailedTestSuites": 10,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 67,
+    "numPassedTests": 23,
+    "numFailedTests": 44,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794447831539,
+    "success": false,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "raw-socket capabilities do not follow a rebound DNS answer (CR-11)"
+            ],
+            "fullName": "raw-socket capabilities do not follow a rebound DNS answer (CR-11) port-check does not connect to the address a rebinding server answers at connect time and says why",
+            "status": "failed",
+            "title": "port-check does not connect to the address a rebinding server answers at connect time and says why",
+            "duration": 9.830398000000002,
+            "failureMessages": [
+              "Error: expected the call to be refused, but it resolved\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/raw-socket-rebinding.test.ts:91:19\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/raw-socket-rebinding.test.ts:104:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "raw-socket capabilities do not follow a rebound DNS answer (CR-11)"
+            ],
+            "fullName": "raw-socket capabilities do not follow a rebound DNS answer (CR-11) ssl-check does not connect to the rebound address and says why",
+            "status": "passed",
+            "title": "ssl-check does not connect to the rebound address and says why",
+            "duration": 12.132249999999999,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "raw-socket capabilities do not follow a rebound DNS answer (CR-11)"
+            ],
+            "fullName": "raw-socket capabilities do not follow a rebound DNS answer (CR-11) ssl-certificate-chain does not connect to the rebound address and says why",
+            "status": "passed",
+            "title": "ssl-certificate-chain does not connect to the rebound address and says why",
+            "duration": 2.1580490000000054,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "an input that strips to an empty host is refused before any socket opens"
+            ],
+            "fullName": "an input that strips to an empty host is refused before any socket opens ssl-check {\"domain\":\"https://\"}",
+            "status": "passed",
+            "title": "ssl-check {\"domain\":\"https://\"}",
+            "duration": 0.690827000000013,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "an input that strips to an empty host is refused before any socket opens"
+            ],
+            "fullName": "an input that strips to an empty host is refused before any socket opens ssl-check {\"domain\":\"http:// \"}",
+            "status": "passed",
+            "title": "ssl-check {\"domain\":\"http:// \"}",
+            "duration": 0.28708699999998544,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "an input that strips to an empty host is refused before any socket opens"
+            ],
+            "fullName": "an input that strips to an empty host is refused before any socket opens ssl-certificate-chain {\"host\":\"https://\"}",
+            "status": "passed",
+            "title": "ssl-certificate-chain {\"host\":\"https://\"}",
+            "duration": 0.23176100000000588,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "an input that strips to an empty host is refused before any socket opens"
+            ],
+            "fullName": "an input that strips to an empty host is refused before any socket opens ssl-certificate-chain {\"host\":\"https:///path\"}",
+            "status": "passed",
+            "title": "ssl-certificate-chain {\"host\":\"https:///path\"}",
+            "duration": 0.1643500000000131,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794447831916,
+        "endTime": 1794447831942.287,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/raw-socket-rebinding.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "port-check failure: a host Strale cannot reach is not a closed port (row 30)"
+            ],
+            "fullName": "port-check failure: a host Strale cannot reach is not a closed port (row 30) connect ENOTFOUND throws, unbilled, as the target's failure",
+            "status": "failed",
+            "title": "connect ENOTFOUND throws, unbilled, as the target's failure",
+            "duration": 5.0324849999999515,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"host\":\"host.test\",\"ports_scanned\":2,\"open_count\":0,\"closed_count\":2,\"open_ports\":[],\"closed_ports\":[{\"port\":22,\"open\":false,\"service\":\"SSH\",\"latency_ms\":0},{\"port\":443,\"open\":false,\"service\":\"HTTPS\",\"latency_ms\":0}],\"scan_timeout_ms\":1000}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledTargetFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:83:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:155:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "port-check failure: a host Strale cannot reach is not a closed port (row 30)"
+            ],
+            "fullName": "port-check failure: a host Strale cannot reach is not a closed port (row 30) connect EAI_AGAIN throws, unbilled, as the target's failure",
+            "status": "failed",
+            "title": "connect EAI_AGAIN throws, unbilled, as the target's failure",
+            "duration": 0.6555670000000191,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"host\":\"host.test\",\"ports_scanned\":2,\"open_count\":0,\"closed_count\":2,\"open_ports\":[],\"closed_ports\":[{\"port\":22,\"open\":false,\"service\":\"SSH\",\"latency_ms\":0},{\"port\":443,\"open\":false,\"service\":\"HTTPS\",\"latency_ms\":0}],\"scan_timeout_ms\":1000}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledTargetFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:83:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:155:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "port-check failure: a host Strale cannot reach is not a closed port (row 30)"
+            ],
+            "fullName": "port-check failure: a host Strale cannot reach is not a closed port (row 30) connect ENETUNREACH throws, unbilled, as the target's failure",
+            "status": "failed",
+            "title": "connect ENETUNREACH throws, unbilled, as the target's failure",
+            "duration": 0.5952290000000175,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"host\":\"host.test\",\"ports_scanned\":2,\"open_count\":0,\"closed_count\":2,\"open_ports\":[],\"closed_ports\":[{\"port\":22,\"open\":false,\"service\":\"SSH\",\"latency_ms\":0},{\"port\":443,\"open\":false,\"service\":\"HTTPS\",\"latency_ms\":0}],\"scan_timeout_ms\":1000}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledTargetFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:83:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:155:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "port-check failure: a host Strale cannot reach is not a closed port (row 30)"
+            ],
+            "fullName": "port-check failure: a host Strale cannot reach is not a closed port (row 30) connect ECONNRESET throws, unbilled, as the target's failure",
+            "status": "failed",
+            "title": "connect ECONNRESET throws, unbilled, as the target's failure",
+            "duration": 0.38993500000015047,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"host\":\"host.test\",\"ports_scanned\":2,\"open_count\":0,\"closed_count\":2,\"open_ports\":[],\"closed_ports\":[{\"port\":22,\"open\":false,\"service\":\"SSH\",\"latency_ms\":0},{\"port\":443,\"open\":false,\"service\":\"HTTPS\",\"latency_ms\":0}],\"scan_timeout_ms\":1000}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledTargetFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:83:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:155:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "port-check failure: a host Strale cannot reach is not a closed port (row 30)"
+            ],
+            "fullName": "port-check failure: a host Strale cannot reach is not a closed port (row 30) a name that fails to resolve on one port fails the call even when another port is open",
+            "status": "failed",
+            "title": "a name that fails to resolve on one port fails the call even when another port is open",
+            "duration": 0.3965600000001359,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"host\":\"host.test\",\"ports_scanned\":2,\"open_count\":1,\"closed_count\":1,\"open_ports\":[{\"port\":443,\"open\":true,\"service\":\"HTTPS\",\"latency_ms\":0}],\"closed_ports\":[{\"port\":22,\"open\":false,\"service\":\"SSH\",\"latency_ms\":0}],\"scan_timeout_ms\":1000}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledTargetFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:83:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:163:5\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "port-check failure: a host Strale cannot reach is not a closed port (row 30)"
+            ],
+            "fullName": "port-check failure: a host Strale cannot reach is not a closed port (row 30) EHOSTUNREACH on every port throws: nothing shows the host was reached",
+            "status": "failed",
+            "title": "EHOSTUNREACH on every port throws: nothing shows the host was reached",
+            "duration": 0.35025999999993473,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"host\":\"host.test\",\"ports_scanned\":2,\"open_count\":0,\"closed_count\":2,\"open_ports\":[],\"closed_ports\":[{\"port\":22,\"open\":false,\"service\":\"SSH\",\"latency_ms\":0},{\"port\":443,\"open\":false,\"service\":\"HTTPS\",\"latency_ms\":0}],\"scan_timeout_ms\":1000}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledTargetFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:83:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:168:5\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "port-check failure: a host Strale cannot reach is not a closed port (row 30)"
+            ],
+            "fullName": "port-check failure: a host Strale cannot reach is not a closed port (row 30) EHOSTDOWN on every port throws: nothing shows the host was reached",
+            "status": "failed",
+            "title": "EHOSTDOWN on every port throws: nothing shows the host was reached",
+            "duration": 0.3009950000000572,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"host\":\"host.test\",\"ports_scanned\":2,\"open_count\":0,\"closed_count\":2,\"open_ports\":[],\"closed_ports\":[{\"port\":22,\"open\":false,\"service\":\"SSH\",\"latency_ms\":0},{\"port\":443,\"open\":false,\"service\":\"HTTPS\",\"latency_ms\":0}],\"scan_timeout_ms\":1000}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledTargetFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:83:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:168:5\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "port-check failure: a host Strale cannot reach is not a closed port (row 30)"
+            ],
+            "fullName": "port-check failure: a host Strale cannot reach is not a closed port (row 30) Strale's own SSRF refusal is thrown as itself, not reported closed",
+            "status": "failed",
+            "title": "Strale's own SSRF refusal is thrown as itself, not reported closed",
+            "duration": 5.037307000000055,
+            "failureMessages": [
+              "Error: promise resolved \"{ output: { …(7) }, …(1) }\" instead of rejecting\n    at _Assertion.__VITEST_REJECTS__ (file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/expect/dist/index.js:1747:17)\n    at _Assertion.propertyGetter (file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/chai/index.js:1570:27)\n    at Reflect.get (<anonymous>)\n    at Object.proxyGetter [as get] (file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/chai/index.js:1659:22)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:174:35\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "port-check negative: refused, silent and open ports are answers, billed"
+            ],
+            "fullName": "port-check negative: refused, silent and open ports are answers, billed a refused port is closed",
+            "status": "passed",
+            "title": "a refused port is closed",
+            "duration": 1.8151310000000649,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "port-check negative: refused, silent and open ports are answers, billed"
+            ],
+            "fullName": "port-check negative: refused, silent and open ports are answers, billed a port that does not answer within the timeout is not open",
+            "status": "passed",
+            "title": "a port that does not answer within the timeout is not open",
+            "duration": 0.378783999999996,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "port-check negative: refused, silent and open ports are answers, billed"
+            ],
+            "fullName": "port-check negative: refused, silent and open ports are answers, billed an open port is open",
+            "status": "passed",
+            "title": "an open port is open",
+            "duration": 0.41866700000014134,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "port-check negative: refused, silent and open ports are answers, billed"
+            ],
+            "fullName": "port-check negative: refused, silent and open ports are answers, billed an ICMP unreachable beside a port the host answered for is not open",
+            "status": "passed",
+            "title": "an ICMP unreachable beside a port the host answered for is not open",
+            "duration": 0.2724069999999301,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "port-check failure: each port says which kind of not-open it is"
+            ],
+            "fullName": "port-check failure: each port says which kind of not-open it is closed, filtered and open are told apart in `state`",
+            "status": "failed",
+            "title": "closed, filtered and open are told apart in `state`",
+            "duration": 1.4647390000000087,
+            "failureMessages": [
+              "AssertionError: expected { '22': undefined, …(3) } to deeply equal { '22': 'closed', …(3) }\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:212:19\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check failure: an image check that failed is not a broken image (row 31)"
+            ],
+            "fullName": "og-image-check failure: an image check that failed is not a broken image (row 31) the image host's HTTP 503 throws, unbilled, as the target's failure",
+            "status": "failed",
+            "title": "the image host's HTTP 503 throws, unbilled, as the target's failure",
+            "duration": 6.295044000000189,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"url\":\"https://site.test\",\"og\":{\"image_url\":\"https://img.test/card.png\",\"width\":1200,\"height\":630,\"alt\":\"Card\",\"title\":\"Site\",\"description\":\"About\"},\"twitter_card\":{\"type\":\"summary_large_image\",\"image_url\":null,\"alt\":null},\"image_size_kb\":null,\"image_format\":null,\"issues\":[\"og:image URL returns non-200 status\"],\"recommendations\":[\"Ensure the og:image URL is accessible and returns HTTP 200.\",\"Add twitter:image:alt for accessibility on Twitter.\"],\"score\":82}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledTargetFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:83:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:240:19\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check failure: an image check that failed is not a broken image (row 31)"
+            ],
+            "fullName": "og-image-check failure: an image check that failed is not a broken image (row 31) the image host's a network error throws, unbilled, as the target's failure",
+            "status": "failed",
+            "title": "the image host's a network error throws, unbilled, as the target's failure",
+            "duration": 0.9855059999999867,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"url\":\"https://site.test\",\"og\":{\"image_url\":\"https://img.test/card.png\",\"width\":1200,\"height\":630,\"alt\":\"Card\",\"title\":\"Site\",\"description\":\"About\"},\"twitter_card\":{\"type\":\"summary_large_image\",\"image_url\":null,\"alt\":null},\"image_size_kb\":null,\"image_format\":null,\"issues\":[\"og:image URL returns non-200 status\"],\"recommendations\":[\"Ensure the og:image URL is accessible and returns HTTP 200.\",\"Add twitter:image:alt for accessibility on Twitter.\"],\"score\":82}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledTargetFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:83:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:240:19\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check failure: an image check that failed is not a broken image (row 31)"
+            ],
+            "fullName": "og-image-check failure: an image check that failed is not a broken image (row 31) the image host's a timeout throws, unbilled, as the target's failure",
+            "status": "failed",
+            "title": "the image host's a timeout throws, unbilled, as the target's failure",
+            "duration": 0.6012630000000172,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"url\":\"https://site.test\",\"og\":{\"image_url\":\"https://img.test/card.png\",\"width\":1200,\"height\":630,\"alt\":\"Card\",\"title\":\"Site\",\"description\":\"About\"},\"twitter_card\":{\"type\":\"summary_large_image\",\"image_url\":null,\"alt\":null},\"image_size_kb\":null,\"image_format\":null,\"issues\":[\"og:image URL returns non-200 status\"],\"recommendations\":[\"Ensure the og:image URL is accessible and returns HTTP 200.\",\"Add twitter:image:alt for accessibility on Twitter.\"],\"score\":82}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledTargetFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:83:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:240:19\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check failure: an image check that failed is not a broken image (row 31)"
+            ],
+            "fullName": "og-image-check failure: an image check that failed is not a broken image (row 31) the image host's HTTP 408 throws, unbilled, as the target's failure",
+            "status": "failed",
+            "title": "the image host's HTTP 408 throws, unbilled, as the target's failure",
+            "duration": 0.5111660000000029,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"url\":\"https://site.test\",\"og\":{\"image_url\":\"https://img.test/card.png\",\"width\":1200,\"height\":630,\"alt\":\"Card\",\"title\":\"Site\",\"description\":\"About\"},\"twitter_card\":{\"type\":\"summary_large_image\",\"image_url\":null,\"alt\":null},\"image_size_kb\":null,\"image_format\":null,\"issues\":[\"og:image URL returns non-200 status\"],\"recommendations\":[\"Ensure the og:image URL is accessible and returns HTTP 200.\",\"Add twitter:image:alt for accessibility on Twitter.\"],\"score\":82}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledTargetFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:83:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:240:19\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check failure: an image check that failed is not a broken image (row 31)"
+            ],
+            "fullName": "og-image-check failure: an image check that failed is not a broken image (row 31) an image host that blocks the check (HTTP 401) is a refusal, not a finding",
+            "status": "failed",
+            "title": "an image host that blocks the check (HTTP 401) is a refusal, not a finding",
+            "duration": 0.6090510000001359,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"url\":\"https://site.test\",\"og\":{\"image_url\":\"https://img.test/card.png\",\"width\":1200,\"height\":630,\"alt\":\"Card\",\"title\":\"Site\",\"description\":\"About\"},\"twitter_card\":{\"type\":\"summary_large_image\",\"image_url\":null,\"alt\":null},\"image_size_kb\":null,\"image_format\":null,\"issues\":[\"og:image URL returns non-200 status\"],\"recommendations\":[\"Ensure the og:image URL is accessible and returns HTTP 200.\",\"Add twitter:image:alt for accessibility on Twitter.\"],\"score\":82}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:248:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check failure: an image check that failed is not a broken image (row 31)"
+            ],
+            "fullName": "og-image-check failure: an image check that failed is not a broken image (row 31) an image host that blocks the check (HTTP 403) is a refusal, not a finding",
+            "status": "failed",
+            "title": "an image host that blocks the check (HTTP 403) is a refusal, not a finding",
+            "duration": 0.8610919999998714,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"url\":\"https://site.test\",\"og\":{\"image_url\":\"https://img.test/card.png\",\"width\":1200,\"height\":630,\"alt\":\"Card\",\"title\":\"Site\",\"description\":\"About\"},\"twitter_card\":{\"type\":\"summary_large_image\",\"image_url\":null,\"alt\":null},\"image_size_kb\":null,\"image_format\":null,\"issues\":[\"og:image URL returns non-200 status\"],\"recommendations\":[\"Ensure the og:image URL is accessible and returns HTTP 200.\",\"Add twitter:image:alt for accessibility on Twitter.\"],\"score\":82}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:248:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check failure: an image check that failed is not a broken image (row 31)"
+            ],
+            "fullName": "og-image-check failure: an image check that failed is not a broken image (row 31) an image host that blocks the check (HTTP 429) is a refusal, not a finding",
+            "status": "failed",
+            "title": "an image host that blocks the check (HTTP 429) is a refusal, not a finding",
+            "duration": 0.7823699999999008,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"url\":\"https://site.test\",\"og\":{\"image_url\":\"https://img.test/card.png\",\"width\":1200,\"height\":630,\"alt\":\"Card\",\"title\":\"Site\",\"description\":\"About\"},\"twitter_card\":{\"type\":\"summary_large_image\",\"image_url\":null,\"alt\":null},\"image_size_kb\":null,\"image_format\":null,\"issues\":[\"og:image URL returns non-200 status\"],\"recommendations\":[\"Ensure the og:image URL is accessible and returns HTTP 200.\",\"Add twitter:image:alt for accessibility on Twitter.\"],\"score\":82}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:248:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check failure: an image check that failed is not a broken image (row 31)"
+            ],
+            "fullName": "og-image-check failure: an image check that failed is not a broken image (row 31) a server that does not implement HEAD is asked again with GET",
+            "status": "failed",
+            "title": "a server that does not implement HEAD is asked again with GET",
+            "duration": 1.1084869999999682,
+            "failureMessages": [
+              "AssertionError: expected [ Array(1) ] to not include 'og:image URL returns non-200 status'\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/expect/dist/index.js:1319:15)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/chai/index.js:1700:25)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:258:28\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check negative: a missing image is still the finding, billed"
+            ],
+            "fullName": "og-image-check negative: a missing image is still the finding, billed an image answering HTTP 404 is reported non-200",
+            "status": "passed",
+            "title": "an image answering HTTP 404 is reported non-200",
+            "duration": 0.9081589999998414,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check negative: a missing image is still the finding, billed"
+            ],
+            "fullName": "og-image-check negative: a missing image is still the finding, billed an image answering HTTP 410 is reported non-200",
+            "status": "passed",
+            "title": "an image answering HTTP 410 is reported non-200",
+            "duration": 0.5196780000001127,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "og-image-check negative: a missing image is still the finding, billed"
+            ],
+            "fullName": "og-image-check negative: a missing image is still the finding, billed a reachable image is measured",
+            "status": "passed",
+            "title": "a reachable image is measured",
+            "duration": 0.6075549999998202,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract failure: a contact page that failed is not a page without contacts (row 32)"
+            ],
+            "fullName": "domain-contact-extract failure: a contact page that failed is not a page without contacts (row 32) the contact page's HTTP 503 throws, unbilled, as the target's failure",
+            "status": "failed",
+            "title": "the contact page's HTTP 503 throws, unbilled, as the target's failure",
+            "duration": 2.653438999999935,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"acme.test\",\"fetched_urls\":[\"https://acme.test/\"],\"role_emails\":[\"hello@acme.test\"],\"personal_addresses_withheld\":0,\"phones\":[],\"social_links\":{},\"contact_page_url\":\"https://acme.test/contact\",\"postal_address\":null,\"has_contact_page\":true}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledTargetFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:83:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:299:19\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract failure: a contact page that failed is not a page without contacts (row 32)"
+            ],
+            "fullName": "domain-contact-extract failure: a contact page that failed is not a page without contacts (row 32) the contact page's a network error throws, unbilled, as the target's failure",
+            "status": "failed",
+            "title": "the contact page's a network error throws, unbilled, as the target's failure",
+            "duration": 1.017608999999993,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"acme.test\",\"fetched_urls\":[\"https://acme.test/\"],\"role_emails\":[\"hello@acme.test\"],\"personal_addresses_withheld\":0,\"phones\":[],\"social_links\":{},\"contact_page_url\":\"https://acme.test/contact\",\"postal_address\":null,\"has_contact_page\":true}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledTargetFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:83:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:299:19\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract failure: a contact page that failed is not a page without contacts (row 32)"
+            ],
+            "fullName": "domain-contact-extract failure: a contact page that failed is not a page without contacts (row 32) the contact page's a timeout throws, unbilled, as the target's failure",
+            "status": "failed",
+            "title": "the contact page's a timeout throws, unbilled, as the target's failure",
+            "duration": 0.5742740000000595,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"acme.test\",\"fetched_urls\":[\"https://acme.test/\"],\"role_emails\":[\"hello@acme.test\"],\"personal_addresses_withheld\":0,\"phones\":[],\"social_links\":{},\"contact_page_url\":\"https://acme.test/contact\",\"postal_address\":null,\"has_contact_page\":true}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledTargetFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:83:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:299:19\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract failure: a contact page that failed is not a page without contacts (row 32)"
+            ],
+            "fullName": "domain-contact-extract failure: a contact page that failed is not a page without contacts (row 32) the contact page's HTTP 408 throws, unbilled, as the target's failure",
+            "status": "failed",
+            "title": "the contact page's HTTP 408 throws, unbilled, as the target's failure",
+            "duration": 0.49585799999999836,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"acme.test\",\"fetched_urls\":[\"https://acme.test/\"],\"role_emails\":[\"hello@acme.test\"],\"personal_addresses_withheld\":0,\"phones\":[],\"social_links\":{},\"contact_page_url\":\"https://acme.test/contact\",\"postal_address\":null,\"has_contact_page\":true}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledTargetFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:83:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:299:19\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract failure: a contact page that failed is not a page without contacts (row 32)"
+            ],
+            "fullName": "domain-contact-extract failure: a contact page that failed is not a page without contacts (row 32) a contact page that blocks the request (HTTP 401) is a refusal",
+            "status": "failed",
+            "title": "a contact page that blocks the request (HTTP 401) is a refusal",
+            "duration": 0.6807699999999386,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"acme.test\",\"fetched_urls\":[\"https://acme.test/\"],\"role_emails\":[\"hello@acme.test\"],\"personal_addresses_withheld\":0,\"phones\":[],\"social_links\":{},\"contact_page_url\":\"https://acme.test/contact\",\"postal_address\":null,\"has_contact_page\":true}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:307:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract failure: a contact page that failed is not a page without contacts (row 32)"
+            ],
+            "fullName": "domain-contact-extract failure: a contact page that failed is not a page without contacts (row 32) a contact page that blocks the request (HTTP 403) is a refusal",
+            "status": "failed",
+            "title": "a contact page that blocks the request (HTTP 403) is a refusal",
+            "duration": 0.4104139999999461,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"acme.test\",\"fetched_urls\":[\"https://acme.test/\"],\"role_emails\":[\"hello@acme.test\"],\"personal_addresses_withheld\":0,\"phones\":[],\"social_links\":{},\"contact_page_url\":\"https://acme.test/contact\",\"postal_address\":null,\"has_contact_page\":true}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:307:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract failure: a contact page that failed is not a page without contacts (row 32)"
+            ],
+            "fullName": "domain-contact-extract failure: a contact page that failed is not a page without contacts (row 32) a contact page that blocks the request (HTTP 429) is a refusal",
+            "status": "failed",
+            "title": "a contact page that blocks the request (HTTP 429) is a refusal",
+            "duration": 0.33511399999997593,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"acme.test\",\"fetched_urls\":[\"https://acme.test/\"],\"role_emails\":[\"hello@acme.test\"],\"personal_addresses_withheld\":0,\"phones\":[],\"social_links\":{},\"contact_page_url\":\"https://acme.test/contact\",\"postal_address\":null,\"has_contact_page\":true}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:307:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract failure: a contact page that failed is not a page without contacts (row 32)"
+            ],
+            "fullName": "domain-contact-extract failure: a contact page that failed is not a page without contacts (row 32) a contact page that is a bot challenge is a refusal",
+            "status": "failed",
+            "title": "a contact page that is a bot challenge is a refusal",
+            "duration": 0.44746600000007675,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"acme.test\",\"fetched_urls\":[\"https://acme.test/\",\"https://acme.test/contact\"],\"role_emails\":[\"hello@acme.test\"],\"personal_addresses_withheld\":0,\"phones\":[],\"social_links\":{},\"contact_page_url\":\"https://acme.test/contact\",\"postal_address\":null,\"has_contact_page\":true}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:317:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract negative: a contact page that is not there leaves the homepage answer, billed"
+            ],
+            "fullName": "domain-contact-extract negative: a contact page that is not there leaves the homepage answer, billed a contact page answering HTTP 404 is skipped and left out of fetched_urls",
+            "status": "passed",
+            "title": "a contact page answering HTTP 404 is skipped and left out of fetched_urls",
+            "duration": 0.6909509999998136,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract negative: a contact page that is not there leaves the homepage answer, billed"
+            ],
+            "fullName": "domain-contact-extract negative: a contact page that is not there leaves the homepage answer, billed a contact page answering HTTP 410 is skipped and left out of fetched_urls",
+            "status": "passed",
+            "title": "a contact page answering HTTP 410 is skipped and left out of fetched_urls",
+            "duration": 0.4573319999999512,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract negative: a contact page that is not there leaves the homepage answer, billed"
+            ],
+            "fullName": "domain-contact-extract negative: a contact page that is not there leaves the homepage answer, billed a contact page robots.txt disallows is skipped and left out of fetched_urls",
+            "status": "passed",
+            "title": "a contact page robots.txt disallows is skipped and left out of fetched_urls",
+            "duration": 1.2337690000001658,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-contact-extract negative: a contact page that is not there leaves the homepage answer, billed"
+            ],
+            "fullName": "domain-contact-extract negative: a contact page that is not there leaves the homepage answer, billed a contact page that answers is read",
+            "status": "passed",
+            "title": "a contact page that answers is read",
+            "duration": 0.6239560000001347,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "protocol-fees-lookup failure: a revenue request that failed is not 'no revenue' (row 33)"
+            ],
+            "fullName": "protocol-fees-lookup failure: a revenue request that failed is not 'no revenue' (row 33) the revenue leg's HTTP 503 throws, unbilled and retryable",
+            "status": "failed",
+            "title": "the revenue leg's HTTP 503 throws, unbilled and retryable",
+            "duration": 0.8915099999999256,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"protocol\":\"Uniswap\",\"slug\":\"parent#uniswap\",\"fees_24h_usd\":1564082,\"fees_48h_to_24h_usd\":2022931,\"fees_7d_usd\":13435356,\"fees_30d_usd\":76015351,\"fees_all_time_usd\":6152364825,\"revenue_24h_usd\":null,\"revenue_7d_usd\":null,\"revenue_30d_usd\":null,\"revenue_all_time_usd\":null}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledProviderFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:91:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:364:19\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "protocol-fees-lookup failure: a revenue request that failed is not 'no revenue' (row 33)"
+            ],
+            "fullName": "protocol-fees-lookup failure: a revenue request that failed is not 'no revenue' (row 33) the revenue leg's a network error throws, unbilled and retryable",
+            "status": "failed",
+            "title": "the revenue leg's a network error throws, unbilled and retryable",
+            "duration": 0.43482700000004115,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"protocol\":\"Uniswap\",\"slug\":\"parent#uniswap\",\"fees_24h_usd\":1564082,\"fees_48h_to_24h_usd\":2022931,\"fees_7d_usd\":13435356,\"fees_30d_usd\":76015351,\"fees_all_time_usd\":6152364825,\"revenue_24h_usd\":null,\"revenue_7d_usd\":null,\"revenue_30d_usd\":null,\"revenue_all_time_usd\":null}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledProviderFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:91:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:364:19\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "protocol-fees-lookup failure: a revenue request that failed is not 'no revenue' (row 33)"
+            ],
+            "fullName": "protocol-fees-lookup failure: a revenue request that failed is not 'no revenue' (row 33) the revenue leg's a timeout throws, unbilled and retryable",
+            "status": "failed",
+            "title": "the revenue leg's a timeout throws, unbilled and retryable",
+            "duration": 0.31476299999985713,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"protocol\":\"Uniswap\",\"slug\":\"parent#uniswap\",\"fees_24h_usd\":1564082,\"fees_48h_to_24h_usd\":2022931,\"fees_7d_usd\":13435356,\"fees_30d_usd\":76015351,\"fees_all_time_usd\":6152364825,\"revenue_24h_usd\":null,\"revenue_7d_usd\":null,\"revenue_30d_usd\":null,\"revenue_all_time_usd\":null}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledProviderFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:91:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:364:19\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "protocol-fees-lookup failure: a revenue request that failed is not 'no revenue' (row 33)"
+            ],
+            "fullName": "protocol-fees-lookup failure: a revenue request that failed is not 'no revenue' (row 33) the revenue leg's HTTP 429 throws, unbilled and retryable",
+            "status": "failed",
+            "title": "the revenue leg's HTTP 429 throws, unbilled and retryable",
+            "duration": 0.33281800000008843,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"protocol\":\"Uniswap\",\"slug\":\"parent#uniswap\",\"fees_24h_usd\":1564082,\"fees_48h_to_24h_usd\":2022931,\"fees_7d_usd\":13435356,\"fees_30d_usd\":76015351,\"fees_all_time_usd\":6152364825,\"revenue_24h_usd\":null,\"revenue_7d_usd\":null,\"revenue_30d_usd\":null,\"revenue_all_time_usd\":null}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledProviderFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:91:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:364:19\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "protocol-fees-lookup failure: a revenue request that failed is not 'no revenue' (row 33)"
+            ],
+            "fullName": "protocol-fees-lookup failure: a revenue request that failed is not 'no revenue' (row 33) an unreadable revenue answer throws, unbilled",
+            "status": "failed",
+            "title": "an unreadable revenue answer throws, unbilled",
+            "duration": 1.5259499999999662,
+            "failureMessages": [
+              "AssertionError: expected 'SyntaxError' to be 'UpstreamUnavailableError' // Object.is equality\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:75:20)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledProviderFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:91:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:372:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "protocol-fees-lookup failure: a revenue request that failed is not 'no revenue' (row 33)"
+            ],
+            "fullName": "protocol-fees-lookup failure: a revenue request that failed is not 'no revenue' (row 33) revenue is read from the fees summary with dataType=dailyRevenue, and billed",
+            "status": "failed",
+            "title": "revenue is read from the fees summary with dataType=dailyRevenue, and billed",
+            "duration": 0.8810780000001159,
+            "failureMessages": [
+              "AssertionError: expected 'https://api.llama.fi/summary/revenue/…' to match /^https:\\/\\/api\\.llama\\.fi\\/summary\\/…/\\\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:381:24\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "protocol-fees-lookup failure: a revenue request that failed is not 'no revenue' (row 33)"
+            ],
+            "fullName": "protocol-fees-lookup failure: a revenue request that failed is not 'no revenue' (row 33) the fees leg's HTTP 503 throws, unbilled",
+            "status": "failed",
+            "title": "the fees leg's HTTP 503 throws, unbilled",
+            "duration": 0.49296000000003914,
+            "failureMessages": [
+              "AssertionError: expected 'Error' to be 'UpstreamUnavailableError' // Object.is equality\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:75:20)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledProviderFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:91:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:386:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "protocol-fees-lookup failure: a revenue request that failed is not 'no revenue' (row 33)"
+            ],
+            "fullName": "protocol-fees-lookup failure: a revenue request that failed is not 'no revenue' (row 33) the fees leg's a network error throws, unbilled",
+            "status": "failed",
+            "title": "the fees leg's a network error throws, unbilled",
+            "duration": 0.48620200000004843,
+            "failureMessages": [
+              "AssertionError: expected 'TypeError' to be 'UpstreamUnavailableError' // Object.is equality\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:75:20)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledProviderFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:91:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:386:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "protocol-fees-lookup failure: a revenue request that failed is not 'no revenue' (row 33)"
+            ],
+            "fullName": "protocol-fees-lookup failure: a revenue request that failed is not 'no revenue' (row 33) the fees leg's a timeout throws, unbilled",
+            "status": "failed",
+            "title": "the fees leg's a timeout throws, unbilled",
+            "duration": 0.45945099999994454,
+            "failureMessages": [
+              "AssertionError: expected 'TimeoutError' to be 'UpstreamUnavailableError' // Object.is equality\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:75:20)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledProviderFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:91:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:386:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "protocol-fees-lookup negative: a protocol without revenue tracking keeps null revenue, billed"
+            ],
+            "fullName": "protocol-fees-lookup negative: a protocol without revenue tracking keeps null revenue, billed revenue 'not found' with fees answered gives null revenue",
+            "status": "passed",
+            "title": "revenue 'not found' with fees answered gives null revenue",
+            "duration": 0.7070129999999608,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "protocol-fees-lookup failure: DeFi Llama's 400 for an unknown protocol reads as not found"
+            ],
+            "fullName": "protocol-fees-lookup failure: DeFi Llama's 400 for an unknown protocol reads as not found an unknown protocol fails as not found",
+            "status": "failed",
+            "title": "an unknown protocol fails as not found",
+            "duration": 0.8217529999999442,
+            "failureMessages": [
+              "Error: expected [Function] to throw error matching /not found on DeFi Llama/ but got 'DeFi Llama fees API returned HTTP 400'\n    at _Assertion.__VITEST_REJECTS__ (file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/expect/dist/index.js:1747:17)\n    at _Assertion.propertyGetter (file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/chai/index.js:1570:27)\n    at Reflect.get (<anonymous>)\n    at Object.proxyGetter [as get] (file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/chai/index.js:1659:22)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:411:37\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "ens-reverse-lookup failure: a forward check that failed is not 'unverified' (row 35)"
+            ],
+            "fullName": "ens-reverse-lookup failure: a forward check that failed is not 'unverified' (row 35) the forward check's HTTP 503 throws, unbilled and retryable",
+            "status": "failed",
+            "title": "the forward check's HTTP 503 throws, unbilled and retryable",
+            "duration": 151.27541099999985,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"address\":\"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045\",\"has_ens\":true,\"ens_name\":\"vitalik.eth\",\"verified\":false}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledProviderFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:91:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:433:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "ens-reverse-lookup failure: a forward check that failed is not 'unverified' (row 35)"
+            ],
+            "fullName": "ens-reverse-lookup failure: a forward check that failed is not 'unverified' (row 35) the forward check's HTTP 429 throws, unbilled and retryable",
+            "status": "failed",
+            "title": "the forward check's HTTP 429 throws, unbilled and retryable",
+            "duration": 0.6870630000000801,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"address\":\"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045\",\"has_ens\":true,\"ens_name\":\"vitalik.eth\",\"verified\":false}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledProviderFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:91:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:433:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "ens-reverse-lookup failure: a forward check that failed is not 'unverified' (row 35)"
+            ],
+            "fullName": "ens-reverse-lookup failure: a forward check that failed is not 'unverified' (row 35) the forward check's a network error throws, unbilled and retryable",
+            "status": "failed",
+            "title": "the forward check's a network error throws, unbilled and retryable",
+            "duration": 0.34133300000007694,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"address\":\"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045\",\"has_ens\":true,\"ens_name\":\"vitalik.eth\",\"verified\":false}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledProviderFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:91:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:433:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "ens-reverse-lookup failure: a forward check that failed is not 'unverified' (row 35)"
+            ],
+            "fullName": "ens-reverse-lookup failure: a forward check that failed is not 'unverified' (row 35) the forward check's a timeout throws, unbilled and retryable",
+            "status": "failed",
+            "title": "the forward check's a timeout throws, unbilled and retryable",
+            "duration": 0.33920800000009876,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"address\":\"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045\",\"has_ens\":true,\"ens_name\":\"vitalik.eth\",\"verified\":false}\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:67:13\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:74:15)\n    at expectUnbilledProviderFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:91:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:433:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "ens-reverse-lookup failure: a forward check that failed is not 'unverified' (row 35)"
+            ],
+            "fullName": "ens-reverse-lookup failure: a forward check that failed is not 'unverified' (row 35) the reverse lookup's HTTP 503 throws as the RPC's failure",
+            "status": "failed",
+            "title": "the reverse lookup's HTTP 503 throws as the RPC's failure",
+            "duration": 0.6519000000000688,
+            "failureMessages": [
+              "AssertionError: expected 'Error' to be 'UpstreamUnavailableError' // Object.is equality\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:75:20)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledProviderFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:91:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:440:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "ens-reverse-lookup failure: a forward check that failed is not 'unverified' (row 35)"
+            ],
+            "fullName": "ens-reverse-lookup failure: a forward check that failed is not 'unverified' (row 35) the reverse lookup's HTTP 429 throws as the RPC's failure",
+            "status": "failed",
+            "title": "the reverse lookup's HTTP 429 throws as the RPC's failure",
+            "duration": 0.34958800000003976,
+            "failureMessages": [
+              "AssertionError: expected 'Error' to be 'UpstreamUnavailableError' // Object.is equality\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:75:20)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledProviderFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:91:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:440:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "ens-reverse-lookup failure: a forward check that failed is not 'unverified' (row 35)"
+            ],
+            "fullName": "ens-reverse-lookup failure: a forward check that failed is not 'unverified' (row 35) the reverse lookup's a network error throws as the RPC's failure",
+            "status": "failed",
+            "title": "the reverse lookup's a network error throws as the RPC's failure",
+            "duration": 0.4211720000000696,
+            "failureMessages": [
+              "AssertionError: expected 'Error' to be 'UpstreamUnavailableError' // Object.is equality\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:75:20)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledProviderFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:91:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:440:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "ens-reverse-lookup failure: a forward check that failed is not 'unverified' (row 35)"
+            ],
+            "fullName": "ens-reverse-lookup failure: a forward check that failed is not 'unverified' (row 35) the reverse lookup's a timeout throws as the RPC's failure",
+            "status": "failed",
+            "title": "the reverse lookup's a timeout throws as the RPC's failure",
+            "duration": 0.30399199999988014,
+            "failureMessages": [
+              "AssertionError: expected 'Error' to be 'UpstreamUnavailableError' // Object.is equality\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:75:20)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledProviderFailure (/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:91:15)\n    at /home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts:440:17\n    at file:///home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "ens-reverse-lookup negative: real answers are unchanged, billed"
+            ],
+            "fullName": "ens-reverse-lookup negative: real answers are unchanged, billed a name that resolves back to the address is verified",
+            "status": "passed",
+            "title": "a name that resolves back to the address is verified",
+            "duration": 0.42515099999991435,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "ens-reverse-lookup negative: real answers are unchanged, billed"
+            ],
+            "fullName": "ens-reverse-lookup negative: real answers are unchanged, billed a name that resolves to no address is unverified",
+            "status": "passed",
+            "title": "a name that resolves to no address is unverified",
+            "duration": 0.34043500000007043,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "ens-reverse-lookup negative: real answers are unchanged, billed"
+            ],
+            "fullName": "ens-reverse-lookup negative: real answers are unchanged, billed a name that resolves to another address is unverified",
+            "status": "passed",
+            "title": "a name that resolves to another address is unverified",
+            "duration": 0.1885810000001129,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "ens-reverse-lookup negative: real answers are unchanged, billed"
+            ],
+            "fullName": "ens-reverse-lookup negative: real answers are unchanged, billed a reverse name that does not normalise is unverified, with no forward request",
+            "status": "passed",
+            "title": "a reverse name that does not normalise is unverified, with no forward request",
+            "duration": 0.5795290000000932,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "ens-reverse-lookup negative: real answers are unchanged, billed"
+            ],
+            "fullName": "ens-reverse-lookup negative: real answers are unchanged, billed an address with no primary name has none",
+            "status": "passed",
+            "title": "an address with no primary name has none",
+            "duration": 0.2135929999999462,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794447832663,
+        "endTime": 1794447832868.5796,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-ad124dee47136ee7b/apps/api/src/capabilities/web-and-chain.upstream-failures.test.ts"
+      }
+    ]
+  }
+}

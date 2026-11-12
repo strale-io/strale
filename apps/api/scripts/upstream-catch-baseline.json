@@ -170,12 +170,6 @@
       "line": 289
     },
     {
-      "file": "apps/api/src/capabilities/domain-contact-extract.ts",
-      "fingerprint": "f32ea8d78974278f24ed4f8eaefd7b16a95d092f1fcc922935da61d762fa25f5",
-      "count": 1,
-      "line": 411
-    },
-    {
       "file": "apps/api/src/capabilities/domain-reputation.ts",
       "fingerprint": "682f35261c31e3f188f65c0fcca45f0fc3194d3b2c8a2c59c997c2099eca8f94",
       "count": 1,
@@ -246,18 +240,6 @@
       "fingerprint": "92957333f0bd22625f7b79d798d70616cc74def7348416ade933f45a9720c4c3",
       "count": 1,
       "line": 129
-    },
-    {
-      "file": "apps/api/src/capabilities/ens-reverse-lookup.ts",
-      "fingerprint": "8e3425284136fa6b4fe80f27faffcc984815d46dc3962129e7195d4cdc3aa8af",
-      "count": 1,
-      "line": 54
-    },
-    {
-      "file": "apps/api/src/capabilities/ens-reverse-lookup.ts",
-      "fingerprint": "f839cfb6136c362e73b3a8df2259202f544272e5d6e75d693fbc82cd1c821c27",
-      "count": 1,
-      "line": 67
     },
     {
       "file": "apps/api/src/capabilities/estonian-company-data.ts",
@@ -638,12 +620,6 @@
       "line": 227
     },
     {
-      "file": "apps/api/src/capabilities/og-image-check.ts",
-      "fingerprint": "d3310b74e0948f9f34f965cce280735b2cfda3fe2e4feb58adc3ab0a7847d9fd",
-      "count": 1,
-      "line": 76
-    },
-    {
       "file": "apps/api/src/capabilities/openapi-validate.ts",
       "fingerprint": "08570200a651824c5a2984f93a1e645b1a6747b3837a39130732870267182b65",
       "count": 1,
@@ -698,12 +674,6 @@
       "line": 264
     },
     {
-      "file": "apps/api/src/capabilities/port-check.ts",
-      "fingerprint": "02c2f90eecdaf7470dd2b70d13d30d634cdbdc8397abeaeccdecb8e3ea61a8e6",
-      "count": 1,
-      "line": 48
-    },
-    {
       "file": "apps/api/src/capabilities/privacy-policy-analyze.ts",
       "fingerprint": "9321f766b18b8685247c4cef6b5c0f0859e15a05dcae0d45f1d610e06393bd74",
       "count": 1,
@@ -726,12 +696,6 @@
       "fingerprint": "204d9f399fec94587285417898f5fa30f2e428964942947793a28d3c06d0b80c",
       "count": 1,
       "line": 32
-    },
-    {
-      "file": "apps/api/src/capabilities/protocol-fees-lookup.ts",
-      "fingerprint": "bd38b90f802e6d245bcb1778c7e83c78003bdaf08417470638f44188dda90bf2",
-      "count": 1,
-      "line": 28
     },
     {
       "file": "apps/api/src/capabilities/redirect-trace.ts",
