@@ -509,7 +509,7 @@ export async function executeSolution(
       if (!executor) {
         const unavailable = servable ? "executor unavailable" : "capability is not currently servable";
         stepErrors.push(`${step.capabilitySlug}: ${unavailable}`);
-        stepFailures.push(stepFailure(step.capabilitySlug, unavailable));
+        stepFailures.push(stepFailure(step.capabilitySlug, unavailable, { final: true }));
         // Money-integrity 2026-08-12: the step must still APPEAR — a bare
         // return made deactivated steps vanish from the audit trail entirely
         // (a solution advertising 14 steps audited 13 with no gap marker).
@@ -543,7 +543,7 @@ export async function executeSolution(
           err instanceof BudgetExhaustedError
         ) {
           stepErrors.push(`${step.capabilitySlug}: ${err.message}`);
-          stepFailures.push(stepFailure(step.capabilitySlug, err));
+          stepFailures.push(stepFailure(step.capabilitySlug, err, { final: true }));
           // Same audit-visibility rule as the executor-unavailable branch.
           stepResults[step.capabilitySlug] = {
             unavailable: true,

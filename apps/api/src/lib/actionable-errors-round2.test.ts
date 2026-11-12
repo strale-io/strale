@@ -65,13 +65,13 @@ it("legacy caller-input execution errors are not retryable", () => {
 
 // Follow-up 42: the bundle is retryable only when it was refunded AND a retry
 // could change at least one failed step; each step keeps its own advice.
-function solutionDetails(refundRequired: boolean, outcomeRetryable: boolean, failures: StepFailure[]) {
+function solutionDetails(refundRequired: boolean, outcomeRetryable: boolean, failures: StepFailure[], stop: { gated?: object; withheldStep?: boolean } = {}) {
   const src = source("routes/solution-execute");
   const prop = nodes(src, ts.isPropertyAssignment).find(n => n.name.getText(src) === "details" && n.getText(src).includes("stepFailureEntries(execResult.failures)"))!;
   const decl = nodes(src, ts.isVariableDeclaration).find(n => n.name.getText(src) === "bundleRetryable")!;
   const execResult = { errors: failures.map(f => `${f.capability_slug}: x`), failures };
   const bundleRetryable = run(decl.initializer!, src, { refundRequired, outcome: { retryable: outcomeRetryable }, anyStepRetryable, execResult });
-  return run(prop.initializer, src, { refundRequired, bundleRetryable, stepFailureEntries, execResult });
+  return run(prop.initializer, src, { refundRequired, bundleRetryable, stepFailureEntries, execResult, gated: stop.gated, withheldStep: stop.withheldStep ?? false });
 }
 const transient = stepFailure("vat-validate", new Error("HTTP 503"));
 const siteRefusal = stepFailure("meta-extract", targetUnavailable("URL", 404));
@@ -97,10 +97,22 @@ it("a refunded bundle whose every step a retry cannot change is not retryable, a
 it("one retryable step makes a refunded bundle retryable", () => {
   expect(solutionDetails(true, true, [siteRefusal, transient]).retryable).toBe(true);
 });
-it("a refunded run the canonical outcome calls final (a tripped gate, a withheld step) is not retryable", () => {
-  const details = solutionDetails(true, false, [transient]);
+it("a tripped gate is final even when a failed step was transient, and the advice names the gate", () => {
+  const details = solutionDetails(true, false, [transient], { gated: { capabilitySlug: "vat-validate" } });
   expect(details.retryable).toBe(false);
-  expect(details.next_step).toMatch(/refunded/);
+  expect(details.next_step).toMatch(/refunded.*gate stops a retry/i);
+  expect(details.next_step).not.toMatch(/will not change the failed steps/);
+});
+it("a withheld step is final even when another failed step was transient, and the advice says Strale withheld it", () => {
+  const details = solutionDetails(true, false, [transient], { withheldStep: true });
+  expect(details.retryable).toBe(false);
+  expect(details.next_step).toMatch(/refunded.*withheld a step/i);
+});
+it("a step the platform stopped (withheld, not deployed, guarded refusal) advises no retry", () => {
+  const withheld = stepFailure("vat-validate", "capability is not currently servable", { final: true });
+  expect(withheld.details).toMatchObject({ retryable: false, error: "capability is not currently servable" });
+  expect(withheld.details.next_step).toMatch(/same answer/);
+  expect(anyStepRetryable([withheld])).toBe(false);
 });
 it("account spend cap advice points to support", () => {
   expect(apiError("spend_cap_exceeded", "Limit.").details?.fix).toBe("Wait until the rolling hourly spend is below 'limit_cents', or contact support to change the account limit.");

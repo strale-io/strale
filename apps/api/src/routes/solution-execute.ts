@@ -634,6 +634,9 @@ solutionExecuteRoute.post(
     // so a withheld run with some output was refunded yet told a rerun
     // "charges the solution price again".
     const bundleRetryable = refundRequired && outcome.retryable && anyStepRetryable(execResult.failures);
+    const withheldStep = Object.values(execResult.steps ?? {}).some(
+      (s) => (s as { platform_withheld?: unknown } | null)?.platform_withheld === true,
+    );
 
     return c.json({
       result: {
@@ -648,7 +651,11 @@ solutionExecuteRoute.post(
             ? "Inspect the failed steps before retrying; a rerun charges the solution price again."
             : bundleRetryable
               ? "This run was refunded; retry with exponential backoff after checking the failed steps."
-              : "This run was refunded; a retry with the same input will not change the failed steps. Follow each step's advice under 'errors' first.",
+              : gated
+                ? "This run was refunded; the gate stops a retry with the same input at the same step. Check the gate's reason under 'gated' first."
+                : withheldStep
+                  ? "This run was refunded; Strale withheld a step of this bundle, so a retry with the same input stops the same way. Follow each step's advice under 'errors'."
+                  : "This run was refunded; a retry with the same input will not change the failed steps. Follow each step's advice under 'errors' first.",
           errors: stepFailureEntries(execResult.failures),
         } } : {}),
         step_count: totalSteps,

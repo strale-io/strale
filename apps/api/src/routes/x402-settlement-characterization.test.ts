@@ -276,7 +276,9 @@ describe("follow-up 42: x402 bundle retry advice", () => {
     expect(body.details).toMatchObject({ retryable: true, errors: [expect.objectContaining({ retryable: true })] });
   });
   it("a tripped gate is not retryable", async () => {
-    state.solution.mockResolvedValue({ steps: { "test-capability": { found: false } }, errors: [], failures: [], step_count: 2, latency_ms: 7,
+    // A retryable step failure rides along, so only the gate can make this final.
+    const transient = stepFailure("other-capability", targetUnavailable("URL", 503));
+    state.solution.mockResolvedValue({ steps: { "test-capability": { found: false } }, errors: ["other-capability: HTTP 503"], failures: [transient], step_count: 2, latency_ms: 7,
       gated: { capabilitySlug: "test-capability", field: "found", observed: false, reason: "not found" } });
     const body = await (await request("solution")).json();
     expect(body.failure_class).toBe("gate_tripped");

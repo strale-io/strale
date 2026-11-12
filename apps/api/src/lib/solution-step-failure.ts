@@ -28,13 +28,19 @@ export interface StepFailure {
 const RETRY_NEXT_STEP = "Retry with exponential backoff; contact support with the transaction_id if the failure continues.";
 const NO_RETRY_NEXT_STEP = "A retry with the same input gets the same answer for this step; check the step's input or choose another tool.";
 
-/** Advice for one failed step, from the error (or the message) the executor caught. */
-export function stepFailure(capabilitySlug: string, err: unknown): StepFailure {
+/**
+ * Advice for one failed step, from the error (or the message) the executor
+ * caught. `final` marks a step the platform itself stopped (withheld, not
+ * deployed, refused by the guarded executor): a retry with the same input meets
+ * the same stop, so the step says so instead of advising a backoff.
+ */
+export function stepFailure(capabilitySlug: string, err: unknown, opts: { final?: boolean } = {}): StepFailure {
   const message = err instanceof Error ? err.message : String(err);
   const error = sanitizeFailureReason(message.slice(0, 200));
   const refusal = refusalDetails(err);
   let details: Record<string, unknown>;
-  if (refusal) details = { ...refusal, error };
+  if (opts.final) details = { retryable: false, next_step: NO_RETRY_NEXT_STEP, error };
+  else if (refusal) details = { ...refusal, error };
   else if (err instanceof UpstreamUnavailableError)
     details = { retryable: err.retryable, next_step: err.retryable ? RETRY_NEXT_STEP : NO_RETRY_NEXT_STEP, error };
   else details = recoveryDetails("execution_failed", "", { error });
