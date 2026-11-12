@@ -199,7 +199,8 @@ tracks:
       publishing block on Petter's OK: the cz not-registered limitation and
       nullable types from this wave, and a proposed domain-reputation
       limitation that a challenge answer fails unbilled with no score.
-      Wave 4, PR #1025: (18) and (23) fixed. robots-txt-parse reads an
+      Wave 4, merged 2026-11-12 as #1025 (1de00912) and deployed: (18)
+      and (23) fixed. robots-txt-parse reads an
       HTML page answered at /robots.txt with no rules or sitemaps (a soft
       404) as no robots.txt, as a 404 reads, and both absent answers carry
       the fields the manifest guarantees. domain-reputation grades only the
