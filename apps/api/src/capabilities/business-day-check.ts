@@ -125,6 +125,23 @@ function addDays(d: Date, n: number): Date {
 const SEARCH_DAYS = 15;
 
 /**
+ * Whether a Nager.Date entry is a day off for business: a public or a bank
+ * holiday. Nager.Date also lists days that are not, such as school-only days
+ * (Austria's regional saints' days), authority-only days (the Netherlands'
+ * Liberation Day, Missouri's Truman Day), optional days (Portugal's Carnival)
+ * and observances (Lincoln's Birthday); counting them answered "not a
+ * business day", billed, on ordinary working days. A public or bank holiday
+ * kept only in some regions still counts for the whole country: Nager.Date
+ * lists nationwide days such as New Year's Day in the United Kingdom and Good
+ * Friday in Switzerland as regional, so dropping regional entries would be
+ * wrong in the other direction. An entry with no type list counts.
+ */
+export function isDayOff(h: { types?: unknown }): boolean {
+  if (!Array.isArray(h.types)) return true;
+  return h.types.includes("Public") || h.types.includes("Bank");
+}
+
+/**
  * One year's public holidays for the country, or a throw that is never
  * billed. A country Nager.Date holds no calendar for (its 404 and 204) is a
  * refusal: the answer would check weekends only and could call a public
@@ -195,7 +212,8 @@ registerCapability("business-day-check", async (input: CapabilityInput) => {
   const holidays: any[] = [];
   for (const y of years) holidays.push(...(await holidaysFor(countryCode, y, dateKey)));
 
-  const holidayDates = new Set(holidays.map((h: any) => h.date));
+  const daysOff = holidays.filter(isDayOff);
+  const holidayDates = new Set(daysOff.map((h: any) => h.date));
 
   const weekend = isWeekend(date, countryCode);
   const isHoliday = holidayDates.has(dateKey);
@@ -204,7 +222,8 @@ registerCapability("business-day-check", async (input: CapabilityInput) => {
   let reason: string | null = null;
   if (weekend) reason = "weekend";
   else if (isHoliday) {
-    const holiday = holidays.find((h: any) => h.date === dateKey);
+    const onDate = daysOff.filter((h: any) => h.date === dateKey);
+    const holiday = onDate.find((h: any) => h.global !== false) ?? onDate[0];
     reason = `public_holiday: ${holiday?.name ?? holiday?.localName ?? "Unknown"}`;
   }
 
