@@ -131,6 +131,11 @@ limitations:
       If the site does not answer the cookie request (timeout, network error or a 5xx), the call fails unbilled rather than reporting no cookies. If the page analysis cannot be read (the model declines or answers in the wrong shape), the cookie inventory is still returned; tracking_scripts, consent_banner_detected, consent_banner_text, third_party_domains and potential_issues are null and the page analysis is named in unavailable_sources. If the analysis does not say whether a consent banner is present, consent_banner_detected is null (unknown) and no missing-banner issue is added.
     category: availability
     severity: info
+  - title: Sites that refuse automated requests are not read
+    text: >-
+      When the site answers HTTP 401, 403, 407 or 429, shows an anti-bot challenge page instead of the content, or disallows the page in robots.txt, or its robots.txt cannot be fetched (a network or server error), the call fails with an error and is not billed. Strale does not try another route around the block. Repeating the call gets the same answer while the site keeps refusing; when robots.txt could not be fetched, wait at least 5 minutes before trying again.
+    category: availability
+    severity: info
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:
