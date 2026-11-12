@@ -77,15 +77,11 @@ function statusMessages(src: ts.SourceFile): string[] {
  * reason, after reading the branch that builds the message; the file's other
  * messages are still checked.
  */
-const DANISH_5XX = "The Danish business registry (cvrapi.dk) returned a server error (HTTP 406). This is usually transient — please try again in a few minutes.";
-const CH_5XX = "Companies House API returned a server error (HTTP 406). This is usually transient — please try again in a few minutes.";
 const NEVER_A_4XX: Record<string, { message: string; reason: string }[]> = {
-  // Both are a registry's 5xx branch; a 4xx there reads "unexpected
-  // response", which is counted against the tool. That the breaker excuses
-  // "returned a server error" from a registry at all is a separate matter,
-  // recorded as promise-audit follow-up (56).
-  "danish-company-data.ts": [{ message: DANISH_5XX, reason: "built only when status >= 500" }],
-  "uk-filing-events.ts": [{ message: CH_5XX, reason: "built only when status >= 500" }],
+  // Empty since (56): the cvrapi.dk and Companies House 5xx branches were
+  // exempted here while the breaker excused any "returned a server error".
+  // It now excuses only the target-site shape, so a registry's 5xx is no
+  // longer excused and needs no exemption.
 };
 const exemptIn = (file: string) => new Set((NEVER_A_4XX[file] ?? []).map(e => e.message));
 

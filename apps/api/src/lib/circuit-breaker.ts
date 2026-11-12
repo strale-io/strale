@@ -161,7 +161,6 @@ const USER_INPUT_ERROR_PATTERNS = [
   "URL returned HTTP 4",         // url-to-markdown: 400/401/403/404 from target site
   "URL returned HTTP 5",         // url-to-markdown, cookie-scan: 5xx from target site (target's problem, not ours)
   "URL did not answer",          // cookie-scan: the caller's target site timed out or dropped the connection
-  "returned a server error",     // url-to-markdown browserless path: target-site 5xx
   "could not be loaded (HTTP",   // url-to-markdown browserless path: generic target-site HTTP failure
   "This site exists but blocks", // url-to-markdown: 403 bot protection
   "blocks automated access",     // url-to-markdown: known blocked sites
@@ -213,6 +212,16 @@ export function isPlatformRefusal(reason: string): boolean {
   return PLATFORM_REFUSAL_PATTERNS.some((p) => reason.includes(p));
 }
 
+/**
+ * A 5xx from the caller's own target site, in the one shape web-provider
+ * builds it ("The target site (host) returned a server error (HTTP 503)").
+ * Matched by its subject, not by "returned a server error" alone: registries
+ * word their own 5xx the same way (cvrapi.dk, Companies House), and a
+ * registry outage is the tool's upstream failing, which the breaker must see
+ * (promise-audit follow-up (56)).
+ */
+const TARGET_SITE_5XX_RE = /The target site(?: \(\S+\))? returned a server error/;
+
 /** Exported so tests can assert the pattern list stays in sync with its producers. */
 export function isUserInputError(reason: string): boolean {
   // Refusals come from the ONE authority (#436), not from a second copy of
@@ -221,7 +230,11 @@ export function isUserInputError(reason: string): boolean {
   // — a 404 on the caller's URL is not a "refusal", but it is still not the
   // capability's ill health — and those legitimately appear mid-message, so
   // they keep substring matching.
-  return isRefusalMessage(reason) || USER_INPUT_ERROR_PATTERNS.some((p) => reason.includes(p));
+  return (
+    isRefusalMessage(reason) ||
+    USER_INPUT_ERROR_PATTERNS.some((p) => reason.includes(p)) ||
+    TARGET_SITE_5XX_RE.test(reason)
+  );
 }
 
 /**

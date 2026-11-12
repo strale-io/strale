@@ -11,7 +11,7 @@
  * circuit-breaker.ts's user-input list. Review H-2 (2026-08-12) proved the
  * breaker list cannot be reused wholesale here: it answers "should this trip
  * the breaker?" and deliberately includes target-site 5xx ("URL returned
- * HTTP 5", "returned a server error") — correct for breakers (the TARGET
+ * HTTP 5", "The target site (host) returned a server error") — correct for breakers (the TARGET
  * site's outage isn't the capability's fault either), but fatal for the
  * floor: counting a month-long upstream outage as caller fault would report
  * 100% completion while every customer call fails. This module carries its
@@ -187,7 +187,8 @@ const UPSTREAM_RE = /HTTP 5\d\d|API error 5\d\d|upstream|unavailable|rate.?limit
 // Curated caller-attributable patterns. Route-level validation phrasings plus
 // the subset of the circuit-breaker's user-input list that is genuinely the
 // caller's doing. Deliberately ABSENT (they classify upstream above):
-// "URL returned HTTP 5", "returned a server error", "could not be loaded".
+// "URL returned HTTP 5", "The target site (host) returned a server error",
+// "could not be loaded".
 const CALLER_INPUT_RE = new RegExp(
   [
     "missing required (?:input )?fields?",
