@@ -406,8 +406,12 @@ tracks:
       size cap pass through. Their dead custom user agents are removed
       (safeFetch already replaced them), and each manifest gains a limitation
       saying a page that refuses or fails the request is not read and the
-      call is unbilled; manifest-text-sync publishes it at boot.
-      (42) fixed on branch fix/bundle-all-failed-retryable: a refunded
+      call is unbilled; manifest-text-sync publishes it at boot for
+      meta-extract and link-extract. gdpr-website-check is report-only
+      (compliance category), so the boot sync does not publish its manifest
+      text: that limitation reaches production only through a startup block
+      once Petter approves the wording.
+      (42) fixed (#1051, merged 2026-11-12): a refunded
       bundle answered retryable true whatever its steps' failures were, and
       each step's advice was rebuilt from its error text after the run, which
       dropped a refusal's own fix and a typed failure's retryable flag. Each
@@ -422,6 +426,25 @@ tracks:
       Billing is unchanged. Regression tests in
       solution-executor-retry.test.ts, actionable-errors-round2.test.ts and
       x402-settlement-characterization.test.ts fail against the previous code.
+      (41) guarded on branch fix/target-status-accept-guard: a tool that files
+      a site's status as the target's (targetUnavailable) must not send an
+      Accept header the site can refuse with 406, or a 406 caused by Strale's
+      own header would be filed as the caller's site failing. A static test
+      (lib/target-status-accept.test.ts) parses every capability that calls
+      targetUnavailable and fails when a safeFetch in it sends an Accept
+      that does not allow */* with a q above 0. It finds both functions
+      through their import declarations (an alias or a namespace import is
+      still seen), pins the full list of eleven tools, and fails on options
+      or headers it cannot read (a variable, a spread, a computed key, a
+      shorthand headers or Accept, spread arguments, and any use of safeFetch
+      other than a direct call), and pins each file's count of direct calls. Every current tool already complies, so
+      the guard ships with no executor change. Recorded, not fixed: a 406
+      from a firewall rule matching Strale's honest user agent is a block of
+      Strale but is filed as the target failing (unbilled and uncounted
+      either way; only the wording differs); a 426 Upgrade Required, which
+      Node's HTTP/1.1-only fetch could draw, is filed the same way; the scan
+      covers top-level capability files only, not helpers in
+      capabilities/lib or src/lib, and checks safeFetch only.
       (49) fixed on branch fix/render-preflight-transport: html-to-pdf and
       screenshot-url take a plain look at the page before Chrome renders it,
       and a transport failure of that look (a timeout, a reset, a refused
@@ -454,7 +477,22 @@ tracks:
       nit, still unbilled). Regression tests in site-access-executors.test.ts
       fail against the previous code. Independent same-provider review in a
       separate context: GO; its body-read and refused-leg findings are fixed.
-      Next: (41); then measuring past billed calls from
+      In flight: (45) to (48) on #1052; (51) on #1053.
+      Open, found while doing (43) to (48):
+      (50) domain-reputation grades and bills a 401, 403 or 429 from the
+      caller's site. Its manifest is report-only (compliance), so the fix
+      needs Petter's approval of the wording plus a startup block; it goes
+      to him with a recommendation.
+      (51) SourceBlockedError is answered retryable (lib/errors.ts), where a
+      source's block repeats on retry; it should be retryable only for a
+      429 or an unreadable robots.txt. Seen in nta-corporate.
+      (55) capabilities/lib/web-provider.ts sends Accept text/html and
+      application/xhtml+xml with no */* on its plain fetch (~line 535) and
+      its preflight (~line 883), then files a non-block 4xx, 406 included,
+      as the target's answer with no further route: the class of (41),
+      outside targetUnavailable and outside the guard's scan.
+      Next: (55), then the (50) recommendation; then measuring past
+      billed calls from
       the affected paths since their earliest releases, deciding refunds per
       policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against
       listed and dry-run prices (P-011, P-008). Do not assume the proposed
