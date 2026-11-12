@@ -136,7 +136,7 @@ const latestDescriptions = new Map([...PUBLIC_DESCRIPTIONS_0124, ...UNLISTED_DES
 // Tools delisted after blocks 0123/0124 froze their copy. Their manifests gain
 // the "Currently unavailable. " prefix that public-descriptions.test.ts
 // requires of every DEACTIVATED slug; the frozen block data does not change.
-const DELISTED_AFTER_0124 = new Set(["price-compare", "eu-trademark-search"]);
+const DELISTED_AFTER_0124 = new Set(["price-compare", "eu-trademark-search", "gdpr-fine-lookup"]);
 // Descriptions narrowed in a manifest after blocks 0123/0124 froze their copy.
 // The boot text sync publishes the manifest (not a compliance tool), and
 // neither block's guard matches the new text, so nothing writes it back.
@@ -1536,6 +1536,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0150_publishPepCheckLimitations",
       "runMigration0151_correctSanctionsLimitations",
       "runMigration0152_businessSummaryDeliveries",
+      "runMigration0153_withholdGdprFineLookup",
     ]);
   });
 });
@@ -2475,7 +2476,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(152);
+    expect(Math.max(...numbers)).toBe(153);
   });
 });
 

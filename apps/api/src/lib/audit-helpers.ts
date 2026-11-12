@@ -26,7 +26,6 @@ export function getDataSourceUrl(slug: string): string | null {
     "lei-lookup": "https://www.gleif.org/en/lei-data",
     "eori-validate": "https://ec.europa.eu/taxation_customs/dds2/eos/eori_validation.jsp",
     "ted-procurement": "https://ted.europa.eu",
-    "gdpr-fine-lookup": "https://www.enforcementtracker.com",
     "eu-court-case-search": "https://curia.europa.eu",
     "eu-trademark-search": "https://euipo.europa.eu",
     "cve-lookup": "https://osv.dev",

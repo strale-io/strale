@@ -3,7 +3,7 @@
 
 slug: gdpr-fine-lookup
 name: "GDPR Fine Lookup"
-description: "Look up GDPR fines by company or country: amounts, authorities and the articles breached."
+description: "Currently unavailable. Look up GDPR fines by company or country: amounts, authorities and the articles breached."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
@@ -60,6 +60,12 @@ output_field_reliability:
   total_fines: guaranteed
   total_amount_eur: guaranteed
 limitations:
+  - title: Tool is currently unavailable
+    text: >-
+      This tool is currently unavailable and does not return GDPR fine data. Its source licenses
+      the database for non-commercial use only, so it is not offered as a paid tool.
+    category: legal
+    severity: warning
   - title: New fines can take up to 7 days to appear
     text: Fine database updated weekly — recently announced fines may take up to 7 days to appear
     category: freshness

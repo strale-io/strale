@@ -42,6 +42,10 @@ export const PROHIBITED_UPSTREAM_HOSTS: ReadonlyMap<string, string> = new Map([
   // rule's never lane item 2 (getting around blocks) as much as for its terms,
   // which are unrecorded: this list also holds hosts barred for HOW they fetch.
   ["r.jina.ai", "Jina Reader retries a blocked fetch through its own proxy pool by default and was used on an anonymous tier whose commercial terms were never recorded"],
+  // 2026-11-11 (Petter: withhold gdpr-fine-lookup). Both spellings: the
+  // matcher anchors on "://", so the apex entry does not cover www.
+  ["www.enforcementtracker.com", "CC BY-NC-SA 4.0; TDM reserved under §§44b/87c UrhG"],
+  ["enforcementtracker.com", "CC BY-NC-SA 4.0; TDM reserved under §§44b/87c UrhG"],
 ]);
 
 /** Every prohibited host named in `text` as a URL (scheme://host). */

@@ -1,0 +1,227 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "5dcf203f33caab854fceb9422b499ad156297ded"
+  },
+  "at": "2026-11-11T23:52:12.787Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/r2-fail-before.json"
+  },
+  "summary": {
+    "total": 13,
+    "passed": 8,
+    "failed": 5,
+    "files": "apps/api/src/lib/startup-migration-0153.test.ts",
+    "source_at": "5dcf203f (PR #1019 round 1: run policy once, rail-only solution guard, never-lane wording, statute citations in the manifest)",
+    "tests_at": "the uncommitted round-2 0153 test",
+    "failing_tests": "rule citation, manifest copy, every_boot policy, solution SQL guard, vendor-suspended bundle"
+  },
+  "topic": "withhold-gdpr-fine-lookup-round2-fail-before",
+  "raw": {
+    "numTotalTestSuites": 3,
+    "numPassedTestSuites": 0,
+    "numFailedTestSuites": 3,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 13,
+    "numPassedTests": 8,
+    "numFailedTests": 5,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794441125067,
+    "success": false,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "gdpr-fine-lookup is withheld (Petter, 2026-11-11)"
+            ],
+            "fullName": "gdpr-fine-lookup is withheld (Petter, 2026-11-11) is in DEACTIVATED with the licence, the TDM reservation and the decision, so auto-register skips it",
+            "status": "passed",
+            "title": "is in DEACTIVATED with the licence, the TDM reservation and the decision, so auto-register skips it",
+            "duration": 1.3271830000001046,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "gdpr-fine-lookup is withheld (Petter, 2026-11-11)"
+            ],
+            "fullName": "gdpr-fine-lookup is withheld (Petter, 2026-11-11) cites the rule it fails precisely: the checks-lane condition, never item 6 only by analogy",
+            "status": "failed",
+            "title": "cites the rule it fails precisely: the checks-lane condition, never item 6 only by analogy",
+            "duration": 3.678030999999919,
+            "failureMessages": [
+              "AssertionError: DEACTIVATED reason: expected 'withheld 2026-11-11 (Petter, 2026-11-…' to match /checks[- ]lane/\n    at /home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/apps/api/src/lib/startup-migration-0153.test.ts:65:27\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2955:64"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "gdpr-fine-lookup is withheld (Petter, 2026-11-11)"
+            ],
+            "fullName": "gdpr-fine-lookup is withheld (Petter, 2026-11-11) the source host is a prohibited upstream, in both spellings the executor could use",
+            "status": "passed",
+            "title": "the source host is a prohibited upstream, in both spellings the executor could use",
+            "duration": 1.6005600000000868,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "gdpr-fine-lookup is withheld (Petter, 2026-11-11)"
+            ],
+            "fullName": "gdpr-fine-lookup is withheld (Petter, 2026-11-11) the vendor-terms record says resale is prohibited, with the licence page as evidence",
+            "status": "passed",
+            "title": "the vendor-terms record says resale is prohibited, with the licence page as evidence",
+            "duration": 0.4510329999998248,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "gdpr-fine-lookup is withheld (Petter, 2026-11-11)"
+            ],
+            "fullName": "gdpr-fine-lookup is withheld (Petter, 2026-11-11) a new audit record no longer points at enforcementtracker.com",
+            "status": "passed",
+            "title": "a new audit record no longer points at enforcementtracker.com",
+            "duration": 0.19099700000015218,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "gdpr-fine-lookup is withheld (Petter, 2026-11-11)"
+            ],
+            "fullName": "gdpr-fine-lookup is withheld (Petter, 2026-11-11) the manifest says it is unavailable and names the licence",
+            "status": "failed",
+            "title": "the manifest says it is unavailable and names the licence",
+            "duration": 0.6952810000000227,
+            "failureMessages": [
+              "AssertionError: expected '# Auto-generated from database on 202…' to match /title: Tool is currently unavailable/\n    at /home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/apps/api/src/lib/startup-migration-0153.test.ts:95:22\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2955:64"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step is registered to run at startup, on every boot",
+            "status": "failed",
+            "title": "is registered to run at startup, on every boot",
+            "duration": 1.7108140000000276,
+            "failureMessages": [
+              "AssertionError: expected 'once' to be 'every_boot' // Object.is equality\n    at /home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/apps/api/src/lib/startup-migration-0153.test.ts:109:78\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:2955:64"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step writes the capability reason only once the boot sync has cleared all three flags",
+            "status": "passed",
+            "title": "writes the capability reason only once the boot sync has cleared all three flags",
+            "duration": 1.2708440000001247,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step switches off, on both rails and with a deliberate reason, the solutions that still have the step while the capability stays withheld",
+            "status": "failed",
+            "title": "switches off, on both rails and with a deliberate reason, the solutions that still have the step while the capability stays withheld",
+            "duration": 1.2233679999999367,
+            "failureMessages": [
+              "AssertionError: expected 'UPDATE solutions SET is_active = fals…' to be 'UPDATE solutions SET is_active = fals…' // Object.is equality\n    at /home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/apps/api/src/lib/startup-migration-0153.test.ts:128:34\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step also takes a vendor-suspended bundle, so the vendor control tower cannot restore it to sale",
+            "status": "failed",
+            "title": "also takes a vendor-suspended bundle, so the vendor control tower cannot restore it to sale",
+            "duration": 1.9733110000001943,
+            "failureMessages": [
+              "AssertionError: expected ' WHERE id IN (SELECT solution_id FROM…' to contain '(is_active = true OR x402_enabled = t…'\n    at /home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/apps/api/src/lib/startup-migration-0153.test.ts:151:19\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step cannot undo a relisting: it never sets a capability flag",
+            "status": "passed",
+            "title": "cannot undo a relisting: it never sets a capability flag",
+            "duration": 0.39456700000005185,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step is a no-op on a second run and binds no Date or Buffer",
+            "status": "passed",
+            "title": "is a no-op on a second run and binds no Date or Buffer",
+            "duration": 0.4411199999999553,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0153: records the reason and withholds every solution with the step"
+            ],
+            "fullName": "block 0153: records the reason and withholds every solution with the step covers every catalogue solution that has the step (ai-act-assess today)",
+            "status": "passed",
+            "title": "covers every catalogue solution that has the step (ai-act-assess today)",
+            "duration": 0.16831999999999425,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794441126263,
+        "endTime": 1794441126278.4412,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-af9ebd6e4af65a060/apps/api/src/lib/startup-migration-0153.test.ts"
+      }
+    ]
+  }
+}
