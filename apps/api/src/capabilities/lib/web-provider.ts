@@ -105,7 +105,7 @@ import {
   looksLikeJsChallenge,
   siteAccessRefusal,
 } from "../../lib/site-access.js";
-import { ResourceLimitError, readErrorTextTruncated, readPageHtml } from "../../lib/resource-limits.js";
+import { ResourceLimitError, readErrorTextTruncated, readPageHtml, readTextTruncated } from "../../lib/resource-limits.js";
 import { bodyHasMoreTextThan } from "./stripped-text-length.js";
 import { targetUnavailable } from "../../lib/upstream-result.js";
 
@@ -857,22 +857,29 @@ function isPreflightTransportFailure(err: unknown): boolean {
  * A transport failure that Node's fetch has and Chrome does not: undici's
  * strict HTTP parser, OpenSSL refusing a legacy TLS server, a certificate
  * chain the server sends incomplete (Chrome fetches the missing issuer), and
- * a dual-stack connect where Node gives up on an address family Chrome
- * skips. The site may well open in Chrome, so these still go on to render.
+ * a connect that failed only because Strale's network lacks the address
+ * family. The site may well open in Chrome, so these still go on to render.
  */
 const INCOMPLETE_CHAIN_CODES = new Set([
   "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
   "UNABLE_TO_GET_ISSUER_CERT",
   "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
 ]);
+const ADDRESS_FAMILY_CODES = new Set(["EAFNOSUPPORT", "ENETUNREACH"]);
 function isNodeProtocolGap(err: unknown): boolean {
   const cause = (err as { cause?: unknown }).cause;
   if (!(cause instanceof Error)) return false;
   if (cause.name === "HTTPParserError") return true;
   const code = (cause as { code?: unknown }).code;
   if (typeof code === "string" && (code.startsWith("ERR_SSL_") || INCOMPLETE_CHAIN_CODES.has(code))) return true;
-  return cause instanceof AggregateError
-    && cause.errors.some(e => (e as { code?: unknown } | null)?.code === "EAFNOSUPPORT");
+  // Strale's own network lacks the address family (no IPv6 route): every
+  // connect attempt failed on that alone, so no site refused anything. A leg
+  // that was refused, reset or timed out is the site's answer and ends the call.
+  if (cause instanceof AggregateError) {
+    return cause.errors.length > 0
+      && cause.errors.every(e => ADDRESS_FAMILY_CODES.has((e as { code?: unknown } | null)?.code as string));
+  }
+  return typeof code === "string" && ADDRESS_FAMILY_CODES.has(code);
 }
 
 /**
@@ -936,9 +943,26 @@ export async function assertPlainPreflightAllowed(
     await discardBody(res, `preflight HTTP ${res.status} (site block)`);
     throw siteAccessRefusal(targetUrl, { kind: "http", status: res.status });
   }
-  const head = await readErrorTextTruncated(res, 8192);
+  const head = opts.opaqueRender
+    ? await readOpaquePreflightHead(res, targetUrl)
+    : await readErrorTextTruncated(res, 8192);
   if (looksLikeJsChallenge(head)) throw siteAccessRefusal(targetUrl, { kind: "challenge" });
   return res.status;
+}
+
+/**
+ * The head of the page for an opaque render. Unlike readErrorTextTruncated,
+ * a read that fails (a reset, a stall past the 8 s signal) is not an empty
+ * head: nothing was checked for a challenge, so the call ends as the target
+ * not answering (unbilled). A failure only Node has still goes on to render.
+ */
+async function readOpaquePreflightHead(res: Response, targetUrl: string): Promise<string> {
+  try {
+    return await readTextTruncated(res, 8192, "url");
+  } catch (err) {
+    if (isNodeProtocolGap(err)) return "";
+    throw targetUnavailable(new URL(targetUrl).hostname, err);
+  }
 }
 
 // ─── Convenience wrappers (drop-in replacements for browserless-extract) ────
