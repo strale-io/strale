@@ -112,8 +112,10 @@ describe("block 0154: narrow the WHOIS and phishing claims in solution copy (PR 
     expect(longRow.to).not.toBe(DOMAIN_TRUST_NEW_LONG_DESCRIPTION);
   });
 
-  it("is registered last in BLOCKS with run policy once", () => {
-    expect(BLOCKS[BLOCKS.length - 1]).toBe(runMigration0154_narrowWhoisSolutionCopy);
+  it("is registered after block 0153 in BLOCKS with run policy once", () => {
+    expect(BLOCKS.indexOf(runMigration0154_narrowWhoisSolutionCopy)).toBeGreaterThan(
+      BLOCKS.findIndex((b) => b.name.startsWith("runMigration0153_")),
+    );
     expect(BLOCK_RUN_POLICY.runMigration0154_narrowWhoisSolutionCopy?.policy).toBe("once");
   });
 });

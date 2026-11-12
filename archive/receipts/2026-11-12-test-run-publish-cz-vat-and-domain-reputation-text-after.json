@@ -1,0 +1,221 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "60f2fc5f207a607aaf918a022904380816c5b875"
+  },
+  "at": "2026-11-12T07:34:44.246Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/w0155/after.json"
+  },
+  "summary": {
+    "numTotalTestSuites": 2,
+    "numPassedTestSuites": 2,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 13,
+    "numPassedTests": 13,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "startTime": 1794468877806,
+    "success": true
+  },
+  "topic": "publish-cz-vat-and-domain-reputation-text-after",
+  "raw": {
+    "numTotalTestSuites": 2,
+    "numPassedTestSuites": 2,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 13,
+    "numPassedTests": 13,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794468877806,
+    "success": true,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text"
+            ],
+            "fullName": "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text cz-unreliable-vat-payer: publishes exactly what the manifest text sync would write",
+            "status": "passed",
+            "title": "cz-unreliable-vat-payer: publishes exactly what the manifest text sync would write",
+            "duration": 13.996368000000075,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text"
+            ],
+            "fullName": "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text domain-reputation: publishes exactly what the manifest text sync would write",
+            "status": "passed",
+            "title": "domain-reputation: publishes exactly what the manifest text sync would write",
+            "duration": 2.4023440000000846,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text"
+            ],
+            "fullName": "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text leaves the other text columns alone: the block writes output_schema only on capabilities",
+            "status": "passed",
+            "title": "leaves the other text columns alone: the block writes output_schema only on capabilities",
+            "duration": 1.5874249999999392,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text"
+            ],
+            "fullName": "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text runs one statement per capability, cz-unreliable-vat-payer first, each scoped to its own slug",
+            "status": "passed",
+            "title": "runs one statement per capability, cz-unreliable-vat-payer first, each scoped to its own slug",
+            "duration": 2.1904879999999594,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text"
+            ],
+            "fullName": "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text writes no updated_at and binds only strings and integers (DEC-20260504-A)",
+            "status": "passed",
+            "title": "writes no updated_at and binds only strings and integers (DEC-20260504-A)",
+            "duration": 2.3439069999999447,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text"
+            ],
+            "fullName": "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text binds every limitation in manifest order, with its index as sort_order",
+            "status": "passed",
+            "title": "binds every limitation in manifest order, with its index as sort_order",
+            "duration": 1.2442360000000008,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text"
+            ],
+            "fullName": "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text keeps a stored example where the manifest has none, as withRuntimeExample does",
+            "status": "passed",
+            "title": "keeps a stored example where the manifest has none, as withRuntimeExample does",
+            "duration": 0.7219330000000355,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text"
+            ],
+            "fullName": "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text reports the rows it changed, and no change on a second run",
+            "status": "passed",
+            "title": "reports the rows it changed, and no change on a second run",
+            "duration": 0.7683990000000449,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text"
+            ],
+            "fullName": "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text is disjoint from M050: neither slug has an entry in CAPABILITY_OUTPUT_CONTRACTS",
+            "status": "passed",
+            "title": "is disjoint from M050: neither slug has an entry in CAPABILITY_OUTPUT_CONTRACTS",
+            "duration": 0.44042500000000473,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text"
+            ],
+            "fullName": "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text is registered after block 0154 with run policy once",
+            "status": "passed",
+            "title": "is registered after block 0154 with run policy once",
+            "duration": 0.24811700000009296,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text"
+            ],
+            "fullName": "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text carries the cz not-registered limitation and the nullable output types (wave 3)",
+            "status": "passed",
+            "title": "carries the cz not-registered limitation and the nullable output types (wave 3)",
+            "duration": 0.22531300000014198,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text"
+            ],
+            "fullName": "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text carries the domain-reputation limitations narrowed to wave 4",
+            "status": "passed",
+            "title": "carries the domain-reputation limitations narrowed to wave 4",
+            "duration": 0.16811900000016067,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text"
+            ],
+            "fullName": "block 0155: publish the cz-unreliable-vat-payer and domain-reputation text keeps the fresh-database seed equal to the published domain-reputation rows",
+            "status": "passed",
+            "title": "keeps the fresh-database seed equal to the published domain-reputation rows",
+            "duration": 0.7345889999999144,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794468879572,
+        "endTime": 1794468879599.7346,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-a43aa00a598896029/apps/api/src/lib/startup-migration-0155.test.ts"
+      }
+    ]
+  }
+}

@@ -1274,6 +1274,23 @@
         "solutions.target_audience"
       ],
       "sha256": "5330b5ac1dde8b5fc042e67e3ff1970d58127098015170381478e155a4242745"
+    },
+    {
+      "id": "M098",
+      "function": "runMigration0155_publishCzVatAndDomainReputationText",
+      "title": "Publish Cz Vat And Domain Reputation Text",
+      "added": "2026-11-12",
+      "columns_written": [
+        "capabilities.output_schema",
+        "capability_limitations.capability_slug",
+        "capability_limitations.category",
+        "capability_limitations.limitation_text",
+        "capability_limitations.severity",
+        "capability_limitations.sort_order",
+        "capability_limitations.title",
+        "capability_limitations.workaround"
+      ],
+      "sha256": "6759aa704ece91d0f0fe940f56dca55a35cab4cefba237f1fda645c6d614dec3"
     }
   ],
   "known_overlaps": [
@@ -1712,9 +1729,10 @@
       "blocks": [
         "M050",
         "M063",
-        "M092"
+        "M092",
+        "M098"
       ],
-      "note": "M050 (0090, 2026-08-17) writes this column only for the slugs listed in CAPABILITY_OUTPUT_CONTRACTS (lib/capability-output-contracts.ts). M063 (0120, 2026-10-13) writes it only for slug = 'fear-greed-index', which is not in that module (startup-migrations.test.ts asserts it), and only once (ledgered). Disjoint by slug, so the two never contend for the same row. M092 (0149, 2026-11-07, DQ-46) writes only the example.lists_queried subtree of 'sanctions-check' and 'pep-check', neither of which is in CAPABILITY_OUTPUT_CONTRACTS (M050 writes only the properties subtree of its seven slugs) or is fear-greed-index (M063); guarded on the exact pre-DQ-46 JSON and run once, so it cannot fight either writer."
+      "note": "M050 (0090, 2026-08-17) writes this column only for the slugs listed in CAPABILITY_OUTPUT_CONTRACTS (lib/capability-output-contracts.ts). M063 (0120, 2026-10-13) writes it only for slug = 'fear-greed-index', which is not in that module (startup-migrations.test.ts asserts it), and only once (ledgered). Disjoint by slug, so the two never contend for the same row. M092 (0149, 2026-11-07, DQ-46) writes only the example.lists_queried subtree of 'sanctions-check' and 'pep-check', neither of which is in CAPABILITY_OUTPUT_CONTRACTS (M050 writes only the properties subtree of its seven slugs) or is fear-greed-index (M063); guarded on the exact pre-DQ-46 JSON and run once, so it cannot fight either writer. M098 (0155, 2026-11-12) writes the whole output_schema of 'cz-unreliable-vat-payer' and 'domain-reputation' only, once (run policy once), guarded by IS DISTINCT FROM; neither slug is in CAPABILITY_OUTPUT_CONTRACTS (startup-migration-0155.test.ts asserts it) or is fear-greed-index, sanctions-check or pep-check, so no row overlaps M050, M063 or M092."
     },
     {
       "column": "solutions.deactivation_reason",
@@ -1826,9 +1844,10 @@
         "M087",
         "M092",
         "M093",
-        "M094"
+        "M094",
+        "M098"
       ],
-      "note": "Disjoint by slug (2026-11-06): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M087 (block 0144) writes only the one active 'dependency-audit' row whose text equals the old production text. Both are run policy \"once\" and guarded on their old values, so neither can rewrite the other's row or fight it on boot. M092 (0149, 2026-11-07, DQ-46) writes title and limitation_text of the one active pep-check freshness row whose text equals its 2026-11-07 production text, once (run policy once); disjoint by slug from M086 (domain-reputation) and M087 (dependency-audit). M093 (0150, 2026-11-07, DQ-47) writes only capability_slug = 'pep-check' rows: it deletes five named rows by exact text and inserts the manifest's three where missing, once (run policy once); disjoint by slug from M086 (domain-reputation), and it never updates a row M092 (0149) wrote except by deleting it as one of the five named texts, after M092 has run. M094 (0151, 2026-11-10) only corrects active sanctions-check rows guarded by exact old text, once; all earlier limitation blocks target other slugs. No row overlaps."
+      "note": "Disjoint by slug (2026-11-06): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M087 (block 0144) writes only the one active 'dependency-audit' row whose text equals the old production text. Both are run policy \"once\" and guarded on their old values, so neither can rewrite the other's row or fight it on boot. M092 (0149, 2026-11-07, DQ-46) writes title and limitation_text of the one active pep-check freshness row whose text equals its 2026-11-07 production text, once (run policy once); disjoint by slug from M086 (domain-reputation) and M087 (dependency-audit). M093 (0150, 2026-11-07, DQ-47) writes only capability_slug = 'pep-check' rows: it deletes five named rows by exact text and inserts the manifest's three where missing, once (run policy once); disjoint by slug from M086 (domain-reputation), and it never updates a row M092 (0149) wrote except by deleting it as one of the five named texts, after M092 has run. M094 (0151, 2026-11-10) only corrects active sanctions-check rows guarded by exact old text, once; all earlier limitation blocks target other slugs. No row overlaps. M098 (0155, 2026-11-12) writes only capability_slug = 'cz-unreliable-vat-payer' and 'domain-reputation' rows, once (run policy once): it deletes active rows that are not one of the manifest's, inserts the missing ones and sets sort_order on kept rows that moved. Disjoint by slug from M087 (dependency-audit), M092 and M093 (pep-check) and M094 (sanctions-check). It shares domain-reputation with M086 (0143): both run once, M086 first in BLOCKS order (already applied in production on 2026-11-06), and M098 replaces M086's two rows with the manifest's four; neither re-runs, so they cannot fight on boot."
     },
     {
       "column": "capability_limitations.updated_at",
@@ -1892,50 +1911,56 @@
         "M086",
         "M092",
         "M093",
-        "M094"
+        "M094",
+        "M098"
       ],
-      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M092 (block 0149, DQ-46) writes only the one active pep-check freshness row whose text equals its 2026-11-07 production text. Both run once and are guarded on their old values, so neither can rewrite the other's row. M093 (0150, 2026-11-07, DQ-47) writes only capability_slug = 'pep-check' rows: it deletes five named rows by exact text and inserts the manifest's three where missing, once (run policy once); disjoint by slug from M086 (domain-reputation), and it never updates a row M092 (0149) wrote except by deleting it as one of the five named texts, after M092 has run. M094 (0151, 2026-11-10) only corrects active sanctions-check rows guarded by exact old text, once; all earlier limitation blocks target other slugs. No row overlaps."
+      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M092 (block 0149, DQ-46) writes only the one active pep-check freshness row whose text equals its 2026-11-07 production text. Both run once and are guarded on their old values, so neither can rewrite the other's row. M093 (0150, 2026-11-07, DQ-47) writes only capability_slug = 'pep-check' rows: it deletes five named rows by exact text and inserts the manifest's three where missing, once (run policy once); disjoint by slug from M086 (domain-reputation), and it never updates a row M092 (0149) wrote except by deleting it as one of the five named texts, after M092 has run. M094 (0151, 2026-11-10) only corrects active sanctions-check rows guarded by exact old text, once; all earlier limitation blocks target other slugs. No row overlaps. M098 (0155, 2026-11-12) writes only capability_slug = 'cz-unreliable-vat-payer' and 'domain-reputation' rows, once (run policy once): it deletes active rows that are not one of the manifest's, inserts the missing ones and sets sort_order on kept rows that moved. Disjoint by slug from M087 (dependency-audit), M092 and M093 (pep-check) and M094 (sanctions-check). It shares domain-reputation with M086 (0143): both run once, M086 first in BLOCKS order (already applied in production on 2026-11-06), and M098 replaces M086's two rows with the manifest's four; neither re-runs, so they cannot fight on boot."
     },
     {
       "column": "capability_limitations.sort_order",
       "blocks": [
         "M086",
-        "M093"
+        "M093",
+        "M098"
       ],
-      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M093 (block 0150, DQ-47) inserts only pep-check rows, once, where their text is missing. Neither can write the other's rows."
+      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M093 (block 0150, DQ-47) inserts only pep-check rows, once, where their text is missing. Neither can write the other's rows. M098 (0155, 2026-11-12) writes only capability_slug = 'cz-unreliable-vat-payer' and 'domain-reputation' rows, once (run policy once): it deletes active rows that are not one of the manifest's, inserts the missing ones and sets sort_order on kept rows that moved. Disjoint by slug from M087 (dependency-audit), M092 and M093 (pep-check) and M094 (sanctions-check). It shares domain-reputation with M086 (0143): both run once, M086 first in BLOCKS order (already applied in production on 2026-11-06), and M098 replaces M086's two rows with the manifest's four; neither re-runs, so they cannot fight on boot."
     },
     {
       "column": "capability_limitations.workaround",
       "blocks": [
         "M086",
         "M093",
-        "M094"
+        "M094",
+        "M098"
       ],
-      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M093 (block 0150, DQ-47) inserts only pep-check rows, once, where their text is missing. Neither can write the other's rows. M094 (0151, 2026-11-10) only corrects active sanctions-check rows guarded by exact old text, once; all earlier limitation blocks target other slugs. No row overlaps."
+      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M093 (block 0150, DQ-47) inserts only pep-check rows, once, where their text is missing. Neither can write the other's rows. M094 (0151, 2026-11-10) only corrects active sanctions-check rows guarded by exact old text, once; all earlier limitation blocks target other slugs. No row overlaps. M098 (0155, 2026-11-12) writes only capability_slug = 'cz-unreliable-vat-payer' and 'domain-reputation' rows, once (run policy once): it deletes active rows that are not one of the manifest's, inserts the missing ones and sets sort_order on kept rows that moved. Disjoint by slug from M087 (dependency-audit), M092 and M093 (pep-check) and M094 (sanctions-check). It shares domain-reputation with M086 (0143): both run once, M086 first in BLOCKS order (already applied in production on 2026-11-06), and M098 replaces M086's two rows with the manifest's four; neither re-runs, so they cannot fight on boot."
     },
     {
       "column": "capability_limitations.capability_slug",
       "blocks": [
         "M086",
-        "M093"
+        "M093",
+        "M098"
       ],
-      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M093 (block 0150, DQ-47) inserts only pep-check rows, once, where their text is missing. Neither can write the other's rows."
+      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M093 (block 0150, DQ-47) inserts only pep-check rows, once, where their text is missing. Neither can write the other's rows. M098 (0155, 2026-11-12) writes only capability_slug = 'cz-unreliable-vat-payer' and 'domain-reputation' rows, once (run policy once): it deletes active rows that are not one of the manifest's, inserts the missing ones and sets sort_order on kept rows that moved. Disjoint by slug from M087 (dependency-audit), M092 and M093 (pep-check) and M094 (sanctions-check). It shares domain-reputation with M086 (0143): both run once, M086 first in BLOCKS order (already applied in production on 2026-11-06), and M098 replaces M086's two rows with the manifest's four; neither re-runs, so they cannot fight on boot."
     },
     {
       "column": "capability_limitations.category",
       "blocks": [
         "M086",
-        "M093"
+        "M093",
+        "M098"
       ],
-      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M093 (block 0150, DQ-47) inserts only pep-check rows, once, where their text is missing. Neither can write the other's rows."
+      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M093 (block 0150, DQ-47) inserts only pep-check rows, once, where their text is missing. Neither can write the other's rows. M098 (0155, 2026-11-12) writes only capability_slug = 'cz-unreliable-vat-payer' and 'domain-reputation' rows, once (run policy once): it deletes active rows that are not one of the manifest's, inserts the missing ones and sets sort_order on kept rows that moved. Disjoint by slug from M087 (dependency-audit), M092 and M093 (pep-check) and M094 (sanctions-check). It shares domain-reputation with M086 (0143): both run once, M086 first in BLOCKS order (already applied in production on 2026-11-06), and M098 replaces M086's two rows with the manifest's four; neither re-runs, so they cannot fight on boot."
     },
     {
       "column": "capability_limitations.severity",
       "blocks": [
         "M086",
-        "M093"
+        "M093",
+        "M098"
       ],
-      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M093 (block 0150, DQ-47) inserts only pep-check rows, once, where their text is missing. Neither can write the other's rows."
+      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M093 (block 0150, DQ-47) inserts only pep-check rows, once, where their text is missing. Neither can write the other's rows. M098 (0155, 2026-11-12) writes only capability_slug = 'cz-unreliable-vat-payer' and 'domain-reputation' rows, once (run policy once): it deletes active rows that are not one of the manifest's, inserts the missing ones and sets sort_order on kept rows that moved. Disjoint by slug from M087 (dependency-audit), M092 and M093 (pep-check) and M094 (sanctions-check). It shares domain-reputation with M086 (0143): both run once, M086 first in BLOCKS order (already applied in production on 2026-11-06), and M098 replaces M086's two rows with the manifest's four; neither re-runs, so they cannot fight on boot."
     },
     {
       "column": "solutions.agent_description",

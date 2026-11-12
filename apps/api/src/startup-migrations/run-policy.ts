@@ -123,4 +123,5 @@ export const BLOCK_RUN_POLICY: Readonly<Record<string, { policy: BlockRunPolicy;
   runMigration0152_businessSummaryDeliveries: { policy: "once", reason: "one CREATE TABLE IF NOT EXISTS; schema validation checks the table on later boots" },
   runMigration0153_withholdGdprFineLookup: { policy: "every_boot", reason: "returns normally with its work deferred when the boot sync has not cleared the capability yet; both steps are guarded on the withheld state and write only over no reason or a vendor: marker, so a re-run cannot undo a relisting or rewrite another deliberate reason" },
   runMigration0154_narrowWhoisSolutionCopy: { policy: "once", reason: "guarded UPDATEs of five solutions' WHOIS and phishing copy, each on the exact text it replaces; a re-run must not undo a later edit" },
+  runMigration0155_publishCzVatAndDomainReputationText: { policy: "once", reason: "one statement per capability publishes the approved output_schema and limitation rows, each part guarded so a second run matches nothing; a re-run must not undo a later edit" },
 };

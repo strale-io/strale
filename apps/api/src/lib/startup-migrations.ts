@@ -144,6 +144,7 @@ import { runMigration0151_correctSanctionsLimitations } from "../startup-migrati
 import { runMigration0152_businessSummaryDeliveries } from "../startup-migrations/blocks/0152-business-summary-deliveries.js";
 import { runMigration0153_withholdGdprFineLookup } from "../startup-migrations/blocks/0153-withhold-gdpr-fine-lookup.js";
 import { runMigration0154_narrowWhoisSolutionCopy } from "../startup-migrations/blocks/0154-narrow-whois-solution-copy.js";
+import { runMigration0155_publishCzVatAndDomainReputationText } from "../startup-migrations/blocks/0155-publish-cz-vat-and-domain-reputation-text.js";
 import { LEDGER_BY_FUNCTION, planBlock, readApplied, recordApplied, type LedgerRow } from "../startup-migrations/applied.js";
 import { BLOCK_RUN_POLICY } from "../startup-migrations/run-policy.js";
 
@@ -248,6 +249,7 @@ export * from "../startup-migrations/blocks/0151-correct-sanctions-limitations.j
 export * from "../startup-migrations/blocks/0152-business-summary-deliveries.js";
 export * from "../startup-migrations/blocks/0153-withhold-gdpr-fine-lookup.js";
 export * from "../startup-migrations/blocks/0154-narrow-whois-solution-copy.js";
+export * from "../startup-migrations/blocks/0155-publish-cz-vat-and-domain-reputation-text.js";
 
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
   runMigration0029_actualCostCents,
@@ -354,6 +356,7 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0152_businessSummaryDeliveries,
   runMigration0153_withholdGdprFineLookup,
   runMigration0154_narrowWhoisSolutionCopy,
+  runMigration0155_publishCzVatAndDomainReputationText,
 ];
 
 /**

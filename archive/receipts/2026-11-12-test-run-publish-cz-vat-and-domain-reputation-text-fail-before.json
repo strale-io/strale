@@ -1,0 +1,64 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "60f2fc5f207a607aaf918a022904380816c5b875"
+  },
+  "at": "2026-11-12T07:34:37.093Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/w0155/fail-before.json"
+  },
+  "summary": {
+    "numTotalTestSuites": 1,
+    "numPassedTestSuites": 0,
+    "numFailedTestSuites": 1,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 0,
+    "numPassedTests": 0,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "startTime": 1794468867017,
+    "success": false
+  },
+  "topic": "publish-cz-vat-and-domain-reputation-text-fail-before",
+  "raw": {
+    "numTotalTestSuites": 1,
+    "numPassedTestSuites": 0,
+    "numFailedTestSuites": 1,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 0,
+    "numPassedTests": 0,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794468867017,
+    "success": false,
+    "testResults": [
+      {
+        "assertionResults": [],
+        "startTime": 1794468867017,
+        "endTime": 1794468867017,
+        "status": "failed",
+        "message": "Cannot find module '../startup-migrations/blocks/0155-publish-cz-vat-and-domain-reputation-text.js' imported from /home/user/strale/.claude/worktrees/agent-a43aa00a598896029/apps/api/src/lib/startup-migration-0155.test.ts",
+        "name": "/home/user/strale/.claude/worktrees/agent-a43aa00a598896029/apps/api/src/lib/startup-migration-0155.test.ts"
+      }
+    ]
+  }
+}
