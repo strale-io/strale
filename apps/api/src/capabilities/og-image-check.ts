@@ -4,6 +4,7 @@ import { readPageHtml } from "../lib/resource-limits.js";
 import { assertNotBlockStatus } from "../lib/site-access.js";
 import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { targetUnavailable } from "../lib/upstream-result.js";
+import { UrlValidationError } from "../lib/url-validator.js";
 
 registerCapability("og-image-check", async (input: CapabilityInput) => {
   const rawUrl = ((input.url as string) ?? (input.task as string) ?? "").trim();
@@ -49,13 +50,17 @@ registerCapability("og-image-check", async (input: CapabilityInput) => {
   let imageSizeKb: number | null = null;
   let imageFormat: string | null = null;
   let imageExists = false;
+  let imageNotPublic = false;
   let imageWidth: number | null = ogWidth ? parseInt(ogWidth, 10) : null;
   let imageHeight: number | null = ogHeight ? parseInt(ogHeight, 10) : null;
 
   const imageToCheck = resolvedOgImage ?? resolvedTwitterImage;
   if (imageToCheck) {
-    const imgHeaders = await probeImage(imageToCheck);
-    // null: the image URL answered a 4xx (404, 410), a real finding below.
+    const probe = await probeImage(imageToCheck);
+    // A 4xx (404, 410) or a URL no one outside the site's network can fetch
+    // is a real finding, reported below.
+    imageNotPublic = probe === NOT_PUBLIC;
+    const imgHeaders = probe instanceof Headers ? probe : null;
     imageExists = imgHeaders !== null;
     if (imgHeaders) {
       const contentLength = imgHeaders.get("content-length");
@@ -81,6 +86,11 @@ registerCapability("og-image-check", async (input: CapabilityInput) => {
   if (!resolvedOgImage) {
     issues.push("Missing og:image meta tag");
     recommendations.push("Add an <meta property=\"og:image\" content=\"...\"> tag with a URL to a 1200x630 image.");
+  } else if (imageNotPublic) {
+    issues.push("og:image URL is not publicly fetchable");
+    recommendations.push(
+      "Use a public http(s) URL for og:image. Social platforms cannot fetch localhost, private network addresses or data: URLs.",
+    );
   } else if (!imageExists) {
     issues.push("og:image URL returns non-200 status");
     recommendations.push("Ensure the og:image URL is accessible and returns HTTP 200.");
@@ -180,10 +190,15 @@ registerCapability("og-image-check", async (input: CapabilityInput) => {
   };
 });
 
+const NOT_PUBLIC = "not_public" as const;
+
 /**
- * The image's response headers, or null when the image URL answered a
- * client error (404, 410, ...): "og:image URL returns non-200 status" is
- * then the finding the caller pays for.
+ * The image's response headers; null when the image URL answered a client
+ * error (404, 410, ...), so "og:image URL returns non-200 status" is the
+ * finding the caller pays for; or NOT_PUBLIC when Strale's URL guard refuses
+ * the image URL (localhost, a private address, a data: URL, or a redirect to
+ * one). That is a misconfigured page, a finding the caller pays for, not the
+ * caller's input fault: they sent the page URL, not the image URL.
  *
  * Every other failure throws, unbilled (2026-11-06 swallowed-failures audit,
  * row 31). Before, a timeout, a network error or a 5xx was swallowed and
@@ -194,7 +209,7 @@ registerCapability("og-image-check", async (input: CapabilityInput) => {
  * marked as the caller's target, retryable. A server that does not
  * implement HEAD (405, 501) is asked again with GET, headers only.
  */
-async function probeImage(imageUrl: string): Promise<Headers | null> {
+async function probeImage(imageUrl: string): Promise<Headers | null | typeof NOT_PUBLIC> {
   const site = `image host ${extractDomain(imageUrl)}`;
   let resp: Response;
   try {
@@ -212,6 +227,8 @@ async function probeImage(imageUrl: string): Promise<Headers | null> {
       });
     }
   } catch (err) {
+    // degraded-ok: only Strale's URL guard refusing the page's own image URL returns NOT_PUBLIC, reported as the "not publicly fetchable" finding; every other failure throws below.
+    if (err instanceof UrlValidationError) return NOT_PUBLIC;
     if (isCapabilityRefusal(err)) throw err;
     throw targetUnavailable(site, err);
   }

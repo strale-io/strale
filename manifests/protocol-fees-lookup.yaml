@@ -78,7 +78,7 @@ output_field_reliability:
 limitations:
   - title: Revenue is null when DeFi Llama does not track it
     text: >-
-      Figures are DeFi Llama's at query time. Revenue fields are null only when DeFi Llama tracks fees but not revenue for the protocol. When DeFi Llama does not answer either request (a server error, a 429, a timeout or an unreadable response), the call fails with an error and is not billed, rather than returning null revenue.
+      Figures are DeFi Llama's at query time. Revenue fields are null when DeFi Llama does not report them, for example when it tracks fees but not revenue for the protocol. When either request to DeFi Llama fails (a server error, a 429, a timeout or an unreadable response), the call fails with an error and is not billed, rather than returning null revenue.
     category: availability
     severity: info
     workaround: Retry after a server error, a 429 or a timeout.

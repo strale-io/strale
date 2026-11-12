@@ -37,7 +37,7 @@ output_schema:
       type: boolean
     avatar_url:
       type: string
-data_source: Public Ethereum RPC (publicnode.com, llamarpc.com)
+data_source: Alchemy (Ethereum mainnet RPC)
 data_source_type: api
 transparency_tag: algorithmic
 maintenance_class: free-stable-api
@@ -69,7 +69,7 @@ output_field_reliability:
 limitations:
   - title: null
     text: >-
-      Output reflects Public Ethereum RPC (publicnode.com, llamarpc.com) at query time. Dependent on upstream API
+      Output reflects Ethereum mainnet state read through Alchemy at query time. Dependent on upstream API
       availability; may degrade if the provider rate-limits or is temporarily unavailable.
     category: availability
     severity: info

@@ -267,6 +267,30 @@ describe("og-image-check negative: a missing image is still the finding, billed"
     expect(out.issues).toContain(NON_200);
   });
 
+  // Billing review of #1021, finding 1: the image URL comes from the page,
+  // so Strale's URL guard refusing it is the page's misconfiguration, a
+  // billed finding, not the caller's input fault. Drives the real validator.
+  it.each([
+    "http://localhost:3000/og.png",
+    "http://127.0.0.1/og.png",
+    "data:image/png;base64,iVBORw0KGgo=",
+  ])("an og:image the URL guard refuses (%s) is reported not publicly fetchable", async (imageUrl) => {
+    const { validateUrl: realValidateUrl } =
+      await vi.importActual<typeof import("../lib/url-validator.js")>("../lib/url-validator.js");
+    safeFetchMock.mockImplementation(async (url: string) => {
+      if (String(url) === imageUrl) {
+        await realValidateUrl(imageUrl);
+        throw new Error("the URL guard should have refused this image URL");
+      }
+      return status(200, OG_PAGE.replace("https://img.test/card.png", imageUrl), {
+        "content-type": "text/html",
+      });
+    });
+    const out = await billed("og-image-check", ogCheck());
+    expect(out.issues).toContain("og:image URL is not publicly fetchable");
+    expect(out.issues).not.toContain(NON_200);
+  });
+
   it("a reachable image is measured", async () => {
     ogSite(async () => status(200, "", { "content-type": "image/jpeg", "content-length": "102400" }));
     const out = await billed("og-image-check", ogCheck());
