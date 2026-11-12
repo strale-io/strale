@@ -123,7 +123,7 @@ tracks:
       (14) port-check reads an AggregateError's code from its first attempt
       only (happy-eyeballs), so a refused dual-stack port can throw instead
       of billing closed; read err.errors; (15) protocol-fees-lookup files a
-      DeFi Llama 400 without "not found" as the provider's fault, though it
+      DeFi Llama 400 without \"not found\" as the provider's fault, though it
       may be the caller's slug; (16) og-image-check's failsUrlGuard
       re-resolves DNS with no timeout of its own and can disagree with
       safeFetch's first lookup; (17) ESSRFBLOCKED classifies as
