@@ -148,7 +148,6 @@ const portCheck = (p: number[]) => exec("port-check")({ host: "host.test", ports
 describe("port-check failure: a host Strale cannot reach is not a closed port (row 30)", () => {
   it.each([
     ["ENOTFOUND", false],
-    ["EAI_AGAIN", true],
     ["ENETUNREACH", true],
     ["ECONNRESET", true],
   ])("connect %s throws, unbilled, as the target's failure", async (code, retryable) => {
@@ -157,6 +156,17 @@ describe("port-check failure: a host Strale cannot reach is not a closed port (r
     expect(err.message).toContain("host host.test");
     expect(err.message).toContain(code);
     expect(err.retryable).toBe(retryable);
+  });
+
+  // promise-audit T1 follow-up 34: EAI_AGAIN is Strale's own resolver failing
+  // for now, not the caller's host, so it counts against port-check.
+  it("connect EAI_AGAIN throws, unbilled and retryable, as port-check's own failure", async () => {
+    ports({ 22: "EAI_AGAIN", 443: "EAI_AGAIN" });
+    const err = await expectUnbilledProviderFailure(portCheck([22, 443]));
+    expect(err.message).toContain("host host.test");
+    expect(err.message).toContain("network error (EAI_AGAIN)");
+    expect(err.retryable).toBe(true);
+    expect(isUserInputError(err.message)).toBe(false);
   });
 
   it("a name that fails to resolve on one port fails the call even when another port is open", async () => {

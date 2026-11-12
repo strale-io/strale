@@ -722,7 +722,6 @@ describe("failure: page-exists never bills exists:null", () => {
   const transport: Array<[string, () => unknown, string, boolean]> = [
     ["a timeout", timeout, "timeout", true],
     ["a network error", () => networkError(), "ECONNRESET", true],
-    ["a resolver failure that is not NXDOMAIN", () => networkError("EAI_AGAIN"), "EAI_AGAIN", true],
     ["a refused connection, as a bare errno Error", () => Object.assign(new Error("connect ECONNREFUSED 192.0.2.1:443"), { code: "ECONNREFUSED" }), "ECONNREFUSED", true],
     [
       "a redirect loop",
@@ -743,6 +742,22 @@ describe("failure: page-exists never bills exists:null", () => {
       expect(outcomeFromError(err)).toMatchObject({ fault: "target", counts_against_capability: false });
     });
   }
+
+  // promise-audit T1 follow-up 34: EAI_AGAIN is Strale's own resolver failing
+  // for now, and a network error with no code names no one. Neither is the
+  // caller's page: unbilled and retryable, but counted against page-exists.
+  it.each([
+    ["Strale's resolver failing for now (EAI_AGAIN)", () => networkError("EAI_AGAIN"), "EAI_AGAIN"],
+    ["a network error with no code", () => Object.assign(new TypeError("fetch failed"), { cause: {} }), null],
+  ])("throws on %s as its own failure, counted against the capability", async (_label, make, code) => {
+    safeFetchMock.mockRejectedValue(make());
+    const err = await expectUnbilledUpstreamFailure(exec("page-exists")({ url: PAGE }));
+    expect(err.code).toBe(code);
+    expect(err.retryable).toBe(true);
+    expect(err.message).not.toContain("URL did not answer");
+    expect(isUserInputError(err.message)).toBe(false);
+    expect(outcomeFromError(err)).toMatchObject({ fault: "provider", counts_against_capability: true });
+  });
 
   it("throws on a 3xx it could not follow, with the status on code and not in the message (review nit)", async () => {
     safeFetchMock.mockResolvedValue(status(301, ""));

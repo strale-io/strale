@@ -286,11 +286,67 @@ describe("PR #1018 review B1: fetchUnavailable converts a bare errno Error", () 
   });
 
   it("targetUnavailable words an errno failure as the target's and keeps it breaker-exempt", () => {
-    const err = targetUnavailable("website site.test", errno("EAI_AGAIN")) as UpstreamUnavailableError;
+    const err = targetUnavailable("website site.test", errno("ECONNREFUSED")) as UpstreamUnavailableError;
     expect(err).toBeInstanceOf(UpstreamUnavailableError);
-    expect(err.message).toBe("Upstream unavailable: website site.test: URL did not answer (EAI_AGAIN); retry later.");
-    expect(err).toMatchObject({ code: "EAI_AGAIN", retryable: true, targetFault: true });
+    expect(err.message).toBe("Upstream unavailable: website site.test: URL did not answer (ECONNREFUSED); retry later.");
+    expect(err).toMatchObject({ code: "ECONNREFUSED", retryable: true, targetFault: true });
     expect(isUserInputError(err.message)).toBe(true);
+  });
+});
+
+describe("promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's", () => {
+  // EAI_AGAIN is a temporary failure of Strale's own resolver (#1025), and a
+  // network error with no code says nothing about whose it was. Neither is
+  // the target's fault: both stay retryable and unbilled, but count against
+  // the capability and its breaker, as fetchUnavailable files them.
+  const notTheSite: Array<[string, unknown, string | null, string]> = [
+    [
+      "Strale's resolver failing for now (EAI_AGAIN, bare errno)",
+      Object.assign(new Error("getaddrinfo EAI_AGAIN site.test"), { code: "EAI_AGAIN", syscall: "getaddrinfo" }),
+      "EAI_AGAIN",
+      "Upstream unavailable: website site.test: network error (EAI_AGAIN); retry shortly.",
+    ],
+    [
+      "Strale's resolver failing for now (EAI_AGAIN, wrapped by fetch)",
+      Object.assign(new TypeError("fetch failed"), { cause: { code: "EAI_AGAIN" } }),
+      "EAI_AGAIN",
+      "Upstream unavailable: website site.test: network error (EAI_AGAIN); retry shortly.",
+    ],
+    [
+      "a network error with no code",
+      Object.assign(new TypeError("fetch failed"), { cause: {} }),
+      null,
+      "Upstream unavailable: website site.test: network error; retry shortly.",
+    ],
+    [
+      "a stream cut off with no code",
+      new TypeError("terminated"),
+      null,
+      "Upstream unavailable: website site.test: network error; retry shortly.",
+    ],
+  ];
+
+  it.each(notTheSite)("targetUnavailable(%s) is fault provider, counts true, retryable", (_label, failure, code, message) => {
+    const err = targetUnavailable("website site.test", failure) as UpstreamUnavailableError;
+    expect(err).toBeInstanceOf(UpstreamUnavailableError);
+    expect(err.message).toBe(message);
+    expect(err).toMatchObject({ code, retryable: true, targetFault: false });
+    expect(isUserInputError(err.message)).toBe(false);
+    expect(outcomeFromError(err)).toMatchObject({
+      success: false,
+      billable: false,
+      fault: "provider",
+      counts_against_capability: true,
+    });
+  });
+
+  it("a host that does not resolve (ENOTFOUND) is still the site's", () => {
+    const err = targetUnavailable(
+      "website site.test",
+      Object.assign(new Error("getaddrinfo ENOTFOUND site.test"), { code: "ENOTFOUND" }),
+    ) as UpstreamUnavailableError;
+    expect(err).toMatchObject({ code: "ENOTFOUND", retryable: false, targetFault: true });
+    expect(outcomeFromError(err)).toMatchObject({ fault: "target", counts_against_capability: false });
   });
 });
 
@@ -299,7 +355,7 @@ describe("PR #1018 review S1: a target-site failure is unbilled and does not cou
     ["a 5xx", 503],
     ["a timeout", new DOMException("The operation was aborted due to timeout", "TimeoutError")],
     ["a network error", Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNRESET" } })],
-    ["a resolver errno", Object.assign(new Error("getaddrinfo EAI_AGAIN site.test"), { code: "EAI_AGAIN" })],
+    ["a connection errno", Object.assign(new Error("connect ECONNREFUSED 192.0.2.1:443"), { code: "ECONNREFUSED" })],
     ["a redirect loop", new Error("Too many redirects (>3) — refusing to follow further.")],
     ["a body that did not parse", new SyntaxError("Unexpected token <")],
   ];

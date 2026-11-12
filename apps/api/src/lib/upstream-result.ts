@@ -303,8 +303,11 @@ export function fetchUnavailable(upstream: string, err: unknown): Error {
  * broken site retried three times must not suspend the capability for
  * everyone (PR #1015 review). Every error it builds carries `targetFault`, so
  * it does not count against the capability's quality floor either (PR #1018
- * review, S1). Called by cookie-scan, page-exists, port-check, og-image-check
- * and domain-contact-extract. pricing-page-extract's `unreadablePage` keeps
+ * review, S1), except Strale's own resolver failing for now (EAI_AGAIN) and a
+ * network error with no code, which it leaves as fetchUnavailable files them
+ * (promise-audit T1 follow-up 34). Called by cookie-scan, page-exists,
+ * port-check, og-image-check, domain-contact-extract, header-security-check
+ * and domain-reputation. pricing-page-extract's `unreadablePage` keeps
  * the target wording but is deliberately not target-marked, so it counts
  * against that capability. Anything else passes through as fetchUnavailable
  * leaves it.
@@ -330,6 +333,12 @@ export function targetUnavailable(site: string, failure: number | unknown): Erro
   }
   const err = fetchUnavailable(site, failure);
   if (!(err instanceof UpstreamUnavailableError)) return err;
+  // EAI_AGAIN is a temporary failure of Strale's own resolver (as in
+  // isConnectionFailure above), and a network error with no code says nothing
+  // about whose it was. Neither is the target's fault, so both stay as
+  // fetchUnavailable files them: retryable, unbilled, and counted against the
+  // capability (promise-audit T1 follow-up 34).
+  if (err.code === "EAI_AGAIN" || err.code === null) return err;
   // A name the resolver says does not resolve will not start resolving on a
   // retry (Node reports NXDOMAIN and NODATA alike as ENOTFOUND).
   if (err.code === "ENOTFOUND") {
