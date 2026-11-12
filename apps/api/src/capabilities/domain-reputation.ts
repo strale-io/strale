@@ -1,6 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import dns from "node:dns/promises";
-import { dnsOrEmpty } from "../lib/upstream-result.js";
+import { dnsOrEmpty, isConnectionFailure, targetUnavailable } from "../lib/upstream-result.js";
 import { validateHost } from "../lib/url-validator.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { SiteAccessRefusedError, SourceBlockedError, isChallengeResponse, siteAccessRefusal } from "../lib/site-access.js";
@@ -58,8 +58,14 @@ registerCapability("domain-reputation", async (input: CapabilityInput) => {
   // an availability probe (safe-fetch.ts, H6 round 2): robots.txt does not
   // govern it, and a domain whose HTTPS is broken is graded as broken rather
   // than refused because its robots.txt could not be read over that same
-  // HTTPS. An anti-bot challenge is the one answer that is refused, unbilled:
-  // its headers belong to the interstitial, not the domain's site.
+  // HTTPS. An anti-bot challenge marked by cf-mitigated is the one answer that
+  // is refused, unbilled: its headers belong to the interstitial, not the
+  // domain's site (a HEAD carries no body, so a body-only challenge is graded
+  // on the interstitial's headers). Only a failure at the network or TLS layer
+  // of the domain itself is graded as "HTTPS connection failed"; Strale's own
+  // refusals, a refused redirect target, a redirect loop and the probe's own
+  // timeout say nothing about the domain's HTTPS and are thrown, unbilled
+  // (promise-audit T1 follow-up 23).
   const httpsUrl = `https://${domain}/`;
   let resp: Response | null = null;
   try {
@@ -70,8 +76,9 @@ registerCapability("domain-reputation", async (input: CapabilityInput) => {
       signal: AbortSignal.timeout(8000),
     });
   } catch (err) {
-    // degraded-ok: a site's refusal of Strale is rethrown, unbilled; any other failure to open the domain's HTTPS endpoint is this check's finding, https_works false.
+    // degraded-ok: a connection or TLS failure of the domain itself is this check's finding, https_works false; anything else is rethrown, unbilled.
     if (err instanceof SiteAccessRefusedError || err instanceof SourceBlockedError) throw err;
+    if (!isConnectionFailure(err)) throw targetUnavailable(httpsUrl, err);
     checks.https_works = false;
     issues.push("HTTPS connection failed");
     score -= 20;

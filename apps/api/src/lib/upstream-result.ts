@@ -239,6 +239,23 @@ export function ssrfBlocked(err: unknown): Error | null {
 }
 
 /**
+ * True when a request failed at the network or TLS layer of the target
+ * itself: undici's `fetch failed` / `terminated` wrapper (a refused or reset
+ * connection, a TLS handshake or certificate failure) or a bare errno Error
+ * from the resolver or socket. Strale's own SSRF refusal is not one. A probe
+ * that grades a target's reachability as its finding (domain-reputation's
+ * HTTPS check) grades only these; a refusal, a URL validation error, a
+ * redirect loop or the probe's own timeout says nothing about the target and
+ * is thrown instead (promise-audit T1 follow-up 23).
+ */
+export function isConnectionFailure(err: unknown): boolean {
+  if (ssrfBlocked(err)) return false;
+  if (err instanceof TypeError && (err.message === "fetch failed" || err.message === "terminated")) return true;
+  const errno = (err as { code?: unknown } | null)?.code;
+  return err instanceof Error && typeof errno === "string" && NETWORK_ERRNO.has(errno);
+}
+
+/**
  * The error for a request to an upstream that threw: a timeout, a network
  * error (undici's `fetch failed` wrapper or a bare errno Error), or a body
  * that did not parse. Anything else is returned unchanged:

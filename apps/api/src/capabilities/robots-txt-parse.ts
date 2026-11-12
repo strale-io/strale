@@ -69,6 +69,17 @@ registerCapability("robots-txt-parse", async (input: CapabilityInput) => {
     }
   }
 
+  // A site that answers /robots.txt with an HTML page and 200 (a soft 404, or
+  // a redirect to its home page) has no robots.txt: the same answer a 404
+  // gives, not a robots.txt that exists with no rules (promise-audit T1
+  // follow-up 18). A real robots.txt mislabelled as text/html still parses.
+  if (rules.length === 0 && sitemaps.length === 0 && text.trimStart().startsWith("<")) {
+    return {
+      output: { url: robotsUrl, exists: false, message: "No robots.txt found: the site answered with an HTML page." },
+      provenance: { source: "http-fetch", fetched_at: new Date().toISOString() },
+    };
+  }
+
   const totalDisallow = rules.reduce((sum, r) => sum + r.disallow.length, 0);
   const totalAllow = rules.reduce((sum, r) => sum + r.allow.length, 0);
   const blocksAll = rules.some(r => r.user_agent === "*" && r.disallow.includes("/"));

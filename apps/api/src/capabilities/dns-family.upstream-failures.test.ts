@@ -333,6 +333,11 @@ describe("a real negative keeps today's output, and is still billed", () => {
     dns.resolveTxt.mockImplementation((name: string) =>
       name === "example.com" ? Promise.resolve([["google-site-verification=abc"]]) : Promise.reject(dnsError("ENOTFOUND")),
     );
+    // The domain refuses the HTTPS connection, as undici reports it. Only a
+    // failure at the domain's own network or TLS layer is graded (follow-up 23).
+    safeFetchMock.mockRejectedValue(
+      Object.assign(new TypeError("fetch failed"), { cause: Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" }) }),
+    );
     await expectBilledNegative("domain-reputation", { domain: "example.com" }, {
       domain: "example.com",
       reputation_score: 60,
