@@ -70,23 +70,165 @@ export function redactRpcSecrets(text: string): string {
 }
 
 /**
+ * True when an RPC error is the contract's own answer rather than the provider
+ * failing: a revert (viem's ExecutionRevertedError /
+ * ContractFunctionRevertedError, JSON-RPC code 3), an empty return
+ * (ContractFunctionZeroDataError) or a return that does not decode
+ * (AbiDecoding*Error). Such an error is never typed as unavailable, whatever
+ * its text says.
+ */
+export function isContractAnswer(err: unknown): boolean {
+  let answer = false;
+  for (let e: unknown = err, depth = 0; e && depth < 8; e = (e as { cause?: unknown }).cause, depth++) {
+    const name = (e as { name?: unknown }).name;
+    // An offchain (CCIP-read) gateway's failure is not the contract's answer,
+    // whatever viem wraps around it or finds under it.
+    if (typeof name === "string" && name.startsWith("OffchainLookup")) return false;
+    // viem wraps a JSON-RPC internal error (-32603) as
+    // ContractFunctionRevertedError, so only one that says it reverted is.
+    if (isInternalRpcError(e) && !/revert/i.test(rpcText(e))) return false;
+    if (typeof name === "string" && /Revert|ZeroData|AbiDecoding/.test(name)) answer = true;
+    if ((e as { code?: unknown }).code === 3) answer = true;
+  }
+  return answer;
+}
+
+function isInternalRpcError(e: unknown): boolean {
+  return (e as { code?: unknown }).code === -32603;
+}
+
+/**
+ * The text of one node of a viem error chain. The innermost node is the raw
+ * JSON-RPC error object, whose reason is only in `message`.
+ */
+function rpcText(e: unknown): string {
+  const node = e as { details?: unknown; shortMessage?: unknown; message?: unknown };
+  return [node.details, node.shortMessage, node.message]
+    .filter((t): t is string => typeof t === "string")
+    .join(" ");
+}
+
+/** The upstream named for a failing offchain gateway; a fixed label, never its URL. */
+export const ENS_OFFCHAIN_GATEWAY = "ENS offchain gateway";
+
+/**
+ * The error for a name whose resolver hands the lookup to an offchain
+ * (CCIP-read, EIP-3668) gateway that then fails. The gateway is chosen by the
+ * name's owner, not by Strale, so its failure is the target's: unbilled and
+ * never counted against the capability or opened on Alchemy's breaker. The
+ * gateway's URL is never put in the message.
+ *
+ * viem wraps everything that fails after the resolver's OffchainLookup revert
+ * in an OffchainLookupError: the gateway's HTTP status or silence
+ * (HttpRequestError), an answer that is not hex
+ * (OffchainLookupResponseMalformedError), a sender mismatch, and the callback
+ * eth_call that hands the gateway's answer back to the resolver
+ * (CallExecutionError). A revert of that callback is the resolver rejecting
+ * its own gateway's answer, so it is the target's too; any other callback
+ * failure is the provider's, and null is returned so the caller classifies it.
+ */
+function offchainGatewayFailure(lookup: unknown): UpstreamUnavailableError | null {
+  const unusable = (code: string) =>
+    new UpstreamUnavailableError(ENS_OFFCHAIN_GATEWAY, "the name's offchain gateway answered with data that cannot be used.", {
+      code,
+      retryable: false,
+      targetFault: true,
+    });
+  const cause = (lookup as { cause?: unknown }).cause;
+  if ((cause as { name?: unknown } | undefined)?.name === "CallExecutionError") {
+    return isContractAnswer(cause) ? unusable("CallbackReverted") : null;
+  }
+  for (let e: unknown = cause, depth = 0; e && depth < 8; e = (e as { cause?: unknown }).cause, depth++) {
+    const name = (e as { name?: unknown }).name;
+    // A malformed answer or a sender mismatch will not change on a retry.
+    if (typeof name === "string" && name.startsWith("OffchainLookup")) return unusable(name);
+    const status = (e as { status?: unknown }).status;
+    if (typeof status === "number") {
+      return new UpstreamUnavailableError(ENS_OFFCHAIN_GATEWAY, `the name's offchain gateway answered HTTP ${status}.`, {
+        code: `HTTP ${status}`,
+        retryable: status >= 500 || status === 408 || status === 429,
+        targetFault: true,
+      });
+    }
+  }
+  return new UpstreamUnavailableError(ENS_OFFCHAIN_GATEWAY, "the name's offchain gateway did not answer; retry later.", {
+    retryable: true,
+    targetFault: true,
+  });
+}
+
+/**
+ * Classify a JSON-RPC error body (code + message) that names a provider
+ * failure rather than an answer: a rate limit (Alchemy sends code 429, or
+ * -32005, inside an HTTP 200 or a JSON 429) or a rejected key (Alchemy
+ * answers HTTP 401/403 with a JSON-RPC body, code -32600, which viem
+ * surfaces without an HTTP status). Returns null for anything else, which
+ * callers keep as a plain error.
+ */
+export function jsonRpcUnavailable(upstream: string, code: unknown, text: string): UpstreamUnavailableError | null {
+  // A revert is the contract's answer, whatever its reason string says.
+  if (code === 3 || /execution reverted/i.test(text)) return null;
+  if (code === 429 || code === -32005 || /compute units|rate.?limit|too many requests/i.test(text)) {
+    return httpUnavailable(upstream, 429);
+  }
+  if (/must be authenticated|invalid api key|unauthori[sz]ed/i.test(text)) return httpUnavailable(upstream, 401);
+  if (/not on (the )?whitelist/i.test(text)) return httpUnavailable(upstream, 403);
+  // An internal error that is not a revert is the provider failing.
+  if (code === -32603) {
+    return new UpstreamUnavailableError(upstream, "internal error (JSON-RPC -32603); retry shortly.", {
+      code: "JSON-RPC -32603",
+      retryable: true,
+    });
+  }
+  return null;
+}
+
+/**
  * The error for an RPC call that threw. viem wraps the transport failure (an
- * HTTP status, a timeout, a network error) several causes deep
- * (ContractFunctionExecutionError > CallExecutionError > HttpRequestError),
- * so the chain is walked for it and a classified, unbilled
- * UpstreamUnavailableError is returned. Anything else becomes a plain error
- * whose message has the key redacted, with no cause attached, so no URL
- * reaches a log through the cause chain either.
+ * HTTP status, a timeout, a network error, a JSON-RPC error body) several
+ * causes deep (ContractFunctionExecutionError > CallExecutionError >
+ * HttpRequestError | RpcRequestError), so the chain is walked for it and a
+ * classified, unbilled UpstreamUnavailableError is returned. A contract
+ * revert or undecodable return is never classified. Anything else becomes a plain error built from
+ * viem's short message (never its full message, which quotes the request
+ * URL), redacted, with no cause attached, so no URL reaches a log through the
+ * cause chain either.
  */
 export function ethRpcFailure(upstream: string, prefix: string, err: unknown): Error {
-  for (let e: unknown = err, depth = 0; e && depth < 8; e = (e as { cause?: unknown }).cause, depth++) {
-    const status = (e as { status?: unknown }).status;
-    if (typeof status === "number") return withoutCause(httpUnavailable(upstream, status));
-    const typed = fetchUnavailable(upstream, e);
-    if (typed instanceof UpstreamUnavailableError) return withoutCause(typed);
+  if (!isContractAnswer(err)) {
+    for (let e: unknown = err, depth = 0; e && depth < 8; e = (e as { cause?: unknown }).cause, depth++) {
+      // An offchain gateway's failure is the name's, not Alchemy's; only a
+      // provider failure on the callback call walks on down the chain.
+      const name = (e as { name?: unknown }).name;
+      if (name === "OffchainLookupError") {
+        const gateway = offchainGatewayFailure(e);
+        if (gateway) return gateway;
+      }
+      const status = (e as { status?: unknown }).status;
+      if (typeof status === "number") return withoutCause(httpUnavailable(upstream, status));
+      const typed = fetchUnavailable(upstream, e);
+      if (typed instanceof UpstreamUnavailableError) return withoutCause(typed);
+      const code = (e as { code?: unknown }).code;
+      if (typeof code === "number") {
+        const rpc = jsonRpcUnavailable(upstream, code, rpcText(e));
+        if (rpc) return rpc;
+      }
+    }
   }
-  const message = err instanceof Error ? err.message : String(err);
-  return new Error(`${prefix}: ${redactRpcSecrets(message)}`);
+  return new Error(`${prefix}: ${safeRpcMessage(err)}`);
+}
+
+/** viem's short message (plus details), redacted, without long hex blobs. */
+function safeRpcMessage(err: unknown): string {
+  const short = (err as { shortMessage?: unknown })?.shortMessage;
+  const details = (err as { details?: unknown })?.details;
+  let text: string;
+  if (typeof short === "string" && short) {
+    text = typeof details === "string" && details && !short.includes(details) ? `${short} (${details})` : short;
+  } else {
+    text = err instanceof Error ? err.message : String(err);
+  }
+  return redactRpcSecrets(text).replace(/0x[0-9a-f]{16,}/gi, "0x…");
 }
 
 function withoutCause(err: Error): Error {

@@ -19,8 +19,9 @@
  * Polygon, Arbitrum and Optimism only. Each served chain also has its own
  * known_answer suite, so production proves every chain separately.
  */
-import { NO_LICENSED_ETH_RPC } from "../../lib/eth-rpc-endpoints.js";
+import { jsonRpcUnavailable, NO_LICENSED_ETH_RPC, redactRpcSecrets } from "../../lib/eth-rpc-endpoints.js";
 import { readJsonWithLimit } from "../../lib/resource-limits.js";
+import { fetchUnavailable, httpUnavailable, UpstreamUnavailableError } from "../../lib/upstream-result.js";
 
 export interface Chain {
   /** Decimal chain id, as returned in outputs. */
@@ -80,19 +81,54 @@ export function requireAddress(raw: unknown, field: string): string {
   return address;
 }
 
+/**
+ * fetchUnavailable returns an error it cannot type unchanged, and that error's
+ * message can quote the request URL, which carries the API key ("Failed to
+ * parse URL from https://…/v2/<key>"). Such an error is rebuilt from its
+ * redacted message, with no cause.
+ */
+function rpcFetchFailure(upstream: string, err: unknown): Error {
+  const typed = fetchUnavailable(upstream, err);
+  if (typed instanceof UpstreamUnavailableError) return typed;
+  return new Error(`${upstream} request failed: ${redactRpcSecrets(err instanceof Error ? err.message : String(err))}`);
+}
+
+/**
+ * One JSON-RPC call. Provider failures (a timeout, a network error, an HTTP
+ * error status, or a JSON-RPC error body that is a rate limit or a rejected
+ * key) throw an unbilled UpstreamUnavailableError; Alchemy sends its rate
+ * limit both as HTTP 429 and as an HTTP 200 carrying code 429, and a rejected
+ * key as HTTP 401/403 with a JSON-RPC body. Any other JSON-RPC error is the
+ * chain's answer and stays a plain error.
+ */
 export async function alchemyRpc<T>(chain: Chain, method: string, params: unknown[]): Promise<T> {
   const endpoint = alchemyUrl(chain);
-  // unguarded-fetch-ok: host comes from the fixed CHAINS registry; user input travels only in the JSON-RPC body
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "User-Agent": "Strale/1.0" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-    signal: AbortSignal.timeout(10000),
-  });
-  if (res.status === 429) throw new Error(`${chain.name} RPC is rate-limiting requests right now. Retry shortly.`);
-  if (!res.ok) throw new Error(`${chain.name} RPC returned HTTP ${res.status}.`);
-  const body = await readJsonWithLimit<{ result?: T; error?: { message?: string } }>(res);
-  if (body.error) throw new Error(`${chain.name} RPC error: ${body.error.message ?? "unknown"}`);
+  const upstream = `${chain.name} RPC (Alchemy)`;
+  let res: Response;
+  try {
+    // unguarded-fetch-ok: host comes from the fixed CHAINS registry; user input travels only in the JSON-RPC body
+    res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": "Strale/1.0" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+      signal: AbortSignal.timeout(10000),
+    });
+  } catch (err) {
+    throw rpcFetchFailure(upstream, err);
+  }
+  if (!res.ok) throw httpUnavailable(upstream, res.status);
+  let body: { result?: T; error?: { code?: unknown; message?: string } };
+  try {
+    body = await readJsonWithLimit<{ result?: T; error?: { code?: unknown; message?: string } }>(res);
+  } catch (err) {
+    throw rpcFetchFailure(upstream, err);
+  }
+  if (body.error) {
+    const message = typeof body.error.message === "string" ? body.error.message : "";
+    const typed = jsonRpcUnavailable(upstream, body.error.code, message);
+    if (typed) throw typed;
+    throw new Error(`${chain.name} RPC error: ${redactRpcSecrets(message) || "unknown"}`);
+  }
   if (body.result === undefined) throw new Error(`${chain.name} RPC returned no result.`);
   return body.result;
 }

@@ -3,6 +3,7 @@ import {
   alchemyRpc, assetTransfers, hexToBigInt, hexToNumber, requireAddress, resolveChain, TRANSFER_CHAINS, weiToEth,
   type AssetTransfer,
 } from "./lib/alchemy-client.js";
+import { UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 // Rebuilt 2026-09-11 onto Alchemy (standard eth_getBalance plus its transfer
 // index) after Etherscan's free API was found to forbid commercial use.
@@ -38,6 +39,13 @@ registerCapability("wallet-balance-lookup", async (input: CapabilityInput) => {
   const names = await Promise.allSettled(
     tokens.map((t) => alchemyRpc<{ name?: string | null }>(chain, "alchemy_getTokenMetadata", [t.address])),
   );
+  // A token Alchemy has no name for reads "Unknown". A provider failure (a
+  // rate limit, a rejected key, a timeout) fails the call, unbilled, rather
+  // than billing names it never read (promise-audit T1 follow-up 33).
+  const providerFailure = names.find(
+    (r): r is PromiseRejectedResult => r.status === "rejected" && r.reason instanceof UpstreamUnavailableError,
+  );
+  if (providerFailure) throw providerFailure.reason;
 
   return {
     output: {
