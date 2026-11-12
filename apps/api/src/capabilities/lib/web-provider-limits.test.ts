@@ -287,6 +287,19 @@ describe("tier 3 (Browserless) HTML is stream-bounded", () => {
     expect(isUserInputError(message)).toBe(true);
   });
 
+  it("a 5xx carrying Chrome's navigation timeout is the slow target's, not Browserless's (promise-audit 59)", async () => {
+    // Browserless answers HTTP 500 for page.goto's timeout (25000 ms is
+    // web-provider's pageTimeout default); apps/api/audit-report.json records
+    // it. The target was slow, so it keeps the target wording.
+    browserlessFetchMock.mockImplementation(
+      async () => new Response("TimeoutError: Navigation timeout of 25000 ms exceeded", { status: 500 }),
+    );
+    const message = await render().then(() => "", (err: Error) => err.message);
+    expect(message).not.toMatch(/rendering service/);
+    expect(message).toMatch(/The target site \(\S+\) returned a server error \(HTTP 500\)/);
+    expect(isUserInputError(message)).toBe(true);
+  });
+
   it("a huge error body is TRUNCATED, not refused — and reading actually STOPS at the cap", async () => {
     // An error body is read to explain a failure; refusing it on size would
     // replace an accurate upstream message with a size error. But asserting

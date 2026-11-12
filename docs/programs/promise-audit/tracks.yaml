@@ -549,13 +549,17 @@ tracks:
       is reported as the registry's failure. Regression tests for (56) and
       (58) are in registry-5xx.upstream-failures.test.ts and fail against
       the previous code.
-      (59) Fixed: a 5xx from Browserless /content whose body names no
-      Chrome net::ERR_* is Browserless itself failing (it answers 200 for a
-      rendered page whatever the target said), and is now worded as 'The
-      page-rendering service (Browserless) returned a server error', which
-      the breaker does not excuse and the taxonomy files as upstream. A 5xx
-      carrying a Chrome navigation failure keeps the target-site wording and
-      stays excused. Regression tests in web-provider-limits.test.ts fail
+      (59) Fixed: Browserless /content answers 200 for a rendered page
+      whatever the target said, and relays Chrome's navigation failures on
+      the target (a net::ERR_*, or the page.goto timeout it sends as HTTP
+      500) as a 5xx. Those keep the target-site wording and stay excused;
+      any other 5xx is now worded 'The page-rendering service (Browserless)
+      returned a server error', which the breaker does not excuse and the
+      taxonomy files as upstream. Recorded, not fixed: other page-side
+      errors relayed as a 5xx (a destroyed execution context, a crashed
+      page) also land on the rendering service; and Browserless's 408
+      ('took too long to load') is not excused while the navigation timeout
+      at 500 is. Regression tests in web-provider-limits.test.ts fail
       against the previous code.
       Next: the (50) recommendation; then measuring past
       billed calls from
