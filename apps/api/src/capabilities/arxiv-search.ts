@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { MAX_FETCHED_API_RESPONSE_BYTES, readTextWithLimit } from "../lib/resource-limits.js";
 import { readBoundedInt } from "../lib/capability-input.js";
+import { UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 // arXiv API — Atom feed of preprints (free, no key). arXiv asks clients to
 // space requests ~3 s apart; one call per invocation and hourly harness
@@ -104,6 +105,13 @@ registerCapability("arxiv-search", async (input: CapabilityInput) => {
   if (!response.ok) throw new Error(`arXiv returned HTTP ${response.status}.`);
 
   const xml = await readTextWithLimit(response, MAX_FETCHED_API_RESPONSE_BYTES, "query", "an endpoint whose response is");
+  // An Atom feed always carries opensearch:totalResults, even for zero
+  // matches. Without it the reply is not the API's answer (a block or
+  // maintenance page served with HTTP 200), and billing it as "no papers"
+  // would sell an outage as an empty result (promise-audit T1 wave 6).
+  if (!/<feed\b/.test(xml) || !/<opensearch:totalResults[^>]*>\d+</.test(xml)) {
+    throw new UpstreamUnavailableError("arXiv API", "the reply was not an Atom search feed; retry shortly.", { code: "unparseable" });
+  }
   const { total, entries } = parseArxivFeed(xml);
 
   return {

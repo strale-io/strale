@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
 import { validateUrl } from "../lib/url-validator.js";
+import { targetUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 const SECURITY_HEADERS: Array<{
   header: string;
@@ -29,6 +30,24 @@ registerCapability("header-security-check", async (input: CapabilityInput) => {
     signal: AbortSignal.timeout(10000),
     // safeFetch follows up to 3 hops with per-hop re-validation
   });
+
+  // A 5xx, 408 or 429 means the site did not serve its page, so its headers
+  // say nothing about the site's security policy; grading them sold an F for
+  // an outage (promise-audit T1 wave 6). Any other answer, a 404 included,
+  // is the site's own response and is graded as it stands.
+  const site = new URL(fullUrl).hostname;
+  if (res.status >= 500 || res.status === 408) {
+    await res.body?.cancel();
+    throw targetUnavailable(site, res.status);
+  }
+  if (res.status === 429) {
+    await res.body?.cancel();
+    throw new UpstreamUnavailableError(site, "URL returned HTTP 429, the site is rate-limiting requests; retry later.", {
+      code: "HTTP 429",
+      retryable: true,
+      targetFault: true,
+    });
+  }
 
   const present: Array<{ header: string; value: string; status: string }> = [];
   const missing: Array<{ header: string; severity: string; recommendation: string }> = [];

@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { UpstreamUnavailableError } from "../lib/upstream-result.js";
 import { EMAIL_RE, checkMx, validateOneEmail, type EmailValidationResult } from "./email-validate.js";
 
 // Batch email validation. Reuses email-validate's validateOneEmail() for the
@@ -200,6 +201,17 @@ registerCapability("email-validate-bulk", async (input: CapabilityInput) => {
   // format/disposable/role checks, but their `valid` verdict is unreliable —
   // we say so explicitly rather than passing off "unchecked" as "no MX".
   const unresolvedDomains = domainList.filter((d) => mxCache.get(d)?.resolved === false);
+  // When no domain's MX lookup completed, nothing past the format check was
+  // learned, and every parsed address would be billed as invalid. Fail
+  // unbilled instead, as single-address email-validate does on a resolver
+  // outage (promise-audit T1 wave 6). A batch with some domains resolved
+  // keeps its partial answer and names the rest in mx_unresolved_domains.
+  if (domainList.length > 0 && unresolvedDomains.length === domainList.length) {
+    throw new UpstreamUnavailableError(
+      "DNS MX query",
+      `no MX lookup completed for any of the ${domainList.length} domain(s); retry shortly.`,
+    );
+  }
 
   const results: Array<EmailValidationResult & { mx_checked?: boolean }> = await Promise.all(
     emails.map(async (email) => {

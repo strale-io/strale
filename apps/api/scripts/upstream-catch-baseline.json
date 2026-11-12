@@ -230,12 +230,6 @@
       "line": 115
     },
     {
-      "file": "apps/api/src/capabilities/ens-resolve.ts",
-      "fingerprint": "92957333f0bd22625f7b79d798d70616cc74def7348416ade933f45a9720c4c3",
-      "count": 1,
-      "line": 129
-    },
-    {
       "file": "apps/api/src/capabilities/estonian-company-data.ts",
       "fingerprint": "d748023648afadbdf127084c8bce2ffa1d4cbef588259b986e91dd00f5fa6c48",
       "count": 1,
@@ -750,12 +744,6 @@
       "fingerprint": "6dddf12e5f40190903f0b05f0b110926fb8a42b33ad810d6329aac1ab31db059",
       "count": 1,
       "line": 38
-    },
-    {
-      "file": "apps/api/src/capabilities/social-profile-check.ts",
-      "fingerprint": "ce058defbd0617e99a87ba3b6f8825fdedf7a3737dec4f2a790c6a610b0f06e5",
-      "count": 1,
-      "line": 137
     },
     {
       "file": "apps/api/src/capabilities/solana-address-validate.ts",

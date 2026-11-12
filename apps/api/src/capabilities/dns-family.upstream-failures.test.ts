@@ -453,9 +453,17 @@ describe("email-deliverability-check: an errored blocklist is unknown, never 'no
 
 describe("email-validate-bulk inherits the fix through the shared checkMx", () => {
   it("marks a timed-out domain mx_checked:false instead of reporting it has no MX", async () => {
-    dns.resolveMx.mockImplementation(reject("ETIMEOUT"));
-    const { output } = await run("email-validate-bulk", { emails: ["jane@example.com"] });
+    dns.resolveMx.mockImplementation(async (domain: string) => {
+      if (domain === "example.com") throw Object.assign(new Error("queryMx ETIMEOUT"), { code: "ETIMEOUT" });
+      return [{ exchange: "mx.example.org", priority: 10 }];
+    });
+    const { output } = await run("email-validate-bulk", { emails: ["jane@example.com", "joe@example.org"] });
     const [first] = output.results as Array<Record<string, unknown>>;
     expect(first).toMatchObject({ email: "jane@example.com", mx_checked: false });
+  });
+
+  it("REGRESSION (promise-audit T1 wave 6): no MX lookup completing is an outage, not a billed batch", async () => {
+    dns.resolveMx.mockImplementation(reject("ETIMEOUT"));
+    await expect(run("email-validate-bulk", { emails: ["jane@example.com"] })).rejects.toBeInstanceOf(UpstreamUnavailableError);
   });
 });

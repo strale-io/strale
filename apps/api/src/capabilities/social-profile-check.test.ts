@@ -19,6 +19,7 @@ vi.mock("../lib/safe-fetch.js", async (importOriginal) => ({
 import { getDirectExecutor } from "./index.js";
 import { STRALE_USER_AGENT } from "../lib/site-access.js";
 import { isCapabilityRefusal } from "../lib/capability-refusal.js";
+import { UpstreamUnavailableError } from "../lib/upstream-result.js";
 import "./social-profile-check.js";
 
 type Profile = { platform: string; kind: string; exists: boolean | null; status_code: number | null; url: string };
@@ -28,7 +29,8 @@ let statusFor: (url: string) => number;
 beforeEach(() => {
   safeFetchMock.mockReset();
   statusFor = () => 404;
-  safeFetchMock.mockImplementation(async (url: string) => new Response("{}", { status: statusFor(String(url)) }));
+  // Every registry answers JSON, as the real APIs do.
+  safeFetchMock.mockImplementation(async (url: string) => new Response("{}", { status: statusFor(String(url)), headers: { "content-type": "application/json" } }));
 });
 
 async function check(username: string) {
@@ -94,11 +96,44 @@ describe("answers", () => {
     expect(r.output.available_platforms).toEqual(["npm"]);
   });
 
-  it("a transport failure is unknown too", async () => {
-    safeFetchMock.mockRejectedValue(new Error("fetch failed"));
+  it("a transport failure on one registry is unknown there; the others still answer", async () => {
+    safeFetchMock.mockImplementation(async (url: string) => {
+      if (String(url).includes("pypi")) throw new TypeError("fetch failed", { cause: Object.assign(new Error("read ECONNRESET"), { code: "ECONNRESET" }) });
+      return new Response("{}", { status: 404, headers: { "content-type": "application/json" } });
+    });
     const r = await check("acme");
-    expect((r.output.profiles as Profile[]).every((p) => p.exists === null)).toBe(true);
-    expect(r.output.available_platforms).toEqual([]);
+    const profiles = r.output.profiles as Profile[];
+    expect(profiles.find((p) => p.platform === "PyPI")?.exists).toBeNull();
+    expect(r.output.available_platforms).toEqual(["npm"]);
+  });
+
+  it("REGRESSION (promise-audit T1 wave 6): no registry answering is an outage, not a billed answer", async () => {
+    safeFetchMock.mockRejectedValue(new TypeError("fetch failed", { cause: Object.assign(new Error("read ECONNRESET"), { code: "ECONNRESET" }) }));
+    await expect(check("acme")).rejects.toBeInstanceOf(UpstreamUnavailableError);
+  });
+
+  it("REGRESSION (promise-audit T1 wave 6): a 200 challenge page is unknown, not 'taken'", async () => {
+    safeFetchMock.mockImplementation(async (url: string) =>
+      String(url).includes("registry.npmjs.org")
+        ? new Response("<html><title>Just a moment...</title></html>", { status: 200, headers: { "content-type": "text/html" } })
+        : new Response("{}", { status: 404, headers: { "content-type": "application/json" } }),
+    );
+    const r = await check("acme");
+    const profiles = r.output.profiles as Profile[];
+    expect(profiles.find((p) => p.platform === "npm")?.exists).toBeNull();
+    expect(r.output.found_count).toBe(0);
+  });
+
+  it("REGRESSION (promise-audit T1 wave 6 review): a 404 HTML page is unknown, not 'available'", async () => {
+    safeFetchMock.mockImplementation(async (url: string) =>
+      String(url).includes("pypi.org")
+        ? new Response("<html><title>Maintenance</title></html>", { status: 404, headers: { "content-type": "text/html" } })
+        : new Response("{}", { status: 404, headers: { "content-type": "application/json" } }),
+    );
+    const r = await check("acme");
+    const profiles = r.output.profiles as Profile[];
+    expect(profiles.find((p) => p.platform === "PyPI")?.exists).toBeNull();
+    expect(profiles.find((p) => p.platform === "npm")?.exists).toBe(false);
   });
 });
 
