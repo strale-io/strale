@@ -34,6 +34,7 @@ import { keyCapError } from "../api-keys.js";
 import { setCostDeadline, noteUnknownCost, withCallCost } from "../call-cost.js";
 import { sortKeysDeep } from "../canonical/jcs.js";
 import { refusalDetails } from "../capability-refusal.js";
+import { sourceBlockDetails } from "../site-access.js";
 import { checkCircuitBreaker, recordFailure, recordSuccess } from "../circuit-breaker.js";
 import { EUR_USD_RATE } from "../currency.js";
 import { apiError, type ApiError } from "../errors.js";
@@ -420,7 +421,7 @@ async function runItem(ctx: RunContext, index: number, input: Record<string, unk
         message: timedOut ? "The item exceeded its time budget. You were not charged for it." : "The item failed to execute. You were not charged for it.",
         retryable: timedOut,
         detail: sanitizeFailureReason(errorMessage),
-        ...refusalDetails(err),
+        ...(refusalDetails(err) ?? sourceBlockDetails(err)),
       },
     };
   }

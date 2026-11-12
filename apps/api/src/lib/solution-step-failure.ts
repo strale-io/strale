@@ -17,6 +17,7 @@
 import { recoveryDetails } from "./errors.js";
 import { refusalDetails } from "./capability-refusal.js";
 import { sanitizeFailureReason } from "./sanitize.js";
+import { sourceBlockDetails } from "./site-access.js";
 import { UpstreamUnavailableError } from "./upstream-result.js";
 
 export interface StepFailure {
@@ -38,9 +39,13 @@ export function stepFailure(capabilitySlug: string, err: unknown, opts: { final?
   const message = err instanceof Error ? err.message : String(err);
   const error = sanitizeFailureReason(message.slice(0, 200));
   const refusal = refusalDetails(err);
+  // Read from the object, not the truncated message: a long hostname can cut
+  // the marker a source block is recognised by (follow-up 51).
+  const block = refusal ? undefined : sourceBlockDetails(err);
   let details: Record<string, unknown>;
   if (opts.final) details = { retryable: false, next_step: NO_RETRY_NEXT_STEP, error };
   else if (refusal) details = { ...refusal, error };
+  else if (block) details = { ...block, error };
   else if (err instanceof UpstreamUnavailableError)
     details = { retryable: err.retryable, next_step: err.retryable ? RETRY_NEXT_STEP : NO_RETRY_NEXT_STEP, error };
   else details = recoveryDetails("execution_failed", "", { error });

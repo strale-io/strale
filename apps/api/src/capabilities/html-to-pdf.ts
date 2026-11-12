@@ -47,8 +47,10 @@ registerCapability("html-to-pdf", async (input: CapabilityInput) => {
     // DEC-20261023-A: robots.txt before Browserless is asked for the page.
     await assertRobotsAllowed(fullUrl);
     // Chrome can get through a JavaScript challenge before the PDF is
-    // printed; a plain look first stops at the block instead.
-    await assertPlainPreflightAllowed(fullUrl);
+    // printed; a plain look first stops at the block instead. A PDF cannot
+    // be read for a challenge afterwards, so a site the plain look cannot
+    // reach ends the call unbilled (promise-audit T1 follow-up 49).
+    await assertPlainPreflightAllowed(fullUrl, { opaqueRender: true });
     bodyObj.url = fullUrl;
     bodyObj.gotoOptions = { waitUntil: "networkidle0", timeout: 25000 };
   } else {

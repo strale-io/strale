@@ -61,6 +61,7 @@ import {
 } from "../lib/site-access.js";
 import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { classifyTransactionFailure } from "../lib/transaction-failure-taxonomy.js";
+import { UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 import "./tech-stack-detect.js";
 import "./cookie-scan.js";
@@ -371,6 +372,60 @@ describe("screenshots and PDFs of a block page are refused, not billed", () => {
       const err = await run(slug, input);
       expect(err).toBeInstanceOf(SiteAccessRefusedError);
       expect(browserlessFetchMock).not.toHaveBeenCalled();
+    });
+  }
+
+  // Promise-audit T1 follow-up 49. A PNG or a PDF cannot be read for a
+  // challenge afterwards, so when the plain look cannot reach the site the
+  // call ends there, unbilled, instead of capturing a page nobody checked.
+  const fetchFailed = (cause: unknown) => Object.assign(new TypeError("fetch failed"), { cause });
+  const coded = (code: string) => Object.assign(new Error(`connect ${code}`), { code });
+  // Node's happy-eyeballs error, as observed on Node 22: an AggregateError
+  // whose own code is its first leg's (IPv6 is tried first).
+  const dualStack = (...codes: string[]) => Object.assign(new AggregateError(codes.map(coded)), { code: codes[0] });
+  // Headers arrive, then the body fails: undici's "terminated", or a stall that
+  // hits the 8 s signal mid-body.
+  const bodyFails = (err: Error) => () => new Response(
+    new ReadableStream({ start(c) { c.error(err); } }),
+    { status: 200, headers: { "content-type": "text/html" } },
+  );
+  const unseen: Array<[string, () => Response]> = [
+    ["a timeout", () => { throw Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError", code: 23 }); }],
+    ["a reset connection", () => { throw fetchFailed(coded("ECONNRESET")); }],
+    ["a redirect loop", () => { throw new Error("Too many redirects (>5) — refusing to follow further. Starting URL: https://site.test."); }],
+    ["a body reset after the headers", bodyFails(Object.assign(new TypeError("terminated"), { cause: Object.assign(new Error("other side closed"), { code: "UND_ERR_SOCKET" }) }))],
+    ["a body that stalls past the timeout", bodyFails(Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError", code: 23 }))],
+    ["a dual-stack connect the site refused on IPv4", () => { throw fetchFailed(dualStack("EAFNOSUPPORT", "ECONNREFUSED")); }],
+  ];
+  const nodeOnly: Array<[string, () => Response]> = [
+    ["legacy TLS", () => { throw fetchFailed(Object.assign(new Error("packet length too long"), { code: "ERR_SSL_PACKET_LENGTH_TOO_LONG" })); }],
+    ["an incomplete certificate chain", () => { throw fetchFailed(Object.assign(new Error("unable to verify the first certificate"), { code: "UNABLE_TO_VERIFY_LEAF_SIGNATURE" })); }],
+    ["a strict-parser failure", () => { throw fetchFailed(Object.assign(new Error("Response does not match the HTTP/1.1 protocol"), { name: "HTTPParserError" })); }],
+    ["an IPv6-only site with no IPv6 route here", () => { throw fetchFailed(dualStack("EAFNOSUPPORT", "ENETUNREACH")); }],
+    ["an address family this network lacks", () => { throw fetchFailed(coded("ENETUNREACH")); }],
+  ];
+  for (const slug of ["screenshot-url", "html-to-pdf"]) {
+    for (const [what, failure] of unseen) {
+      it(`REGRESSION: ${slug} ends unbilled on ${what} in the plain look, before Browserless is asked`, async () => {
+        pageResponse = failure;
+        const err = await run(slug, { url: "https://site.test" });
+        expect(err).toBeInstanceOf(UpstreamUnavailableError);
+        expect((err as UpstreamUnavailableError).targetFault).toBe(true);
+        expect(browserlessFetchMock).not.toHaveBeenCalled();
+      });
+    }
+    it(`${slug} still renders after a failure only Node has (legacy TLS, chain, parser, address family)`, async () => {
+      browserlessFetchMock.mockImplementation(async () =>
+        slug === "screenshot-url"
+          ? new Response(Buffer.from([0x89, 0x50, 0x4e, 0x47]), { status: 200, headers: { "content-type": "image/png" } })
+          : new Response(Buffer.from("%PDF-1.4"), { status: 200, headers: { "content-type": "application/pdf" } }),
+      );
+      for (const [what, failure] of nodeOnly) {
+        browserlessFetchMock.mockClear();
+        pageResponse = failure;
+        expect(await run(slug, { url: "https://site.test" }), what).toBeNull();
+        expect(browserlessFetchMock, what).toHaveBeenCalledTimes(1);
+      }
     });
   }
 
