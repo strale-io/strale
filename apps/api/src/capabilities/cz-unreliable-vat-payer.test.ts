@@ -40,6 +40,8 @@ describe("cz-unreliable-vat-payer", () => {
     const { output } = await run();
     expect(output.is_registered_vat_payer).toBe(false);
     expect(output.is_unreliable_payer).toBeNull();
+    expect(output.dic).toBeNull();
+    expect(output.joint_liability_risk).not.toMatch(/reliable/i);
   });
 
   it("reports a reliable payer with its published account", async () => {
@@ -67,6 +69,11 @@ describe("cz-unreliable-vat-payer", () => {
   it("throws when an OK reply carries no payer status", async () => {
     reply(soap(OK_STATUS));
     await expect(run()).rejects.toThrow(/carried no payer status/);
+  });
+
+  it("throws, rather than reporting a reliable payer, when the reliability flag is missing", async () => {
+    reply(soap(`${OK_STATUS}<statusPlatceDPH dic="12345679" cisloFu="451"/>`));
+    await expect(run()).rejects.toThrow(/carried no reliability status/);
   });
 
   it("still throws on a non-zero status code", async () => {

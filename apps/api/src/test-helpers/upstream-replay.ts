@@ -178,6 +178,15 @@ function skewJson(value: unknown): unknown {
 }
 
 const PLAIN_NUMBER = /^-?\d+(?:\.\d+)?$/;
+
+/**
+ * An XML attribute that carries the protocol's own status, not content (the
+ * MF ČR register's statusCode="0"). Skewing it turns an OK reply into a fault
+ * the executor must throw on, so skew would only exercise the fault path and
+ * never reach the values the contract reads. `hollow` and `empty` still
+ * perturb it.
+ */
+const PROTOCOL_STATUS_ATTRIBUTE = /^(?:[\w.-]+:)?(?:status|result|return|error)Code$/i;
 const skewNumber = (text: string) => (PLAIN_NUMBER.test(text) ? String(Number(text) * 1000 + 7) : text);
 
 /**
@@ -205,7 +214,11 @@ function perturbed(recorded: RecordedResponse, mode: Perturbation): string {
   if (mode === "hollow" && text.startsWith("<")) return text.replace(/=(?:"[^"]*"|'[^']*')/g, (m: string) => `=${m[1]}${m[1]}`).replace(/>[^<]+</g, "><");
   if (mode === "skew" && text.startsWith("<")) {
     return text
-      .replace(/=(?:"([^"]*)"|'([^']*)')/g, (m: string, dq?: string, sq?: string) => `=${m[1]}${skewNumber(dq ?? sq ?? "")}${m[1]}`)
+      .replace(/([\w:.-]+)=(?:"([^"]*)"|'([^']*)')/g, (m: string, name: string, dq?: string, sq?: string) => {
+        if (PROTOCOL_STATUS_ATTRIBUTE.test(name)) return m;
+        const q = m[name.length + 1];
+        return `${name}=${q}${skewNumber(dq ?? sq ?? "")}${q}`;
+      })
       .replace(/>([^<]+)</g, (whole, v: string) => (PLAIN_NUMBER.test(v.trim()) ? `>${skewNumber(v.trim())}<` : whole));
   }
   return "";

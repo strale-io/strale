@@ -170,12 +170,6 @@
       "line": 289
     },
     {
-      "file": "apps/api/src/capabilities/domain-reputation.ts",
-      "fingerprint": "682f35261c31e3f188f65c0fcca45f0fc3194d3b2c8a2c59c997c2099eca8f94",
-      "count": 1,
-      "line": 79
-    },
-    {
       "file": "apps/api/src/capabilities/email-finder.ts",
       "fingerprint": "2721114eb030374768bff837bb11a33938b8fe896032dcdbe916233aeca4f88e",
       "count": 1,
@@ -918,12 +912,6 @@
       "fingerprint": "e67f71d79ec3dd1770d6834b707193a11260d1a9f4a020af0a5f4e35ee96e557",
       "count": 1,
       "line": 44
-    },
-    {
-      "file": "apps/api/src/capabilities/youtube-summarize.ts",
-      "fingerprint": "a65d0f37d53a9a3643d563cd6f42fad765d69d202af46aacec51fbadc7af2185",
-      "count": 1,
-      "line": 137
     },
     {
       "file": "apps/api/src/capabilities/youtube-summarize.ts",

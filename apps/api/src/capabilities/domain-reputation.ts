@@ -3,6 +3,7 @@ import dns from "node:dns/promises";
 import { dnsOrEmpty } from "../lib/upstream-result.js";
 import { validateHost } from "../lib/url-validator.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { SiteAccessRefusedError, SourceBlockedError } from "../lib/site-access.js";
 
 registerCapability("domain-reputation", async (input: CapabilityInput) => {
   let domain = ((input.domain as string) ?? (input.url as string) ?? (input.task as string) ?? "").trim().toLowerCase();
@@ -76,7 +77,9 @@ registerCapability("domain-reputation", async (input: CapabilityInput) => {
 
     if (!hsts) { issues.push("No HSTS header"); score -= 5; }
     if (!xcto) { issues.push("No X-Content-Type-Options header"); score -= 3; }
-  } catch {
+  } catch (err) {
+    // degraded-ok: a site's refusal of Strale (robots.txt, an anti-bot challenge) is rethrown, unbilled; any other failure to open the domain's HTTPS endpoint is this check's finding, https_works false. Before wave 3 a refusal was billed as "HTTPS connection failed".
+    if (err instanceof SiteAccessRefusedError || err instanceof SourceBlockedError) throw err;
     checks.https_works = false;
     issues.push("HTTPS connection failed");
     score -= 20;

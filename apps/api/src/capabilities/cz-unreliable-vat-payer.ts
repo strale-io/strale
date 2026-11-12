@@ -109,9 +109,14 @@ function parseResponse(xml: string): {
   }
 
   const dic = xml.match(/<statusPlatceDPH[^>]*\bdic="([^"]+)"/)?.[1] ?? null;
-  const nespolehlivy = xml.match(/\bnespolehlivyPlatce="([^"]+)"/)?.[1];
-  const isUnreliable =
-    nespolehlivy === "ANO" ? true : nespolehlivy === "NE" ? false : null;
+  // The schema allows only ANO, NE or NENALEZEN (handled above). Anything else
+  // is a malformed reply; reading it as "reliability unknown" produced a billed
+  // "Payer is reliable" risk text (promise-audit T1 wave 3 review).
+  const nespolehlivy = platceBlock.match(/\bnespolehlivyPlatce="([^"]+)"/)?.[1];
+  if (nespolehlivy !== "ANO" && nespolehlivy !== "NE") {
+    throw new UpstreamUnavailableError(MFCR_SERVICE, "the reply carried no reliability status.", { code: "unparseable" });
+  }
+  const isUnreliable = nespolehlivy === "ANO";
   const fu = xml.match(/\bcisloFu="([^"]+)"/)?.[1] ?? null;
 
   const accounts: PublishedAccount[] = [];
@@ -187,6 +192,7 @@ registerCapability("cz-unreliable-vat-payer", async (input: CapabilityInput) => 
     return {
       output: {
         input_dic: dic,
+        dic: null,
         is_registered_vat_payer: false,
         is_unreliable_payer: null,
         financial_office_code: null,
@@ -194,7 +200,7 @@ registerCapability("cz-unreliable-vat-payer", async (input: CapabilityInput) => 
         published_account_count: 0,
         response_generated_at: parsed.response_generated_at,
         joint_liability_risk:
-          "DIČ is NOT registered as a VAT payer in the Czech VAT register. Treat as non-VAT-registered for invoice handling.",
+          "This DIČ is not in the Czech register of VAT payers. If the invoice charges Czech VAT, check the DIČ the supplier is registered under.",
       },
       provenance: {
         source: "MF ČR rozhraniCRPDPH SOAP",

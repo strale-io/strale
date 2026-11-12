@@ -104,6 +104,13 @@ limitations:
     severity: info
     workaround: >-
       Validate the expected response schema and test business rules separately.
+  - title: Endpoints that block automated requests cannot be checked
+    text: >-
+      When the endpoint's site answers with an anti-bot challenge page or its robots.txt disallows the path, the call
+      fails with an error and is not billed, rather than reporting the endpoint healthy or unhealthy.
+    category: coverage
+    severity: info
+    workaround: Check endpoints behind bot protection from an allowlisted monitor of your own.
   - title: API responses are limited to 4 MiB
     text: >-
       API response bodies above 4 MiB are refused during download rather than parsed.
