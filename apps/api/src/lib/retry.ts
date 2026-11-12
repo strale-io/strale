@@ -145,7 +145,9 @@ export async function withRetry<T>(
  * The one transient-retry policy for running a capability executor on a
  * customer rail. Deterministic capabilities run once (a retry cannot change
  * their answer); everything else gets one retry after ~1 s on the transient
- * patterns above (429/502/503/504, network resets).
+ * patterns above (429/502/503/504, network resets). A capability refusal
+ * (a site that blocks Strale, a policy refusal, bad input) is never retried,
+ * even when its text names HTTP 429.
  *
  * Shared on purpose. Until 2026-10-19 only POST /v1/do applied this policy;
  * the x402 gateway called the executor bare, so a wallet buyer whose request
