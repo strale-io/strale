@@ -1,7 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import dns from "node:dns/promises";
 import { dnsOrEmpty, isConnectionFailure, targetUnavailable } from "../lib/upstream-result.js";
-import { validateHost } from "../lib/url-validator.js";
+import { UrlValidationError, validateHost } from "../lib/url-validator.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { SiteAccessRefusedError, SourceBlockedError, isChallengeResponse, siteAccessRefusal } from "../lib/site-access.js";
 
@@ -61,11 +61,15 @@ registerCapability("domain-reputation", async (input: CapabilityInput) => {
   // HTTPS. An anti-bot challenge marked by cf-mitigated is the one answer that
   // is refused, unbilled: its headers belong to the interstitial, not the
   // domain's site (a HEAD carries no body, so a body-only challenge is graded
-  // on the interstitial's headers). Only a failure at the network or TLS layer
-  // of the domain itself is graded as "HTTPS connection failed"; Strale's own
-  // refusals, a refused redirect target, a redirect loop and the probe's own
-  // timeout say nothing about the domain's HTTPS and are thrown, unbilled
-  // (promise-audit T1 follow-up 23).
+  // on the interstitial's headers). Only the domain's own HTTPS is graded: a
+  // failure at its network or TLS layer ("HTTPS connection failed") or no
+  // answer within the probe's 8 s ("HTTPS did not answer within 8 seconds";
+  // undici's own connect timeout is 10 s, so a port that drops connections
+  // ends here, and a retry would not change it). Strale's own refusals and a
+  // redirect to a restricted address say nothing about the domain's HTTPS
+  // and are thrown, unbilled (promise-audit T1 follow-up 23). A redirect
+  // chain longer than safeFetch's cap is graded on the 3xx it ends at: an
+  // HTTPS answer is proof that HTTPS works.
   const httpsUrl = `https://${domain}/`;
   let resp: Response | null = null;
   try {
@@ -74,13 +78,18 @@ registerCapability("domain-reputation", async (input: CapabilityInput) => {
       method: "HEAD",
       purpose: "availability_probe",
       signal: AbortSignal.timeout(8000),
+      returnOnRedirectCap: true,
     });
   } catch (err) {
-    // degraded-ok: a connection or TLS failure of the domain itself is this check's finding, https_works false; anything else is rethrown, unbilled.
+    // degraded-ok: a connection or TLS failure of the domain itself, or no answer in 8 s, is this check's finding, https_works false; anything else is rethrown, unbilled.
     if (err instanceof SiteAccessRefusedError || err instanceof SourceBlockedError) throw err;
-    if (!isConnectionFailure(err)) throw targetUnavailable(httpsUrl, err);
+    if (err instanceof UrlValidationError) {
+      throw new UrlValidationError(`${domain} redirected to a URL that targets a restricted address, so Strale did not follow it.`);
+    }
+    const timedOut = (err as { name?: unknown } | null)?.name === "TimeoutError";
+    if (!timedOut && !isConnectionFailure(err)) throw targetUnavailable(httpsUrl, err);
     checks.https_works = false;
-    issues.push("HTTPS connection failed");
+    issues.push(timedOut ? "HTTPS did not answer within 8 seconds" : "HTTPS connection failed");
     score -= 20;
   }
 

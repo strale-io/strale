@@ -4,9 +4,10 @@
  * - domain-reputation (23): its HTTPS check graded every failure of the HEAD
  *   probe as "HTTPS connection failed" and billed it, including failures that
  *   say nothing about the domain's HTTPS: a ToS-blocklisted domain (Strale's
- *   own refusal), a redirect to a private address (a refused URL), a redirect
- *   loop and the probe's own 8 s timeout. Only a failure at the network or
- *   TLS layer of the domain itself is graded now; the others throw, unbilled.
+ *   own refusal), a redirect to a private address (a refused URL) and
+ *   Strale's own SSRF block. Those throw now, unbilled. A redirect chain
+ *   past safeFetch's cap is graded on the 3xx it ends at (HTTPS answered),
+ *   and no answer within 8 s keeps its grade under its own issue text.
  * - robots-txt-parse (18): an HTML page served with 200 at /robots.txt (a
  *   soft 404) was returned as a robots.txt that exists with no rules. It now
  *   reads as no robots.txt, the same answer a 404 gives.
@@ -15,7 +16,7 @@
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { loadExecutor, loadManifest } from "../test-helpers/known-answer-contract.js";
-import { outcomeFromError } from "../lib/execution-outcome.js";
+import { outcomeFromError, outcomeFromOutput } from "../lib/execution-outcome.js";
 
 const dnsStub = vi.hoisted(() => {
   const empty = async () => [];
@@ -77,22 +78,36 @@ describe("domain-reputation grades only the domain's own HTTPS failure (follow-u
 
   it("refuses a redirect to a private address rather than grading it", async () => {
     serve(() => new Response(null, { status: 301, headers: { location: "http://127.0.0.1/" } }));
-    await expectUnbilled(run("domain-reputation", { domain: "private-hop.example.com" }));
+    const outcome = await expectUnbilled(run("domain-reputation", { domain: "private-hop.example.com" }));
+    expect(outcome.fault).toBe("caller");
+    expect(outcome.error_message).toBe(
+      "private-hop.example.com redirected to a URL that targets a restricted address, so Strale did not follow it.",
+    );
   });
 
-  it("does not grade a redirect loop as an HTTPS failure", async () => {
+  it("grades a redirect chain past the cap on the 3xx it ends at, not as a failure", async () => {
     let n = 0;
-    serve(() => new Response(null, { status: 302, headers: { location: `https://loop.example.com/${++n}` } }));
-    const outcome = await expectUnbilled(run("domain-reputation", { domain: "loop.example.com" }));
-    expect(outcome.error_message).toMatch(/kept redirecting/);
+    serve(() =>
+      new Response(null, {
+        status: 302,
+        headers: { location: `https://longchain.example.com/${++n}`, "strict-transport-security": "max-age=1" },
+      }),
+    );
+    const { output } = await run("domain-reputation", { domain: "longchain.example.com" });
+    expect(output.checks.https_works).toBe(true);
+    expect(output.checks.https_status).toBe(302);
+    expect(output.checks.has_hsts).toBe(true);
+    expect(output.issues).not.toContain("HTTPS connection failed");
   });
 
-  it("does not grade its own probe timeout as an HTTPS failure", async () => {
+  it("grades no answer within 8 s under its own issue, not as a refused connection", async () => {
     vi.stubGlobal("fetch", async () => {
       throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
     });
-    const outcome = await expectUnbilled(run("domain-reputation", { domain: "slow.example.com" }));
-    expect(outcome.retryable).toBe(true);
+    const { output } = await run("domain-reputation", { domain: "slow.example.com" });
+    expect(output.checks.https_works).toBe(false);
+    expect(output.issues).toContain("HTTPS did not answer within 8 seconds");
+    expect(output.issues).not.toContain("HTTPS connection failed");
   });
 
   it("still grades a TLS failure of the domain itself", async () => {
@@ -104,6 +119,16 @@ describe("domain-reputation grades only the domain's own HTTPS failure (follow-u
     const { output } = await run("domain-reputation", { domain: "expired.example.com" });
     expect(output.checks.https_works).toBe(false);
     expect(output.issues).toContain("HTTPS connection failed");
+  });
+
+  it("does not grade a temporary failure of Strale's own resolver", async () => {
+    vi.stubGlobal("fetch", async () => {
+      throw Object.assign(new TypeError("fetch failed"), {
+        cause: Object.assign(new Error("getaddrinfo EAI_AGAIN"), { code: "EAI_AGAIN" }),
+      });
+    });
+    const outcome = await expectUnbilled(run("domain-reputation", { domain: "resolver.example.com" }));
+    expect(outcome.retryable).toBe(true);
   });
 
   it("refuses Strale's own connect-time SSRF block rather than grading it", async () => {
@@ -121,8 +146,36 @@ describe("robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18
     const page = "<!DOCTYPE html><html><head><title>Not found</title></head><body><h1>Oops</h1></body></html>";
     serve(() => new Response(page, { status: 200, headers: { "content-type": "text/html; charset=utf-8" } }));
     const { output } = await run("robots-txt-parse", { url: "https://soft404.example.com" });
+    expect(output).toEqual({
+      url: "https://soft404.example.com/robots.txt",
+      exists: false,
+      message: "No robots.txt found: the site answered with an HTML page.",
+      rules: [],
+      sitemaps: [],
+      user_agents: [],
+      blocks_all_crawlers: false,
+    });
+    expect(outcomeFromOutput("robots-txt-parse", output).billable, "no robots.txt is a real answer").toBe(true);
+  });
+
+  it("gives a 404 the fields the manifest guarantees", async () => {
+    serve(() => new Response("", { status: 404 }));
+    const { output } = await run("robots-txt-parse", { url: "https://missing.example.com" });
+    expect(output).toMatchObject({ exists: false, message: "No robots.txt found.", rules: [], sitemaps: [], user_agents: [] });
+    expect(output.blocks_all_crawlers).toBe(false);
+  });
+
+  it("keeps a robots.txt that opens with an HTML-style comment and has rules", async () => {
+    serve(() => new Response("<!-- managed by CMS -->\nUser-agent: *\nDisallow: /tmp\n", { status: 200 }));
+    const { output } = await run("robots-txt-parse", { url: "https://htmlcomment.example.com" });
+    expect(output.exists).toBe(true);
+    expect(output.total_disallow_rules).toBe(1);
+  });
+
+  it("reads an HTML page after a byte-order mark as no robots.txt", async () => {
+    serve(() => new Response("\uFEFF<html><body>Home</body></html>", { status: 200, headers: { "content-type": "text/html" } }));
+    const { output } = await run("robots-txt-parse", { url: "https://bom.example.com" });
     expect(output.exists).toBe(false);
-    expect(output.rules).toBeUndefined();
   });
 
   it("reads an HTML page as no robots.txt even when it is served as text/plain", async () => {

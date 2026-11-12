@@ -4,6 +4,12 @@ import { readRobotsTxt } from "../lib/resource-limits.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { isChallengeResponse, siteAccessRefusal } from "../lib/site-access.js";
 
+/**
+ * The fields output_field_reliability marks guaranteed, as a site without a
+ * robots.txt has them: no rules, no sitemaps, nothing blocked.
+ */
+const NO_ROBOTS_TXT = { rules: [], sitemaps: [], user_agents: [], blocks_all_crawlers: false } as const;
+
 registerCapability("robots-txt-parse", async (input: CapabilityInput) => {
   let url = ((input.url as string) ?? (input.domain as string) ?? (input.task as string) ?? "").trim();
   if (!url) throw new Error("'url' (website URL or domain) is required.");
@@ -23,7 +29,7 @@ registerCapability("robots-txt-parse", async (input: CapabilityInput) => {
   if (response.status === 404) {
     await discardBody(response, "robots-txt-parse: no robots.txt");
     return {
-      output: { url: robotsUrl, exists: false, message: "No robots.txt found." },
+      output: { url: robotsUrl, exists: false, message: "No robots.txt found.", ...NO_ROBOTS_TXT },
       provenance: { source: "http-fetch", fetched_at: new Date().toISOString() },
     };
   }
@@ -75,7 +81,7 @@ registerCapability("robots-txt-parse", async (input: CapabilityInput) => {
   // follow-up 18). A real robots.txt mislabelled as text/html still parses.
   if (rules.length === 0 && sitemaps.length === 0 && text.trimStart().startsWith("<")) {
     return {
-      output: { url: robotsUrl, exists: false, message: "No robots.txt found: the site answered with an HTML page." },
+      output: { url: robotsUrl, exists: false, message: "No robots.txt found: the site answered with an HTML page.", ...NO_ROBOTS_TXT },
       provenance: { source: "http-fetch", fetched_at: new Date().toISOString() },
     };
   }

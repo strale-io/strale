@@ -240,16 +240,23 @@ export function ssrfBlocked(err: unknown): Error | null {
 
 /**
  * True when a request failed at the network or TLS layer of the target
- * itself: undici's `fetch failed` / `terminated` wrapper (a refused or reset
- * connection, a TLS handshake or certificate failure) or a bare errno Error
- * from the resolver or socket. Strale's own SSRF refusal is not one. A probe
- * that grades a target's reachability as its finding (domain-reputation's
- * HTTPS check) grades only these; a refusal, a URL validation error, a
- * redirect loop or the probe's own timeout says nothing about the target and
- * is thrown instead (promise-audit T1 follow-up 23).
+ * itself: any undici `fetch failed` / `terminated` wrapper (a refused or
+ * reset connection, a TLS handshake or certificate failure) other than
+ * Strale's own SSRF refusal, or a bare errno Error from the resolver or
+ * socket, except a temporary failure of Strale's own resolver (EAI_AGAIN).
+ * A probe that grades a target's reachability as its finding
+ * (domain-reputation's HTTPS check) grades these; a refusal, a URL validation
+ * error or a redirect loop says nothing about the target and is thrown
+ * instead (promise-audit T1 follow-up 23). A timeout is not one: whether it
+ * is a finding is the caller's call.
  */
 export function isConnectionFailure(err: unknown): boolean {
   if (ssrfBlocked(err)) return false;
+  // EAI_AGAIN is a temporary failure of Strale's own resolver, not the
+  // target's: thrown and retried, as the DNS checks do (PR #1025 review).
+  for (const e of [err, (err as { cause?: unknown } | null)?.cause]) {
+    if ((e as { code?: unknown } | null)?.code === "EAI_AGAIN") return false;
+  }
   if (err instanceof TypeError && (err.message === "fetch failed" || err.message === "terminated")) return true;
   const errno = (err as { code?: unknown } | null)?.code;
   return err instanceof Error && typeof errno === "string" && NETWORK_ERRNO.has(errno);
