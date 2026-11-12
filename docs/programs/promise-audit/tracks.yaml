@@ -421,7 +421,9 @@ tracks:
       video may not have captions'. robots-txt-parse (48) files the caller's
       site failing as the target's (unbilled, not counted) and refuses a block
       status or challenge. Manifests for the three data tools say so; the boot
-      sync publishes them. Independent review GO. Found, not fixed: (52)
+      sync publishes them. robots-txt-parse now calls targetUnavailable, so
+      the (41) Accept guard pins it as a twelfth tool; it sends no Accept,
+      so Node's */* applies. Independent review GO. Found, not fixed: (52)
       youtube-summarize fetches the caption track (youtube.com/api/timedtext)
       with a plain fetch, no robots check and no Strale user agent, and
       YouTube's robots.txt disallows /api/ for every agent, so each successful
