@@ -1,6 +1,6 @@
 import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { validateUrl } from "../lib/url-validator.js";
+import { UrlValidationError, validateUrl } from "../lib/url-validator.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { logWarn } from "../lib/log.js";
 import { readTextTruncated } from "../lib/resource-limits.js";
@@ -205,7 +205,11 @@ registerCapability("page-exists", async (input: CapabilityInput) => {
     // weather: they fail the call exactly like the pre-flight validateUrl.
     const ssrf = ssrfBlocked(err);
     if (ssrf) throw ssrf;
-    if (err instanceof Error && err.message.includes("restricted")) throw err;
+    // The validator's own refusal on a redirect hop (a restricted address or a
+    // scheme other than http(s)), recognised by its type:
+    // matching the word "restricted" also caught a redirect loop, whose
+    // message names its starting URL (promise-audit T1 follow-up 35).
+    if (err instanceof UrlValidationError) throw err;
     // The requested host name does not resolve: no page under it can.
     if (isRequestedHostUnresolvable(err, new URL(url).hostname)) {
       return result({ exists: false, confidence: "high", reason: "dns_nxdomain" });

@@ -1,0 +1,2308 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "e7effd67fc44bd3544271e7c849abb0f37aee350"
+  },
+  "at": "2026-11-12T12:44:07.349Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/af35.json"
+  },
+  "summary": {
+    "numTotalTestSuites": 25,
+    "numPassedTestSuites": 25,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 184,
+    "numPassedTests": 184,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "startTime": 1794487414182,
+    "success": true
+  },
+  "topic": "url-validation-by-type-after",
+  "raw": {
+    "numTotalTestSuites": 25,
+    "numPassedTestSuites": 25,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 184,
+    "numPassedTests": 184,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794487414182,
+    "success": true,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [],
+            "fullName": "Round 2 uptime-check probes a Disallow-all site without retrieving page content",
+            "status": "passed",
+            "title": "Round 2 uptime-check probes a Disallow-all site without retrieving page content",
+            "duration": 20.055394999999976,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "Round 2 url-health-check probes a Disallow-all site without retrieving page content",
+            "status": "passed",
+            "title": "Round 2 url-health-check probes a Disallow-all site without retrieving page content",
+            "duration": 2.562285999999972,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "Round 2 redirect-trace probes a Disallow-all site without retrieving page content",
+            "status": "passed",
+            "title": "Round 2 redirect-trace probes a Disallow-all site without retrieving page content",
+            "duration": 2.3212929999999687,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "Round 2 paid-api-preflight probes a Disallow-all site without retrieving page content",
+            "status": "passed",
+            "title": "Round 2 paid-api-preflight probes a Disallow-all site without retrieving page content",
+            "duration": 2.174411999999961,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "Round 2 uptime reports a real transport failure as down despite Disallow-all",
+            "status": "passed",
+            "title": "Round 2 uptime reports a real transport failure as down despite Disallow-all",
+            "duration": 2.7858489999999847,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "Round 2 url-to-markdown remains content-gated and surfaces refusal",
+            "status": "passed",
+            "title": "Round 2 url-to-markdown remains content-gated and surfaces refusal",
+            "duration": 1.5102699999999913,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "Round 2 page-exists remains content-gated and surfaces refusal",
+            "status": "passed",
+            "title": "Round 2 page-exists remains content-gated and surfaces refusal",
+            "duration": 1.8075690000000577,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "Round 2 api-health-check remains content-gated and surfaces refusal",
+            "status": "passed",
+            "title": "Round 2 api-health-check remains content-gated and surfaces refusal",
+            "duration": 1.0512079999999742,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "Round 2 robots-txt-parse fetches its control file directly",
+            "status": "passed",
+            "title": "Round 2 robots-txt-parse fetches its control file directly",
+            "duration": 1.5472220000000334,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "Round 2 DNS typo preserves the socket diagnostic from the robots fetch",
+            "status": "passed",
+            "title": "Round 2 DNS typo preserves the socket diagnostic from the robots fetch",
+            "duration": 0.8521499999999378,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "Round 2 content monitor latency excludes the robots lookup",
+            "status": "passed",
+            "title": "Round 2 content monitor latency excludes the robots lookup",
+            "duration": 1.364172999999937,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "Round 2 content monitor latency excludes robots on redirected origins too",
+            "status": "passed",
+            "title": "Round 2 content monitor latency excludes robots on redirected origins too",
+            "duration": 1.3669909999999845,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794487415598,
+        "endTime": 1794487415638.367,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale-wt-urlval/apps/api/src/capabilities/availability-probe.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "page-exists, real safeFetch and robots pre-check, resolver mocked (review B1)"
+            ],
+            "fullName": "page-exists, real safeFetch and robots pre-check, resolver mocked (review B1) bills exists:false with reason dns_nxdomain when the host does not exist",
+            "status": "passed",
+            "title": "bills exists:false with reason dns_nxdomain when the host does not exist",
+            "duration": 26.360570999999936,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "page-exists, real safeFetch and robots pre-check, resolver mocked (review B1)"
+            ],
+            "fullName": "page-exists, real safeFetch and robots pre-check, resolver mocked (review B1) fails unbilled, as its own failure, when Strale's resolver only fails for now",
+            "status": "passed",
+            "title": "fails unbilled, as its own failure, when Strale's resolver only fails for now",
+            "duration": 3.2414999999999736,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "page-exists, a live page that leads to a host that does not resolve (review round 2, S-a)"
+            ],
+            "fullName": "page-exists, a live page that leads to a host that does not resolve (review round 2, S-a) does not bill exists:false when the live page redirects to a host that does not resolve",
+            "status": "passed",
+            "title": "does not bill exists:false when the live page redirects to a host that does not resolve",
+            "duration": 3.070265999999947,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "page-exists, a live page that leads to a host that does not resolve (review round 2, S-a)"
+            ],
+            "fullName": "page-exists, a live page that leads to a host that does not resolve (review round 2, S-a) does not bill exists:false when the live site's robots.txt redirects to a host that does not resolve",
+            "status": "passed",
+            "title": "does not bill exists:false when the live site's robots.txt redirects to a host that does not resolve",
+            "duration": 1.2965750000000753,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "page-exists, a live page that leads to a host that does not resolve (review round 2, S-a)"
+            ],
+            "fullName": "page-exists, a live page that leads to a host that does not resolve (review round 2, S-a) fails unbilled, without fetching the page, when the site's robots.txt answers with a server error",
+            "status": "passed",
+            "title": "fails unbilled, without fetching the page, when the site's robots.txt answers with a server error",
+            "duration": 1.060006000000044,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794487415320,
+        "endTime": 1794487415355.06,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale-wt-urlval/apps/api/src/capabilities/page-exists-dns.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "page-exists recognises the validator's refusal by type, not by a word (follow-up 35)"
+            ],
+            "fullName": "page-exists recognises the validator's refusal by type, not by a word (follow-up 35) files a redirect loop under a /restricted/ path as the caller's site, not counted",
+            "status": "passed",
+            "title": "files a redirect loop under a /restricted/ path as the caller's site, not counted",
+            "duration": 15.398789000000079,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "page-exists recognises the validator's refusal by type, not by a word (follow-up 35)"
+            ],
+            "fullName": "page-exists recognises the validator's refusal by type, not by a word (follow-up 35) still fails a redirect into a restricted address as the validator's own refusal",
+            "status": "passed",
+            "title": "still fails a redirect into a restricted address as the validator's own refusal",
+            "duration": 1.764112999999952,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "page-exists recognises the validator's refusal by type, not by a word (follow-up 35)"
+            ],
+            "fullName": "page-exists recognises the validator's refusal by type, not by a word (follow-up 35) still fails a redirect to a scheme other than http(s) as the validator's own refusal",
+            "status": "passed",
+            "title": "still fails a redirect to a scheme other than http(s) as the validator's own refusal",
+            "duration": 1.1540539999999737,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794487415121,
+        "endTime": 1794487415140.154,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale-wt-urlval/apps/api/src/capabilities/page-exists-validation-by-type.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "H6 robots enforcement inside safeFetch"
+            ],
+            "fullName": "H6 robots enforcement inside safeFetch stops a * disallow before requesting the page",
+            "status": "passed",
+            "title": "stops a * disallow before requesting the page",
+            "duration": 17.149659999999983,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 robots enforcement inside safeFetch"
+            ],
+            "fullName": "H6 robots enforcement inside safeFetch stops a StraleBot disallow before requesting the page",
+            "status": "passed",
+            "title": "stops a StraleBot disallow before requesting the page",
+            "duration": 1.3400670000000332,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 robots enforcement inside safeFetch"
+            ],
+            "fullName": "H6 robots enforcement inside safeFetch allows a longer Allow rule and sends the honest agent on both requests",
+            "status": "passed",
+            "title": "allows a longer Allow rule and sends the honest agent on both requests",
+            "duration": 1.8251789999999914,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 robots enforcement inside safeFetch"
+            ],
+            "fullName": "H6 robots enforcement inside safeFetch matches wildcard rules",
+            "status": "passed",
+            "title": "matches wildcard rules",
+            "duration": 0.984361999999976,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 robots enforcement inside safeFetch"
+            ],
+            "fullName": "H6 robots enforcement inside safeFetch caches for an hour per origin and checks each page path",
+            "status": "passed",
+            "title": "caches for an hour per origin and checks each page path",
+            "duration": 3.8051909999999793,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 robots enforcement inside safeFetch"
+            ],
+            "fullName": "H6 robots enforcement inside safeFetch robots HTTP 400 allows the page",
+            "status": "passed",
+            "title": "robots HTTP 400 allows the page",
+            "duration": 0.7246599999999717,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 robots enforcement inside safeFetch"
+            ],
+            "fullName": "H6 robots enforcement inside safeFetch robots HTTP 401 allows the page",
+            "status": "passed",
+            "title": "robots HTTP 401 allows the page",
+            "duration": 0.553389999999979,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 robots enforcement inside safeFetch"
+            ],
+            "fullName": "H6 robots enforcement inside safeFetch robots HTTP 403 allows the page",
+            "status": "passed",
+            "title": "robots HTTP 403 allows the page",
+            "duration": 2.6875139999999647,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 robots enforcement inside safeFetch"
+            ],
+            "fullName": "H6 robots enforcement inside safeFetch robots HTTP 404 allows the page",
+            "status": "passed",
+            "title": "robots HTTP 404 allows the page",
+            "duration": 0.7037320000000022,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 robots enforcement inside safeFetch"
+            ],
+            "fullName": "H6 robots enforcement inside safeFetch robots HTTP 429 allows the page",
+            "status": "passed",
+            "title": "robots HTTP 429 allows the page",
+            "duration": 2.8213480000000004,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 robots enforcement inside safeFetch"
+            ],
+            "fullName": "H6 robots enforcement inside safeFetch robots 5xx stops before the page",
+            "status": "passed",
+            "title": "robots 5xx stops before the page",
+            "duration": 0.6669200000000046,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 robots enforcement inside safeFetch"
+            ],
+            "fullName": "H6 robots enforcement inside safeFetch robots timeout is bounded and conservative",
+            "status": "passed",
+            "title": "robots timeout is bounded and conservative",
+            "duration": 1.3230730000000221,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 robots enforcement inside safeFetch"
+            ],
+            "fullName": "H6 robots enforcement inside safeFetch vendor_api skips robots even within a page executor",
+            "status": "passed",
+            "title": "vendor_api skips robots even within a page executor",
+            "duration": 0.4005360000000451,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 robots enforcement inside safeFetch"
+            ],
+            "fullName": "H6 robots enforcement inside safeFetch direct_api skips robots even within a page executor",
+            "status": "passed",
+            "title": "direct_api skips robots even within a page executor",
+            "duration": 0.2630809999999997,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 robots enforcement inside safeFetch"
+            ],
+            "fullName": "H6 robots enforcement inside safeFetch checks a redirected path before requesting it",
+            "status": "passed",
+            "title": "checks a redirected path before requesting it",
+            "duration": 0.9572030000000495,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution refuses 0.1.2.3 before fetch",
+            "status": "passed",
+            "title": "refuses 0.1.2.3 before fetch",
+            "duration": 2.606335999999999,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution refuses 100.64.0.1 before fetch",
+            "status": "passed",
+            "title": "refuses 100.64.0.1 before fetch",
+            "duration": 0.4847870000000398,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution refuses 198.18.0.1 before fetch",
+            "status": "passed",
+            "title": "refuses 198.18.0.1 before fetch",
+            "duration": 0.31621699999999464,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution refuses 198.19.255.254 before fetch",
+            "status": "passed",
+            "title": "refuses 198.19.255.254 before fetch",
+            "duration": 0.27764300000001185,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution refuses 224.0.0.1 before fetch",
+            "status": "passed",
+            "title": "refuses 224.0.0.1 before fetch",
+            "duration": 0.2592260000000124,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution refuses 239.255.255.255 before fetch",
+            "status": "passed",
+            "title": "refuses 239.255.255.255 before fetch",
+            "duration": 0.2539019999999823,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution refuses 240.0.0.1 before fetch",
+            "status": "passed",
+            "title": "refuses 240.0.0.1 before fetch",
+            "duration": 0.24708499999997002,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution refuses 255.255.255.255 before fetch",
+            "status": "passed",
+            "title": "refuses 255.255.255.255 before fetch",
+            "duration": 0.3281900000000064,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution refuses 192.0.2.1 before fetch",
+            "status": "passed",
+            "title": "refuses 192.0.2.1 before fetch",
+            "duration": 0.35336699999999155,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution refuses 198.51.100.1 before fetch",
+            "status": "passed",
+            "title": "refuses 198.51.100.1 before fetch",
+            "duration": 0.2759290000000192,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution refuses 203.0.113.1 before fetch",
+            "status": "passed",
+            "title": "refuses 203.0.113.1 before fetch",
+            "duration": 4.365981999999974,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution refuses ::ffff:10.0.0.1 before fetch",
+            "status": "passed",
+            "title": "refuses ::ffff:10.0.0.1 before fetch",
+            "duration": 0.5823449999999752,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution refuses ::ffff:c612:1 before fetch",
+            "status": "passed",
+            "title": "refuses ::ffff:c612:1 before fetch",
+            "duration": 0.37266999999997097,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution refuses 0:0:0:0:0:ffff:c612:1 before fetch",
+            "status": "passed",
+            "title": "refuses 0:0:0:0:0:ffff:c612:1 before fetch",
+            "duration": 0.27006600000004255,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution refuses 64:ff9b::808:808 before fetch",
+            "status": "passed",
+            "title": "refuses 64:ff9b::808:808 before fetch",
+            "duration": 0.2615629999999669,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution refuses 2002:0808:0808::1 before fetch",
+            "status": "passed",
+            "title": "refuses 2002:0808:0808::1 before fetch",
+            "duration": 0.26724400000000514,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution refuses 2001:db8::1 before fetch",
+            "status": "passed",
+            "title": "refuses 2001:db8::1 before fetch",
+            "duration": 2.4193900000000212,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution refuses ff02::1 before fetch",
+            "status": "passed",
+            "title": "refuses ff02::1 before fetch",
+            "duration": 2.5795350000000212,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution connection-time lookup also refuses 0.1.2.3",
+            "status": "passed",
+            "title": "connection-time lookup also refuses 0.1.2.3",
+            "duration": 6.671396000000016,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution connection-time lookup also refuses 100.64.0.1",
+            "status": "passed",
+            "title": "connection-time lookup also refuses 100.64.0.1",
+            "duration": 0.31717600000001767,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution connection-time lookup also refuses 198.18.0.1",
+            "status": "passed",
+            "title": "connection-time lookup also refuses 198.18.0.1",
+            "duration": 0.2655409999999847,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution connection-time lookup also refuses 198.19.255.254",
+            "status": "passed",
+            "title": "connection-time lookup also refuses 198.19.255.254",
+            "duration": 0.289258000000018,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution connection-time lookup also refuses 224.0.0.1",
+            "status": "passed",
+            "title": "connection-time lookup also refuses 224.0.0.1",
+            "duration": 0.2401320000000169,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution connection-time lookup also refuses 239.255.255.255",
+            "status": "passed",
+            "title": "connection-time lookup also refuses 239.255.255.255",
+            "duration": 0.21857599999998456,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution connection-time lookup also refuses 240.0.0.1",
+            "status": "passed",
+            "title": "connection-time lookup also refuses 240.0.0.1",
+            "duration": 0.1984069999999747,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution connection-time lookup also refuses 255.255.255.255",
+            "status": "passed",
+            "title": "connection-time lookup also refuses 255.255.255.255",
+            "duration": 0.24567600000000311,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution connection-time lookup also refuses 192.0.2.1",
+            "status": "passed",
+            "title": "connection-time lookup also refuses 192.0.2.1",
+            "duration": 0.3692020000000298,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution connection-time lookup also refuses 198.51.100.1",
+            "status": "passed",
+            "title": "connection-time lookup also refuses 198.51.100.1",
+            "duration": 0.7373589999999695,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution connection-time lookup also refuses 203.0.113.1",
+            "status": "passed",
+            "title": "connection-time lookup also refuses 203.0.113.1",
+            "duration": 0.2716219999999794,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution connection-time lookup also refuses ::ffff:10.0.0.1",
+            "status": "passed",
+            "title": "connection-time lookup also refuses ::ffff:10.0.0.1",
+            "duration": 0.19914800000003652,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution connection-time lookup also refuses ::ffff:c612:1",
+            "status": "passed",
+            "title": "connection-time lookup also refuses ::ffff:c612:1",
+            "duration": 0.20747999999997546,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution connection-time lookup also refuses 0:0:0:0:0:ffff:c612:1",
+            "status": "passed",
+            "title": "connection-time lookup also refuses 0:0:0:0:0:ffff:c612:1",
+            "duration": 0.17327699999998458,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution connection-time lookup also refuses 64:ff9b::808:808",
+            "status": "passed",
+            "title": "connection-time lookup also refuses 64:ff9b::808:808",
+            "duration": 0.15739999999999554,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution connection-time lookup also refuses 2002:0808:0808::1",
+            "status": "passed",
+            "title": "connection-time lookup also refuses 2002:0808:0808::1",
+            "duration": 0.19190800000001218,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution connection-time lookup also refuses 2001:db8::1",
+            "status": "passed",
+            "title": "connection-time lookup also refuses 2001:db8::1",
+            "duration": 0.15216900000001488,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 SSRF DNS resolution"
+            ],
+            "fullName": "H6 SSRF DNS resolution connection-time lookup also refuses ff02::1",
+            "status": "passed",
+            "title": "connection-time lookup also refuses ff02::1",
+            "duration": 0.14136300000001256,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "H6 a robots transport failure advises bounded retry on object and string error paths",
+            "status": "passed",
+            "title": "H6 a robots transport failure advises bounded retry on object and string error paths",
+            "duration": 0.9454190000000153,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "H6 the robots deadline includes stalled DNS and never fetches after late resolution",
+            "status": "passed",
+            "title": "H6 the robots deadline includes stalled DNS and never fetches after late resolution",
+            "duration": 52.164110999999934,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794487414637,
+        "endTime": 1794487414755.164,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale-wt-urlval/apps/api/src/lib/safe-fetch-hardening.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "safeFetch — scheme rejection (F-0-006)"
+            ],
+            "fullName": "safeFetch — scheme rejection (F-0-006) rejects file://",
+            "status": "passed",
+            "title": "rejects file://",
+            "duration": 2.643504000000007,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "safeFetch — scheme rejection (F-0-006)"
+            ],
+            "fullName": "safeFetch — scheme rejection (F-0-006) rejects gopher://",
+            "status": "passed",
+            "title": "rejects gopher://",
+            "duration": 0.46616299999999455,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "safeFetch — scheme rejection (F-0-006)"
+            ],
+            "fullName": "safeFetch — scheme rejection (F-0-006) rejects javascript:",
+            "status": "passed",
+            "title": "rejects javascript:",
+            "duration": 0.37953099999998585,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "safeFetch — scheme rejection (F-0-006)"
+            ],
+            "fullName": "safeFetch — scheme rejection (F-0-006) rejects data:",
+            "status": "passed",
+            "title": "rejects data:",
+            "duration": 0.3100689999999986,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "safeFetch — literal private-IP refusal (F-0-006)"
+            ],
+            "fullName": "safeFetch — literal private-IP refusal (F-0-006) rejects loopback 127.0.0.1",
+            "status": "passed",
+            "title": "rejects loopback 127.0.0.1",
+            "duration": 0.42281900000000405,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "safeFetch — literal private-IP refusal (F-0-006)"
+            ],
+            "fullName": "safeFetch — literal private-IP refusal (F-0-006) rejects IPv4-mapped IPv6 private host",
+            "status": "passed",
+            "title": "rejects IPv4-mapped IPv6 private host",
+            "duration": 4.070064000000002,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "safeFetch — literal private-IP refusal (F-0-006)"
+            ],
+            "fullName": "safeFetch — literal private-IP refusal (F-0-006) rejects cloud metadata IP",
+            "status": "passed",
+            "title": "rejects cloud metadata IP",
+            "duration": 0.3187040000000252,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "followRedirects — loop mechanics (F-0-006)"
+            ],
+            "fullName": "followRedirects — loop mechanics (F-0-006) follows a short chain and returns the final 200 response",
+            "status": "passed",
+            "title": "follows a short chain and returns the final 200 response",
+            "duration": 19.35414000000003,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "followRedirects — loop mechanics (F-0-006)"
+            ],
+            "fullName": "followRedirects — loop mechanics (F-0-006) throws when more than maxRedirects hops are required",
+            "status": "passed",
+            "title": "throws when more than maxRedirects hops are required",
+            "duration": 12.814121,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "followRedirects — loop mechanics (F-0-006)"
+            ],
+            "fullName": "followRedirects — loop mechanics (F-0-006) refuses a redirect whose Location is a blocked URL (re-validation happens per hop)",
+            "status": "passed",
+            "title": "refuses a redirect whose Location is a blocked URL (re-validation happens per hop)",
+            "duration": 2.847763000000043,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "followRedirects — loop mechanics (F-0-006)"
+            ],
+            "fullName": "followRedirects — loop mechanics (F-0-006) returns the response as-is when it's a redirect without a Location header",
+            "status": "passed",
+            "title": "returns the response as-is when it's a redirect without a Location header",
+            "duration": 1.9811709999999607,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "followRedirects — returnOnCap (Phase-4 tail fix)"
+            ],
+            "fullName": "followRedirects — returnOnCap (Phase-4 tail fix) returns the 3xx response at the cap instead of throwing when returnOnCap is true",
+            "status": "passed",
+            "title": "returns the 3xx response at the cap instead of throwing when returnOnCap is true",
+            "duration": 2.5571599999999535,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "followRedirects — returnOnCap (Phase-4 tail fix)"
+            ],
+            "fullName": "followRedirects — returnOnCap (Phase-4 tail fix) still throws past the cap when returnOnCap is false (default) — existing callers unaffected",
+            "status": "passed",
+            "title": "still throws past the cap when returnOnCap is false (default) — existing callers unaffected",
+            "duration": 2.009748000000002,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "followRedirects — returnOnCap (Phase-4 tail fix)"
+            ],
+            "fullName": "followRedirects — returnOnCap (Phase-4 tail fix) does not return early when the response at the cap boundary is not a redirect",
+            "status": "passed",
+            "title": "does not return early when the response at the cap boundary is not a redirect",
+            "duration": 3.8626290000000267,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "followRedirects — returnOnCap (Phase-4 tail fix)"
+            ],
+            "fullName": "followRedirects — returnOnCap (Phase-4 tail fix) validates every hop's URL before fetching it, even in returnOnCap mode",
+            "status": "passed",
+            "title": "validates every hop's URL before fetching it, even in returnOnCap mode",
+            "duration": 2.0965649999999982,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794487414576,
+        "endTime": 1794487414633.0967,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale-wt-urlval/apps/api/src/lib/safe-fetch.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks ::7f00:1",
+            "status": "passed",
+            "title": "blocks ::7f00:1",
+            "duration": 4.0263459999999895,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks ::127.0.0.1",
+            "status": "passed",
+            "title": "blocks ::127.0.0.1",
+            "duration": 0.887629000000004,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks ::a00:1",
+            "status": "passed",
+            "title": "blocks ::a00:1",
+            "duration": 0.12974699999999473,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 100::1",
+            "status": "passed",
+            "title": "blocks 100::1",
+            "duration": 0.15785599999999533,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 2001::a00:1",
+            "status": "passed",
+            "title": "blocks 2001::a00:1",
+            "duration": 0.10334600000000194,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 2001:0:4136:e378:8000:63bf:3fff:fdd2",
+            "status": "passed",
+            "title": "blocks 2001:0:4136:e378:8000:63bf:3fff:fdd2",
+            "duration": 0.08125900000000286,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 2001:10::1",
+            "status": "passed",
+            "title": "blocks 2001:10::1",
+            "duration": 0.10835899999999299,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 192.0.0.8",
+            "status": "passed",
+            "title": "blocks 192.0.0.8",
+            "duration": 0.0734470000000016,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 192.88.99.1",
+            "status": "passed",
+            "title": "blocks 192.88.99.1",
+            "duration": 0.3048830000000038,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks fec0::1",
+            "status": "passed",
+            "title": "blocks fec0::1",
+            "duration": 0.112985000000009,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks feff::1",
+            "status": "passed",
+            "title": "blocks feff::1",
+            "duration": 0.11113699999999938,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks fe80::1",
+            "status": "passed",
+            "title": "blocks fe80::1",
+            "duration": 0.05050599999999861,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks febf::1",
+            "status": "passed",
+            "title": "blocks febf::1",
+            "duration": 0.044240000000002055,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks fc01::1",
+            "status": "passed",
+            "title": "blocks fc01::1",
+            "duration": 0.035004999999998176,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks fd00:ec2::254",
+            "status": "passed",
+            "title": "blocks fd00:ec2::254",
+            "duration": 0.03531300000000215,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks ::1",
+            "status": "passed",
+            "title": "blocks ::1",
+            "duration": 0.06036100000000033,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks ::",
+            "status": "passed",
+            "title": "blocks ::",
+            "duration": 0.03678200000000231,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks ::ffff:7f00:1",
+            "status": "passed",
+            "title": "blocks ::ffff:7f00:1",
+            "duration": 0.041187000000007856,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 0:0:0:0:0:ffff:127.0.0.1",
+            "status": "passed",
+            "title": "blocks 0:0:0:0:0:ffff:127.0.0.1",
+            "duration": 0.033976000000009776,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks ::ffff:169.254.169.254",
+            "status": "passed",
+            "title": "blocks ::ffff:169.254.169.254",
+            "duration": 0.040439999999989595,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 127.0.0.1",
+            "status": "passed",
+            "title": "blocks 127.0.0.1",
+            "duration": 0.028697000000008188,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 10.1.2.3",
+            "status": "passed",
+            "title": "blocks 10.1.2.3",
+            "duration": 0.028121999999996206,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 172.31.255.255",
+            "status": "passed",
+            "title": "blocks 172.31.255.255",
+            "duration": 0.026870000000002392,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 100.64.0.1",
+            "status": "passed",
+            "title": "blocks 100.64.0.1",
+            "duration": 0.02716999999999814,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 169.254.169.254",
+            "status": "passed",
+            "title": "blocks 169.254.169.254",
+            "duration": 0.0272070000000042,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 198.18.0.1",
+            "status": "passed",
+            "title": "blocks 198.18.0.1",
+            "duration": 0.026288999999991347,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 224.0.0.1",
+            "status": "passed",
+            "title": "blocks 224.0.0.1",
+            "duration": 0.026631000000008953,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 240.0.0.1",
+            "status": "passed",
+            "title": "blocks 240.0.0.1",
+            "duration": 0.09624599999999361,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 255.255.255.255",
+            "status": "passed",
+            "title": "blocks 255.255.255.255",
+            "duration": 0.036294999999995525,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 0.1.2.3",
+            "status": "passed",
+            "title": "blocks 0.1.2.3",
+            "duration": 0.038710000000008904,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 64:ff9b::a00:1",
+            "status": "passed",
+            "title": "blocks 64:ff9b::a00:1",
+            "duration": 0.04687800000000664,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 64:ff9b::1:0:0:1",
+            "status": "passed",
+            "title": "blocks 64:ff9b::1:0:0:1",
+            "duration": 0.04204200000000924,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 64:ff9b:2::1",
+            "status": "passed",
+            "title": "blocks 64:ff9b:2::1",
+            "duration": 0.03829600000000255,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks ::ffff:0:7f00:1",
+            "status": "passed",
+            "title": "blocks ::ffff:0:7f00:1",
+            "duration": 0.03978599999999233,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks ::ffff:0:127.0.0.1",
+            "status": "passed",
+            "title": "blocks ::ffff:0:127.0.0.1",
+            "duration": 0.037475999999998066,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks ::ffff:0:0:1",
+            "status": "passed",
+            "title": "blocks ::ffff:0:0:1",
+            "duration": 0.036141000000000645,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 2002:a00:1::",
+            "status": "passed",
+            "title": "blocks 2002:a00:1::",
+            "duration": 0.07726000000000965,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks 2001:db8::1",
+            "status": "passed",
+            "title": "blocks 2001:db8::1",
+            "duration": 0.04527000000000214,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks ff02::1",
+            "status": "passed",
+            "title": "blocks ff02::1",
+            "duration": 0.060024999999996,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table allows public 8.8.8.8",
+            "status": "passed",
+            "title": "allows public 8.8.8.8",
+            "duration": 0.07101299999999355,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table allows public 1.1.1.1",
+            "status": "passed",
+            "title": "allows public 1.1.1.1",
+            "duration": 0.03744700000000023,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table allows public 172.32.0.1",
+            "status": "passed",
+            "title": "allows public 172.32.0.1",
+            "duration": 0.03582099999999855,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table allows public 100.128.0.1",
+            "status": "passed",
+            "title": "allows public 100.128.0.1",
+            "duration": 0.035581000000007634,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table allows public 192.0.3.1",
+            "status": "passed",
+            "title": "allows public 192.0.3.1",
+            "duration": 0.0348199999999963,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table allows public 2606:4700::1111",
+            "status": "passed",
+            "title": "allows public 2606:4700::1111",
+            "duration": 0.042644000000009896,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table allows public 2001:4860:4860::8888",
+            "status": "passed",
+            "title": "allows public 2001:4860:4860::8888",
+            "duration": 0.03843699999998762,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table allows public 2a00:1450:4001::200e",
+            "status": "passed",
+            "title": "allows public 2a00:1450:4001::200e",
+            "duration": 0.03740000000000521,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table allows public ::ffff:8.8.8.8",
+            "status": "passed",
+            "title": "allows public ::ffff:8.8.8.8",
+            "duration": 0.09176799999998764,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table blocks any address with a zone ID instead of throwing",
+            "status": "passed",
+            "title": "blocks any address with a zone ID instead of throwing",
+            "duration": 0.10828499999999508,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — CIDR table"
+            ],
+            "fullName": "isBlockedIp — CIDR table does not judge hostnames by their first letters (fdic.gov, ffmpeg.org, 10x.com)",
+            "status": "passed",
+            "title": "does not judge hostnames by their first letters (fdic.gov, ffmpeg.org, 10x.com)",
+            "duration": 0.10230099999999709,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateHost — IPv6 literal forms (raw-socket capabilities)"
+            ],
+            "fullName": "validateHost — IPv6 literal forms (raw-socket capabilities) refuses ::1",
+            "status": "passed",
+            "title": "refuses ::1",
+            "duration": 0.9986650000000026,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateHost — IPv6 literal forms (raw-socket capabilities)"
+            ],
+            "fullName": "validateHost — IPv6 literal forms (raw-socket capabilities) refuses fe80::1",
+            "status": "passed",
+            "title": "refuses fe80::1",
+            "duration": 0.24907500000000482,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateHost — IPv6 literal forms (raw-socket capabilities)"
+            ],
+            "fullName": "validateHost — IPv6 literal forms (raw-socket capabilities) refuses fd00::1",
+            "status": "passed",
+            "title": "refuses fd00::1",
+            "duration": 0.14254499999999837,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateHost — IPv6 literal forms (raw-socket capabilities)"
+            ],
+            "fullName": "validateHost — IPv6 literal forms (raw-socket capabilities) refuses ::7f00:1",
+            "status": "passed",
+            "title": "refuses ::7f00:1",
+            "duration": 0.11596699999999771,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateHost — IPv6 literal forms (raw-socket capabilities)"
+            ],
+            "fullName": "validateHost — IPv6 literal forms (raw-socket capabilities) refuses [::1]",
+            "status": "passed",
+            "title": "refuses [::1]",
+            "duration": 0.10327800000000309,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateHost — IPv6 literal forms (raw-socket capabilities)"
+            ],
+            "fullName": "validateHost — IPv6 literal forms (raw-socket capabilities) refuses [fd00::1]:443",
+            "status": "passed",
+            "title": "refuses [fd00::1]:443",
+            "duration": 0.11085900000000493,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateHost — IPv6 literal forms (raw-socket capabilities)"
+            ],
+            "fullName": "validateHost — IPv6 literal forms (raw-socket capabilities) refuses [fe80::1]",
+            "status": "passed",
+            "title": "refuses [fe80::1]",
+            "duration": 0.14977700000000027,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateHost — IPv6 literal forms (raw-socket capabilities)"
+            ],
+            "fullName": "validateHost — IPv6 literal forms (raw-socket capabilities) refuses an IPv4 literal with a port",
+            "status": "passed",
+            "title": "refuses an IPv4 literal with a port",
+            "duration": 0.21391899999998998,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateHost — IPv6 literal forms (raw-socket capabilities)"
+            ],
+            "fullName": "validateHost — IPv6 literal forms (raw-socket capabilities) accepts a public IPv6 literal, bare or bracketed with a port",
+            "status": "passed",
+            "title": "accepts a public IPv6 literal, bare or bracketed with a port",
+            "duration": 0.47566899999999634,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateHost — IPv6 literal forms (raw-socket capabilities)"
+            ],
+            "fullName": "validateHost — IPv6 literal forms (raw-socket capabilities) refuses shorthand IPv4 that getaddrinfo resolves to loopback (127.1, 2130706433)",
+            "status": "passed",
+            "title": "refuses shorthand IPv4 that getaddrinfo resolves to loopback (127.1, 2130706433)",
+            "duration": 48.75153199999998,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateHost — IPv6 literal forms (raw-socket capabilities)"
+            ],
+            "fullName": "validateHost — IPv6 literal forms (raw-socket capabilities) refuses an empty host \"\" (net and tls would default it to localhost)",
+            "status": "passed",
+            "title": "refuses an empty host \"\" (net and tls would default it to localhost)",
+            "duration": 0.2912629999999865,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateHost — IPv6 literal forms (raw-socket capabilities)"
+            ],
+            "fullName": "validateHost — IPv6 literal forms (raw-socket capabilities) refuses an empty host \"   \" (net and tls would default it to localhost)",
+            "status": "passed",
+            "title": "refuses an empty host \"   \" (net and tls would default it to localhost)",
+            "duration": 0.11728099999999131,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateHost — IPv6 literal forms (raw-socket capabilities)"
+            ],
+            "fullName": "validateHost — IPv6 literal forms (raw-socket capabilities) refuses an empty host \"\\t\" (net and tls would default it to localhost)",
+            "status": "passed",
+            "title": "refuses an empty host \"\\t\" (net and tls would default it to localhost)",
+            "duration": 0.10738499999999362,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateHost — IPv6 literal forms (raw-socket capabilities)"
+            ],
+            "fullName": "validateHost — IPv6 literal forms (raw-socket capabilities) refuses a host with a control character \"a\\u0000b.com\"",
+            "status": "passed",
+            "title": "refuses a host with a control character \"a\\u0000b.com\"",
+            "duration": 0.1355130000000031,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateHost — IPv6 literal forms (raw-socket capabilities)"
+            ],
+            "fullName": "validateHost — IPv6 literal forms (raw-socket capabilities) refuses a host with a control character \"example.com\\r\\nHost: x\"",
+            "status": "passed",
+            "title": "refuses a host with a control character \"example.com\\r\\nHost: x\"",
+            "duration": 0.09042199999998957,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateHost — IPv6 literal forms (raw-socket capabilities)"
+            ],
+            "fullName": "validateHost — IPv6 literal forms (raw-socket capabilities) refuses a host with a control character \"ab.com\"",
+            "status": "passed",
+            "title": "refuses a host with a control character \"ab.com\"",
+            "duration": 0.08150900000001116,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateHost — IPv6 literal forms (raw-socket capabilities)"
+            ],
+            "fullName": "validateHost — IPv6 literal forms (raw-socket capabilities) refuses a port with no host",
+            "status": "passed",
+            "title": "refuses a port with no host",
+            "duration": 0.12366000000000099,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateHost — IPv6 literal forms (raw-socket capabilities)"
+            ],
+            "fullName": "validateHost — IPv6 literal forms (raw-socket capabilities) refuses a malformed host with stray colons instead of resolving it",
+            "status": "passed",
+            "title": "refuses a malformed host with stray colons instead of resolving it",
+            "duration": 0.31670299999998974,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794487415249,
+        "endTime": 1794487415310.3167,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale-wt-urlval/apps/api/src/lib/url-validator.cidr.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "isBlockedIp — original ranges (regression)"
+            ],
+            "fullName": "isBlockedIp — original ranges (regression) blocks IPv4 loopback",
+            "status": "passed",
+            "title": "blocks IPv4 loopback",
+            "duration": 1.4254449999999963,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — original ranges (regression)"
+            ],
+            "fullName": "isBlockedIp — original ranges (regression) blocks IPv4 private ranges (10/8, 192.168/16, 172.16/12)",
+            "status": "passed",
+            "title": "blocks IPv4 private ranges (10/8, 192.168/16, 172.16/12)",
+            "duration": 0.32608999999999355,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — original ranges (regression)"
+            ],
+            "fullName": "isBlockedIp — original ranges (regression) blocks link-local 169.254/16 (includes cloud metadata v4)",
+            "status": "passed",
+            "title": "blocks link-local 169.254/16 (includes cloud metadata v4)",
+            "duration": 0.15025399999998967,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — original ranges (regression)"
+            ],
+            "fullName": "isBlockedIp — original ranges (regression) blocks IPv6 loopback and unique-local",
+            "status": "passed",
+            "title": "blocks IPv6 loopback and unique-local",
+            "duration": 3.673738,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — original ranges (regression)"
+            ],
+            "fullName": "isBlockedIp — original ranges (regression) blocks unspecified addresses",
+            "status": "passed",
+            "title": "blocks unspecified addresses",
+            "duration": 0.19463199999999858,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — original ranges (regression)"
+            ],
+            "fullName": "isBlockedIp — original ranges (regression) allows public IPv4 addresses",
+            "status": "passed",
+            "title": "allows public IPv4 addresses",
+            "duration": 0.13230500000000234,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — F-0-006 bypass-class hardening",
+              "IPv4-mapped IPv6 (::ffff:...)"
+            ],
+            "fullName": "isBlockedIp — F-0-006 bypass-class hardening IPv4-mapped IPv6 (::ffff:...) blocks when mapping a loopback v4",
+            "status": "passed",
+            "title": "blocks when mapping a loopback v4",
+            "duration": 0.2051090000000073,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — F-0-006 bypass-class hardening",
+              "IPv4-mapped IPv6 (::ffff:...)"
+            ],
+            "fullName": "isBlockedIp — F-0-006 bypass-class hardening IPv4-mapped IPv6 (::ffff:...) blocks when mapping a private v4",
+            "status": "passed",
+            "title": "blocks when mapping a private v4",
+            "duration": 0.18212000000001183,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — F-0-006 bypass-class hardening",
+              "IPv4-mapped IPv6 (::ffff:...)"
+            ],
+            "fullName": "isBlockedIp — F-0-006 bypass-class hardening IPv4-mapped IPv6 (::ffff:...) blocks when mapping cloud metadata v4",
+            "status": "passed",
+            "title": "blocks when mapping cloud metadata v4",
+            "duration": 0.3587739999999968,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — F-0-006 bypass-class hardening",
+              "IPv4-mapped IPv6 (::ffff:...)"
+            ],
+            "fullName": "isBlockedIp — F-0-006 bypass-class hardening IPv4-mapped IPv6 (::ffff:...) allows when mapping a public v4",
+            "status": "passed",
+            "title": "allows when mapping a public v4",
+            "duration": 0.1398110000000088,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — F-0-006 bypass-class hardening",
+              "Carrier-grade NAT 100.64.0.0/10"
+            ],
+            "fullName": "isBlockedIp — F-0-006 bypass-class hardening Carrier-grade NAT 100.64.0.0/10 blocks 100.64.*.* boundary",
+            "status": "passed",
+            "title": "blocks 100.64.*.* boundary",
+            "duration": 0.18497000000000696,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — F-0-006 bypass-class hardening",
+              "Carrier-grade NAT 100.64.0.0/10"
+            ],
+            "fullName": "isBlockedIp — F-0-006 bypass-class hardening Carrier-grade NAT 100.64.0.0/10 blocks upper boundary 100.127.255.255",
+            "status": "passed",
+            "title": "blocks upper boundary 100.127.255.255",
+            "duration": 0.09161500000000444,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — F-0-006 bypass-class hardening",
+              "Carrier-grade NAT 100.64.0.0/10"
+            ],
+            "fullName": "isBlockedIp — F-0-006 bypass-class hardening Carrier-grade NAT 100.64.0.0/10 allows addresses outside the 100.64/10 range",
+            "status": "passed",
+            "title": "allows addresses outside the 100.64/10 range",
+            "duration": 0.0878709999999927,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — F-0-006 bypass-class hardening",
+              "AWS metadata IPv6"
+            ],
+            "fullName": "isBlockedIp — F-0-006 bypass-class hardening AWS metadata IPv6 blocks fd00:ec2::254",
+            "status": "passed",
+            "title": "blocks fd00:ec2::254",
+            "duration": 0.0776170000000036,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBlockedIp — F-0-006 bypass-class hardening",
+              "AWS metadata IPv6"
+            ],
+            "fullName": "isBlockedIp — F-0-006 bypass-class hardening AWS metadata IPv6 blocks other fd00:ec2:* addresses",
+            "status": "passed",
+            "title": "blocks other fd00:ec2:* addresses",
+            "duration": 0.0797629999999998,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateUrl scheme allowlist (F-0-006)"
+            ],
+            "fullName": "validateUrl scheme allowlist (F-0-006) rejects file:// URLs",
+            "status": "passed",
+            "title": "rejects file:// URLs",
+            "duration": 1.0681430000000063,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateUrl scheme allowlist (F-0-006)"
+            ],
+            "fullName": "validateUrl scheme allowlist (F-0-006) rejects gopher://",
+            "status": "passed",
+            "title": "rejects gopher://",
+            "duration": 0.23761899999999514,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateUrl scheme allowlist (F-0-006)"
+            ],
+            "fullName": "validateUrl scheme allowlist (F-0-006) rejects ftp://",
+            "status": "passed",
+            "title": "rejects ftp://",
+            "duration": 0.19639300000000048,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateUrl scheme allowlist (F-0-006)"
+            ],
+            "fullName": "validateUrl scheme allowlist (F-0-006) rejects javascript:",
+            "status": "passed",
+            "title": "rejects javascript:",
+            "duration": 0.15442599999998663,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateUrl scheme allowlist (F-0-006)"
+            ],
+            "fullName": "validateUrl scheme allowlist (F-0-006) rejects data:",
+            "status": "passed",
+            "title": "rejects data:",
+            "duration": 0.1353029999999933,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateUrl scheme allowlist (F-0-006)"
+            ],
+            "fullName": "validateUrl scheme allowlist (F-0-006) accepts http:// with a public-resolvable hostname",
+            "status": "passed",
+            "title": "accepts http:// with a public-resolvable hostname",
+            "duration": 2.095940000000013,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateUrl scheme allowlist (F-0-006)"
+            ],
+            "fullName": "validateUrl scheme allowlist (F-0-006) accepts https:// with a public-resolvable hostname",
+            "status": "passed",
+            "title": "accepts https:// with a public-resolvable hostname",
+            "duration": 0.4976259999999968,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateUrl direct-IP refusal (F-0-006)"
+            ],
+            "fullName": "validateUrl direct-IP refusal (F-0-006) rejects a URL whose host is a literal loopback IP",
+            "status": "passed",
+            "title": "rejects a URL whose host is a literal loopback IP",
+            "duration": 0.2822519999999997,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateUrl direct-IP refusal (F-0-006)"
+            ],
+            "fullName": "validateUrl direct-IP refusal (F-0-006) rejects a URL whose host is a literal private IP",
+            "status": "passed",
+            "title": "rejects a URL whose host is a literal private IP",
+            "duration": 0.27897500000000264,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateUrl direct-IP refusal (F-0-006)"
+            ],
+            "fullName": "validateUrl direct-IP refusal (F-0-006) rejects a URL whose host is the cloud metadata IP",
+            "status": "passed",
+            "title": "rejects a URL whose host is the cloud metadata IP",
+            "duration": 0.23702199999999607,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateUrl direct-IP refusal (F-0-006)"
+            ],
+            "fullName": "validateUrl direct-IP refusal (F-0-006) rejects a URL whose host is a carrier-grade NAT IP",
+            "status": "passed",
+            "title": "rejects a URL whose host is a carrier-grade NAT IP",
+            "duration": 0.1634910000000076,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateUrl direct-IP refusal (F-0-006)"
+            ],
+            "fullName": "validateUrl direct-IP refusal (F-0-006) rejects an IPv4-mapped IPv6 of a private range",
+            "status": "passed",
+            "title": "rejects an IPv4-mapped IPv6 of a private range",
+            "duration": 0.1406769999999966,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "validateUrl direct-IP refusal (F-0-006)"
+            ],
+            "fullName": "validateUrl direct-IP refusal (F-0-006) rejects .internal Railway hostnames",
+            "status": "passed",
+            "title": "rejects .internal Railway hostnames",
+            "duration": 0.10780599999999652,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794487414753,
+        "endTime": 1794487414767.108,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale-wt-urlval/apps/api/src/lib/url-validator.test.ts"
+      }
+    ]
+  }
+}
