@@ -422,6 +422,24 @@ tracks:
       Billing is unchanged. Regression tests in
       solution-executor-retry.test.ts, actionable-errors-round2.test.ts and
       x402-settlement-characterization.test.ts fail against the previous code.
+      (49) fixed on branch fix/render-preflight-transport: html-to-pdf and
+      screenshot-url take a plain look at the page before Chrome renders it,
+      and a transport failure of that look (a timeout, a reset, a refused
+      connection, a redirect loop) let the render go ahead. A PDF or PNG
+      cannot be read for a challenge page afterwards, so a challenge could
+      be rendered and billed. For these two routes a transport failure now
+      ends the call through targetUnavailable: unbilled, filed as the
+      target's, retryable for a timeout. Behaviour change: a site that takes
+      more than 8 s before its first byte now ends the call unbilled with
+      'retry later' where it used to render. Residual risk: failures only
+      Node's client has (legacy TLS ERR_SSL_*, an incomplete certificate
+      chain, a malformed HTTP response, IPv6-only reach) still go on to
+      render, because Chrome opens those sites; a challenge behind one of
+      them is not caught. company-enrich keeps the old default; it reads its
+      HTML. Found, not fixed: both routes bill a rendered page whatever its
+      status when it is not a block status (a 404 or 500 page becomes a
+      billed PDF or PNG), a (41)-class follow-up. Regression tests in
+      site-access-executors.test.ts fail against the previous code.
       Next: (41); then measuring past billed calls from
       the affected paths since their earliest releases, deciding refunds per
       policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against

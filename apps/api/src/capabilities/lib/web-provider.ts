@@ -107,6 +107,7 @@ import {
 } from "../../lib/site-access.js";
 import { ResourceLimitError, readErrorTextTruncated, readPageHtml } from "../../lib/resource-limits.js";
 import { bodyHasMoreTextThan } from "./stripped-text-length.js";
+import { targetUnavailable } from "../../lib/upstream-result.js";
 
 /** Moved to `lib/site-access.ts` so `safeFetch` can stop at a challenge too; re-exported for existing importers. */
 export { looksLikeJsChallenge } from "../../lib/site-access.js";
@@ -853,6 +854,28 @@ function isPreflightTransportFailure(err: unknown): boolean {
 }
 
 /**
+ * A transport failure that Node's fetch has and Chrome does not: undici's
+ * strict HTTP parser, OpenSSL refusing a legacy TLS server, a certificate
+ * chain the server sends incomplete (Chrome fetches the missing issuer), and
+ * a dual-stack connect where Node gives up on an address family Chrome
+ * skips. The site may well open in Chrome, so these still go on to render.
+ */
+const INCOMPLETE_CHAIN_CODES = new Set([
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+  "UNABLE_TO_GET_ISSUER_CERT",
+  "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+]);
+function isNodeProtocolGap(err: unknown): boolean {
+  const cause = (err as { cause?: unknown }).cause;
+  if (!(cause instanceof Error)) return false;
+  if (cause.name === "HTTPParserError") return true;
+  const code = (cause as { code?: unknown }).code;
+  if (typeof code === "string" && (code.startsWith("ERR_SSL_") || INCOMPLETE_CHAIN_CODES.has(code))) return true;
+  return cause instanceof AggregateError
+    && cause.errors.some(e => (e as { code?: unknown } | null)?.code === "EAFNOSUPPORT");
+}
+
+/**
  * A redirect whose Location is not a URL surfaces as a bare TypeError
  * "Invalid URL" from safeFetch's redirect loop. Chrome fails on it too, so it
  * is the call's end; this gives it a sentence the caller can act on.
@@ -874,8 +897,18 @@ function readableRedirectError(err: unknown, targetUrl: string): unknown {
  * safeFetch refuses a blocklisted host on every hop. Returns the status, so a
  * caller that ends on other 4xx answers (fetchPage, as in tier 1) can. A
  * transport failure is left to the rendered route and returns undefined.
+ *
+ * `opaqueRender` is for a route whose output Strale cannot read for a
+ * challenge afterwards (a PNG, a PDF; promise-audit T1 follow-up 49). There a
+ * transport failure ends the call as the target not answering (unbilled), so
+ * Chrome never captures a page the plain look did not see. The exception is a
+ * failure only Node has (isNodeProtocolGap): Chrome opens those sites, and
+ * refusing them would refuse real pages. That residual risk is recorded.
  */
-export async function assertPlainPreflightAllowed(targetUrl: string): Promise<number | undefined> {
+export async function assertPlainPreflightAllowed(
+  targetUrl: string,
+  opts: { opaqueRender?: boolean } = {},
+): Promise<number | undefined> {
   let res: Response;
   try {
     res = await safeFetch(targetUrl, {
@@ -887,7 +920,10 @@ export async function assertPlainPreflightAllowed(targetUrl: string): Promise<nu
   } catch (err) {
     const ssrf = ssrfRefusalIn(err);
     if (ssrf) throw ssrf;
-    if (isPreflightTransportFailure(err)) return undefined;
+    if (isPreflightTransportFailure(err)) {
+      if (opts.opaqueRender && !isNodeProtocolGap(err)) throw targetUnavailable(new URL(targetUrl).hostname, err);
+      return undefined;
+    }
     throw readableRedirectError(err, targetUrl);
   }
   try {
