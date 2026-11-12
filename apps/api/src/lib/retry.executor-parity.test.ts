@@ -21,6 +21,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { executeWithTransientRetry } from "./retry.js";
+import { siteAccessRefusal } from "./site-access.js";
 
 vi.mock("./log.js", () => ({ logWarn: vi.fn(), logError: vi.fn(), log: vi.fn() }));
 
@@ -50,6 +51,16 @@ describe("executeWithTransientRetry — the shared policy", () => {
       slug: "french-company-data", capabilityType: "data",
     })).rejects.toThrow("HTTP 429");
     expect(executor).toHaveBeenCalledTimes(2);
+  }, 10_000);
+
+  it("never retries a site's HTTP 429 refusal (promise-audit follow-up 43)", async () => {
+    const refusal = siteAccessRefusal("https://blocked.example/page", { kind: "http", status: 429 });
+    expect(refusal.message).toMatch(/HTTP 429/);
+    const executor = vi.fn(async (_input: Record<string, unknown>) => { throw refusal; });
+    await expect(executeWithTransientRetry(executor, {}, {
+      slug: "header-security-check", capabilityType: "data",
+    })).rejects.toBe(refusal);
+    expect(executor).toHaveBeenCalledTimes(1);
   }, 10_000);
 
   it("never retries a refusal", async () => {

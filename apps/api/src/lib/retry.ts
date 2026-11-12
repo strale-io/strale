@@ -8,6 +8,7 @@
 
 import { APIError, APIConnectionError, APIConnectionTimeoutError } from "@anthropic-ai/sdk";
 import { remainingCallMs } from "./call-cost.js";
+import { isCapabilityRefusal } from "./capability-refusal.js";
 import { logWarn } from "./log.js";
 import { UpstreamUnavailableError } from "./upstream-result.js";
 
@@ -53,6 +54,10 @@ const NON_RETRYABLE: RegExp[] = [
 ];
 
 function isRetryable(error: Error, extraPatterns: RegExp[]): boolean {
+  // A refusal is a decision, not a fault: the same call gets the same answer.
+  // Checked first because a site refusal's message names its status ("HTTP
+  // 429"), which DEFAULT_RETRYABLE would otherwise match and re-fetch once.
+  if (isCapabilityRefusal(error)) return false;
   // The executor already decided: a swallowed-failure fix that throws this
   // says whether a second attempt could get an answer (lib/upstream-result.ts).
   if (error instanceof UpstreamUnavailableError) return error.retryable;
