@@ -1,0 +1,394 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "vitest run src/capabilities/business-day-eori.upstream-failures.test.ts (new tests, executor unchanged)",
+    "commit": "1de00912beb3bfe00a153a30e8b71875292b8193"
+  },
+  "at": "2026-11-12T05:06:11.381Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/nager-fail-before.json"
+  },
+  "summary": {
+    "tests": 27,
+    "passed": 21,
+    "failed": 6,
+    "note": "the six new no-calendar refusal and cross-year tests fail on the unchanged executor"
+  },
+  "topic": "promise-audit-t1-nager-no-calendar-fail-before",
+  "raw": {
+    "numTotalTestSuites": 3,
+    "numPassedTestSuites": 1,
+    "numFailedTestSuites": 2,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 27,
+    "numPassedTests": 21,
+    "numFailedTests": 6,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794459541914,
+    "success": false,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, when Nager.Date fails with HTTP 503",
+            "status": "passed",
+            "title": "throws, unbilled, when Nager.Date fails with HTTP 503",
+            "duration": 470.52408399999996,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, when Nager.Date fails with HTTP 429",
+            "status": "passed",
+            "title": "throws, unbilled, when Nager.Date fails with HTTP 429",
+            "duration": 7.678196999999955,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, when Nager.Date fails with network error",
+            "status": "passed",
+            "title": "throws, unbilled, when Nager.Date fails with network error",
+            "duration": 6.625573000000031,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, when Nager.Date fails with timeout",
+            "status": "passed",
+            "title": "throws, unbilled, when Nager.Date fails with timeout",
+            "duration": 8.40761699999996,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, when Nager.Date answers 200 with a body that does not parse",
+            "status": "passed",
+            "title": "throws, unbilled, when Nager.Date answers 200 with a body that does not parse",
+            "duration": 7.071882999999957,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, when Nager.Date answers 200 with JSON that is not a holiday list",
+            "status": "passed",
+            "title": "throws, unbilled, when Nager.Date answers 200 with JSON that is not a holiday list",
+            "duration": 6.489251999999965,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) refuses 1975-06-02, a year Nager.Date does not cover (HTTP 400): unbilled, not counted against the capability",
+            "status": "passed",
+            "title": "refuses 1975-06-02, a year Nager.Date does not cover (HTTP 400): unbilled, not counted against the capability",
+            "duration": 7.364229000000023,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) refuses 2077-06-03, a year Nager.Date does not cover (HTTP 400): unbilled, not counted against the capability",
+            "status": "passed",
+            "title": "refuses 2077-06-03, a year Nager.Date does not cover (HTTP 400): unbilled, not counted against the capability",
+            "duration": 9.018291999999974,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, on a 400 for a year inside Nager.Date's window: the caller's date does not explain it",
+            "status": "passed",
+            "title": "throws, unbilled, on a 400 for a year inside Nager.Date's window: the caller's date does not explain it",
+            "duration": 5.912010000000009,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) answers a holiday correctly when Nager.Date answers",
+            "status": "passed",
+            "title": "answers a holiday correctly when Nager.Date answers",
+            "duration": 3.0645920000000615,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) refuses, unbilled, a country Nager.Date holds no calendar for (204), instead of a weekends-only answer",
+            "status": "failed",
+            "title": "refuses, unbilled, a country Nager.Date holds no calendar for (204), instead of a weekends-only answer",
+            "duration": 4.877921000000015,
+            "failureMessages": [
+              "Error: expected a refusal, got a billable result: {\"date\":\"2026-12-25\",\"country_code\":\"TH\",\"is_business_day\":true,\"reason\":null,\"next_business_day\":\"2026-12-28\",\"previous_business_day\":\"2026-12-24\"}\n    at err (/home/user/strale-wt-pa-nager/apps/api/src/capabilities/business-day-eori.upstream-failures.test.ts:139:15)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectNoCalendarRefusal (/home/user/strale-wt-pa-nager/apps/api/src/capabilities/business-day-eori.upstream-failures.test.ts:137:18)\n    at /home/user/strale-wt-pa-nager/apps/api/src/capabilities/business-day-eori.upstream-failures.test.ts:154:17\n    at file:///home/user/strale-wt-pa-nager/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) refuses, unbilled, a country code Nager.Date does not recognise (404), such as ZZ",
+            "status": "failed",
+            "title": "refuses, unbilled, a country code Nager.Date does not recognise (404), such as ZZ",
+            "duration": 2.8156759999999394,
+            "failureMessages": [
+              "Error: expected a refusal, got a billable result: {\"date\":\"2026-12-25\",\"country_code\":\"ZZ\",\"is_business_day\":true,\"reason\":null,\"next_business_day\":\"2026-12-28\",\"previous_business_day\":\"2026-12-24\"}\n    at err (/home/user/strale-wt-pa-nager/apps/api/src/capabilities/business-day-eori.upstream-failures.test.ts:139:15)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectNoCalendarRefusal (/home/user/strale-wt-pa-nager/apps/api/src/capabilities/business-day-eori.upstream-failures.test.ts:137:18)\n    at /home/user/strale-wt-pa-nager/apps/api/src/capabilities/business-day-eori.upstream-failures.test.ts:163:17\n    at file:///home/user/strale-wt-pa-nager/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) refuses again from the negative cache: a second call for the same uncovered country is still unbilled",
+            "status": "failed",
+            "title": "refuses again from the negative cache: a second call for the same uncovered country is still unbilled",
+            "duration": 5.20929799999999,
+            "failureMessages": [
+              "Error: expected a refusal, got a billable result: {\"date\":\"2026-06-03\",\"country_code\":\"TH\",\"is_business_day\":true,\"reason\":null,\"next_business_day\":\"2026-06-04\",\"previous_business_day\":\"2026-06-02\"}\n    at err (/home/user/strale-wt-pa-nager/apps/api/src/capabilities/business-day-eori.upstream-failures.test.ts:139:15)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectNoCalendarRefusal (/home/user/strale-wt-pa-nager/apps/api/src/capabilities/business-day-eori.upstream-failures.test.ts:137:18)\n    at /home/user/strale-wt-pa-nager/apps/api/src/capabilities/business-day-eori.upstream-failures.test.ts:171:5\n    at file:///home/user/strale-wt-pa-nager/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) counts next year's holidays for the next business day: 30 Dec 2026 is followed by 4 Jan 2027, not 1 Jan",
+            "status": "failed",
+            "title": "counts next year's holidays for the next business day: 30 Dec 2026 is followed by 4 Jan 2027, not 1 Jan",
+            "duration": 9.457065000000057,
+            "failureMessages": [
+              "AssertionError: expected { date: '2026-12-30', …(5) } to match object { is_business_day: true, …(2) }\n(3 matching properties omitted from actual)\n    at Proxy.<anonymous> (file:///home/user/strale-wt-pa-nager/node_modules/@vitest/expect/dist/index.js:1283:10)\n    at Proxy.<anonymous> (file:///home/user/strale-wt-pa-nager/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale-wt-pa-nager/node_modules/chai/index.js:1700:25)\n    at /home/user/strale-wt-pa-nager/apps/api/src/capabilities/business-day-eori.upstream-failures.test.ts:190:22\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-pa-nager/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) counts last year's holidays for the previous business day: 4 Jan 2027 is preceded by 30 Dec 2026, not 31 Dec",
+            "status": "failed",
+            "title": "counts last year's holidays for the previous business day: 4 Jan 2027 is preceded by 30 Dec 2026, not 31 Dec",
+            "duration": 9.310677000000055,
+            "failureMessages": [
+              "AssertionError: expected { date: '2027-01-04', …(5) } to match object { is_business_day: true, …(2) }\n(3 matching properties omitted from actual)\n    at Proxy.<anonymous> (file:///home/user/strale-wt-pa-nager/node_modules/@vitest/expect/dist/index.js:1283:10)\n    at Proxy.<anonymous> (file:///home/user/strale-wt-pa-nager/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale-wt-pa-nager/node_modules/chai/index.js:1700:25)\n    at /home/user/strale-wt-pa-nager/apps/api/src/capabilities/business-day-eori.upstream-failures.test.ts:198:22\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-pa-nager/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) throws, unbilled, when the adjacent year's holidays do not arrive",
+            "status": "failed",
+            "title": "throws, unbilled, when the adjacent year's holidays do not arrive",
+            "duration": 2.5867190000000164,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"date\":\"2026-12-30\",\"country_code\":\"SE\",\"is_business_day\":true,\"reason\":null,\"next_business_day\":\"2027-01-01\",\"previous_business_day\":\"2026-12-29\"}\n    at err (/home/user/strale-wt-pa-nager/apps/api/src/capabilities/business-day-eori.upstream-failures.test.ts:29:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale-wt-pa-nager/apps/api/src/capabilities/business-day-eori.upstream-failures.test.ts:27:15)\n    at /home/user/strale-wt-pa-nager/apps/api/src/capabilities/business-day-eori.upstream-failures.test.ts:204:17\n    at file:///home/user/strale-wt-pa-nager/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "business-day-check: Nager.Date failures throw (row 17)"
+            ],
+            "fullName": "business-day-check: Nager.Date failures throw (row 17) asks for one year only when the search cannot leave it",
+            "status": "passed",
+            "title": "asks for one year only when the search cannot leave it",
+            "duration": 2.1257890000000543,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) throws, unbilled, when the EORI service fails with HTTP 503",
+            "status": "passed",
+            "title": "throws, unbilled, when the EORI service fails with HTTP 503",
+            "duration": 14.271913999999924,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) throws, unbilled, when the EORI service fails with HTTP 429",
+            "status": "passed",
+            "title": "throws, unbilled, when the EORI service fails with HTTP 429",
+            "duration": 11.341537000000017,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) throws, unbilled, when the EORI service fails with network error",
+            "status": "passed",
+            "title": "throws, unbilled, when the EORI service fails with network error",
+            "duration": 5.012714999999957,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) throws, unbilled, when the EORI service fails with timeout",
+            "status": "passed",
+            "title": "throws, unbilled, when the EORI service fails with timeout",
+            "duration": 5.265653000000043,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) throws, unbilled, when the EORI service fails with HTTP 500 SOAP fault",
+            "status": "passed",
+            "title": "throws, unbilled, when the EORI service fails with HTTP 500 SOAP fault",
+            "duration": 6.495300000000043,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) throws, not retryable, when the endpoint is gone (404)",
+            "status": "passed",
+            "title": "throws, not retryable, when the endpoint is gone (404)",
+            "duration": 4.6537340000000995,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) throws, unbilled, when a 200 reply carries no validation status (it used to read valid: false)",
+            "status": "passed",
+            "title": "throws, unbilled, when a 200 reply carries no validation status (it used to read valid: false)",
+            "duration": 5.070032999999967,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) keeps the real negative: a number the service says is not valid",
+            "status": "passed",
+            "title": "keeps the real negative: a number the service says is not valid",
+            "duration": 6.731296999999927,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) keeps the positive answer",
+            "status": "passed",
+            "title": "keeps the positive answer",
+            "duration": 5.027872000000002,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eori-validate: service failures throw (row 19)"
+            ],
+            "fullName": "eori-validate: service failures throw (row 19) still answers a malformed number from the format check without calling the service",
+            "status": "passed",
+            "title": "still answers a malformed number from the format check without calling the service",
+            "duration": 2.4817709999999806,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794459542069,
+        "endTime": 1794459542704.4817,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale-wt-pa-nager/apps/api/src/capabilities/business-day-eori.upstream-failures.test.ts"
+      }
+    ]
+  }
+}

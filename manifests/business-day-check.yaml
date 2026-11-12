@@ -62,15 +62,16 @@ output_field_reliability:
   previous_business_day: guaranteed
 limitations:
   - title: Weekend definition varies by country
-    text: Uses Sat-Sun weekends for most countries, Fri-Sat for the Gulf and some other Middle Eastern and South Asian countries (the UAE is Sat-Sun since 2022), and Friday only for Iran. Countries not in the table (for example Israel and Nepal) are treated as Sat-Sun, and some rows are marked unverified in the code.
+    text: Uses Sat-Sun weekends for most countries and Fri-Sat for some Middle Eastern, North African and South Asian countries (for example Bahrain, Algeria and Bangladesh); some Fri-Sat rows are marked unverified in the code. Countries without a holiday calendar, such as Israel, Iran and Nepal, are refused whatever their weekend (see below).
     category: accuracy
     severity: info
   - title: Holiday data from Nager.Date
     text: >-
       Depends on the Nager.Date API for holiday data. If the API is unreachable, rate-limited or returns an
-      unreadable answer, the call fails and is not charged. For a country Nager.Date holds no holiday calendar for,
-      only weekends are checked. Nager.Date covers about 50 years either side of the current year; a date outside that window is
-      refused and not charged.
+      unreadable answer, the call fails and is not charged. A country Nager.Date holds no holiday calendar for (for example
+      Thailand, the United Arab Emirates and Saudi Arabia) and a code it does not recognise are refused and not charged,
+      because weekends alone cannot say whether a day is a business day. Nager.Date covers about 50 years either side of the
+      current year; a date outside that window, or within about two weeks of either end of it, is refused and not charged.
     category: dependency
     severity: info
 
