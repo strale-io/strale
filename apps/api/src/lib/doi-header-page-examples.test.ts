@@ -10,8 +10,14 @@ const content = { exports: {} as { toolPages: Record<string, { example: { input:
 runInNewContext(compiled.outputText, content);
 const { toolPages } = content.exports;
 
-vi.mock("./safe-fetch.js", () => ({ safeFetch: vi.fn() }));
-vi.mock("./url-validator.js", () => ({ validateUrl: vi.fn(async () => {}) }));
+vi.mock("./safe-fetch.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./safe-fetch.js")>()),
+  safeFetch: vi.fn(),
+}));
+vi.mock("./url-validator.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./url-validator.js")>()),
+  validateUrl: vi.fn(async () => {}),
+}));
 import { safeFetch } from "./safe-fetch.js";
 import { validateUrl } from "./url-validator.js";
 import "../capabilities/header-security-check.js";
@@ -87,6 +93,7 @@ it("the security-header illustration matches the executor and its grade counts p
       expect((await getExecutor("header-security-check")!(example.input)).output).toMatchObject({ score, grade });
     }
     fetcher.mockRejectedValueOnce(new DOMException("Timed out", "TimeoutError"));
-    await expect(getExecutor("header-security-check")!(example.input)).rejects.toThrow("Timed out");
+    // A timeout is the caller's site not answering (promise-audit T1 follow-up 30).
+    await expect(getExecutor("header-security-check")!(example.input)).rejects.toThrow("URL did not answer (timeout)");
   } finally { vi.clearAllMocks(); }
 });

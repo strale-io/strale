@@ -1,0 +1,213 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "b5564fd20e5f0f9358ed8b8ee873125ce2b18623"
+  },
+  "at": "2026-11-12T08:24:42.996Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/hsc-fail-before.json"
+  },
+  "summary": {
+    "numTotalTestSuites": 4,
+    "numPassedTestSuites": 0,
+    "numFailedTestSuites": 4,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 11,
+    "numPassedTests": 3,
+    "numFailedTests": 8,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "startTime": 1794471878431,
+    "success": false
+  },
+  "topic": "header-security-check-refusals-fail-before",
+  "raw": {
+    "numTotalTestSuites": 4,
+    "numPassedTestSuites": 0,
+    "numFailedTestSuites": 4,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 11,
+    "numPassedTests": 3,
+    "numFailedTests": 8,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794471878431,
+    "success": false,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "header-security-check: a refusal is not graded"
+            ],
+            "fullName": "header-security-check: a refusal is not graded HTTP 401 fails the call unbilled as a site refusal, without retrying",
+            "status": "failed",
+            "title": "HTTP 401 fails the call unbilled as a site refusal, without retrying",
+            "duration": 14.549145000000067,
+            "failureMessages": [
+              "Error: expected header-security-check to fail\n    at failure (/home/user/strale-wt-hsc/apps/api/src/capabilities/header-security-check.test.ts:30:9)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale-wt-hsc/apps/api/src/capabilities/header-security-check.test.ts:43:19\n    at file:///home/user/strale-wt-hsc/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a refusal is not graded"
+            ],
+            "fullName": "header-security-check: a refusal is not graded HTTP 403 fails the call unbilled as a site refusal, without retrying",
+            "status": "failed",
+            "title": "HTTP 403 fails the call unbilled as a site refusal, without retrying",
+            "duration": 0.6675490000000082,
+            "failureMessages": [
+              "Error: expected header-security-check to fail\n    at failure (/home/user/strale-wt-hsc/apps/api/src/capabilities/header-security-check.test.ts:30:9)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale-wt-hsc/apps/api/src/capabilities/header-security-check.test.ts:43:19\n    at file:///home/user/strale-wt-hsc/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a refusal is not graded"
+            ],
+            "fullName": "header-security-check: a refusal is not graded HTTP 407 fails the call unbilled as a site refusal, without retrying",
+            "status": "failed",
+            "title": "HTTP 407 fails the call unbilled as a site refusal, without retrying",
+            "duration": 0.6099450000000388,
+            "failureMessages": [
+              "Error: expected header-security-check to fail\n    at failure (/home/user/strale-wt-hsc/apps/api/src/capabilities/header-security-check.test.ts:30:9)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale-wt-hsc/apps/api/src/capabilities/header-security-check.test.ts:43:19\n    at file:///home/user/strale-wt-hsc/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a refusal is not graded"
+            ],
+            "fullName": "header-security-check: a refusal is not graded the site's own 404 is still graded as it stands",
+            "status": "passed",
+            "title": "the site's own 404 is still graded as it stands",
+            "duration": 1.0793370000000095,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a site that does not answer is the site's fault"
+            ],
+            "fullName": "header-security-check: a site that does not answer is the site's fault a reset connection fails unbilled and does not count against the capability",
+            "status": "failed",
+            "title": "a reset connection fails unbilled and does not count against the capability",
+            "duration": 1.7181300000000874,
+            "failureMessages": [
+              "AssertionError: expected TypeError: fetch failed to be an instance of UpstreamUnavailableError\n    at Proxy.<anonymous> (file:///home/user/strale-wt-hsc/node_modules/@vitest/expect/dist/index.js:1386:15)\n    at Proxy.<anonymous> (file:///home/user/strale-wt-hsc/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale-wt-hsc/node_modules/chai/index.js:1700:25)\n    at /home/user/strale-wt-hsc/apps/api/src/capabilities/header-security-check.test.ts:71:19\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-hsc/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a site that does not answer is the site's fault"
+            ],
+            "fullName": "header-security-check: a site that does not answer is the site's fault a timeout fails unbilled and does not count against the capability",
+            "status": "failed",
+            "title": "a timeout fails unbilled and does not count against the capability",
+            "duration": 0.9338300000000572,
+            "failureMessages": [
+              "AssertionError: expected DOMException{ stack: 'TimeoutError: …' } to be an instance of UpstreamUnavailableError\n    at Proxy.<anonymous> (file:///home/user/strale-wt-hsc/node_modules/@vitest/expect/dist/index.js:1386:15)\n    at Proxy.<anonymous> (file:///home/user/strale-wt-hsc/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale-wt-hsc/node_modules/chai/index.js:1700:25)\n    at /home/user/strale-wt-hsc/apps/api/src/capabilities/header-security-check.test.ts:71:19\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-hsc/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a site that does not answer is the site's fault"
+            ],
+            "fullName": "header-security-check: a site that does not answer is the site's fault a host that does not resolve fails unbilled and does not count against the capability",
+            "status": "failed",
+            "title": "a host that does not resolve fails unbilled and does not count against the capability",
+            "duration": 0.3650310000000445,
+            "failureMessages": [
+              "AssertionError: expected Error: getaddrinfo ENOTFOUND example.com { code: '…' } to be an instance of UpstreamUnavailableError\n    at Proxy.<anonymous> (file:///home/user/strale-wt-hsc/node_modules/@vitest/expect/dist/index.js:1386:15)\n    at Proxy.<anonymous> (file:///home/user/strale-wt-hsc/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale-wt-hsc/node_modules/chai/index.js:1700:25)\n    at /home/user/strale-wt-hsc/apps/api/src/capabilities/header-security-check.test.ts:71:19\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-hsc/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a site that does not answer is the site's fault"
+            ],
+            "fullName": "header-security-check: a site that does not answer is the site's fault a redirect loop fails unbilled and does not count against the capability",
+            "status": "failed",
+            "title": "a redirect loop fails unbilled and does not count against the capability",
+            "duration": 0.29004700000007233,
+            "failureMessages": [
+              "AssertionError: expected Error: Too many redirects (max 3) to be an instance of UpstreamUnavailableError\n    at Proxy.<anonymous> (file:///home/user/strale-wt-hsc/node_modules/@vitest/expect/dist/index.js:1386:15)\n    at Proxy.<anonymous> (file:///home/user/strale-wt-hsc/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale-wt-hsc/node_modules/chai/index.js:1700:25)\n    at /home/user/strale-wt-hsc/apps/api/src/capabilities/header-security-check.test.ts:71:19\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-hsc/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: Strale's own refusals pass through unchanged"
+            ],
+            "fullName": "header-security-check: Strale's own refusals pass through unchanged a robots.txt or challenge refusal from the fetch layer",
+            "status": "passed",
+            "title": "a robots.txt or challenge refusal from the fetch layer",
+            "duration": 0.6152409999999691,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: Strale's own refusals pass through unchanged"
+            ],
+            "fullName": "header-security-check: Strale's own refusals pass through unchanged an SSRF refusal on a redirect hop",
+            "status": "failed",
+            "title": "an SSRF refusal on a redirect hop",
+            "duration": 2.2782270000000153,
+            "failureMessages": [
+              "AssertionError: expected TypeError: fetch failed to be Error: connection to a restricted address… { code: '…' } // Object.is equality\n    at /home/user/strale-wt-hsc/apps/api/src/capabilities/header-security-check.test.ts:88:29\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-hsc/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: Strale's own refusals pass through unchanged"
+            ],
+            "fullName": "header-security-check: Strale's own refusals pass through unchanged a redirect to a restricted address caught by the URL validator",
+            "status": "passed",
+            "title": "a redirect to a restricted address caught by the URL validator",
+            "duration": 0.22897199999999884,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794471879117,
+        "endTime": 1794471879141.2783,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale-wt-hsc/apps/api/src/capabilities/header-security-check.test.ts"
+      }
+    ]
+  }
+}
