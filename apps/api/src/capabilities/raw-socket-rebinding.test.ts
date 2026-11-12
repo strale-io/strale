@@ -98,12 +98,12 @@ function askedAtConnectTime(host: string): boolean {
 }
 
 describe("raw-socket capabilities do not follow a rebound DNS answer (CR-11)", () => {
-  it("port-check does not connect to the address a rebinding server answers at connect time", async () => {
-    const result = (await exec("port-check")({ host: REBIND_HOST, ports: [port], timeout_ms: 2000 })) as {
-      output: { open_count: number };
-    };
+  it("port-check does not connect to the address a rebinding server answers at connect time and says why", async () => {
+    // Before wave 2d this resolved, billed, with the port reported closed;
+    // the refusal now fails the call (swallowed-failures audit, row 30).
+    const err = await refusal(exec("port-check")({ host: REBIND_HOST, ports: [port], timeout_ms: 2000 }));
     expect(connections).toBe(0);
-    expect(result.output.open_count).toBe(0);
+    expect(err.message).toMatch(CONNECT_TIME_REFUSAL);
     expect(askedAtConnectTime(REBIND_HOST)).toBe(true);
   });
 

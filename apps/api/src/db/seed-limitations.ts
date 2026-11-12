@@ -539,7 +539,7 @@ export const LIMITATIONS: LimitationDef[] = [
   { capabilitySlug: "country-trade-data", category: "availability", severity: "info",
     title: "World Bank outages fail without a charge",
     limitationText: "Totals come from the World Bank for the requested year when it has both exports and imports. When it has neither, the embedded 2023 estimates answer for both totals and data_source is embedded-trade-data. When it has only one, the embedded estimates answer for both where the country has an entry; for a country without one, the World Bank's single figure is returned beside a null. The two sources are never mixed, and totals_year names the year the totals are for; data_source is World Bank API when the country has no embedded entry. When the World Bank does not answer (an error status, a timeout, an unreadable response or a rejected request), the call fails with an error and is not billed.",
-    workaround: "After a World Bank server error (5xx), a 429 or a timeout, retry after a short wait; any other error status, and a rejected or unreadable answer, will not change on retry." },
+    workaround: "After a World Bank server error (5xx), a 429, a timeout or a network error, retry after a short wait; any other error status, and a rejected or unreadable answer, will not change on retry." },
   { capabilitySlug: "country-trade-data", category: "coverage", severity: "info",
     title: "Country names are read only from a short list",
     limitationText: "The country is an ISO alpha-2 code, a name or alias on a short list (such as Sweden, UK or USA), or the start of one of those names when it is at least four letters long and fits only one country. Any other name, including one that contains a listed name (North Korea, or Hong Kong, China), is refused and not billed.",
@@ -1383,7 +1383,11 @@ export const LIMITATIONS: LimitationDef[] = [
   { capabilitySlug: "port-check", category: "coverage", severity: "info",
     title: "TCP connection test only — firewalls may block probes from Strale's IP range while allowing other traffic",
     limitationText: "TCP connection test only — firewalls may block probes from Strale's IP range while allowing traffic from other sources",
-    workaround: "If a port shows as closed, verify from your own network before concluding the service is down" },
+    workaround: "If a port shows as closed or filtered, verify from your own network before concluding the service is down" },
+  { capabilitySlug: "port-check", category: "availability", severity: "info",
+    title: "A host that cannot be reached fails the call instead of reporting closed ports",
+    limitationText: "A refused connection is reported as `closed` and no answer within the timeout as `filtered`; both are answers and are billed. A host that is down also shows as `filtered`, because over TCP it looks the same as a firewall that drops probes. When Strale cannot resolve or reach the host at all (the name does not resolve, no route, the connection is reset, or every probed port gets an ICMP unreachable), the call fails with an error and is not billed. A host that resolves to a private or restricted address is refused, also unbilled.",
+    workaround: "Check the host name, then retry; a failure to resolve will not change on retry." },
 
   // ── redirect-trace ──
   { capabilitySlug: "redirect-trace", category: "coverage", severity: "info",

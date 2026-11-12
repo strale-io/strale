@@ -36,7 +36,7 @@ This tool returns aggregate totals only. It does not return chain or product bre
 
 ## Preserve missing values
 
-A `null` metric means unavailable, not zero. The fee request must succeed, but revenue retrieval is optional: an unavailable revenue endpoint can yield a successful response with null revenue fields. The result does not distinguish every reason for absent revenue data.
+A `null` metric means unavailable, not zero. Revenue fields are null when DefiLlama reports fees for the protocol but does not track its revenue. If the fee or the revenue request fails, the call fails and is not charged; it does not return null revenue in place of the failure.
 
 Show unavailable values as missing and avoid calculating a ratio from them. Keep an actual zero when the provider supplies one. The example on the tool page is a catalogue illustration, not a current market measurement.
 

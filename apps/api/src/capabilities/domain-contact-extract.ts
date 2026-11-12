@@ -3,7 +3,8 @@ import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { MAX_SCRAPED_CONTACT_BYTES, readTextTruncated } from "../lib/resource-limits.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import { assertRedirectAllowed, assertRobotsAllowed } from "../lib/robots-txt.js";
-import { assertNotBlockStatus, siteAccessRefusal } from "../lib/site-access.js";
+import { assertNotBlockStatus, siteAccessRefusal, SiteAccessRefusedError } from "../lib/site-access.js";
+import { targetUnavailable } from "../lib/upstream-result.js";
 import { looksLikeJsChallenge } from "./lib/web-provider.js";
 import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { ROLE_PREFIXES } from "./email-validate.js";
@@ -301,6 +302,55 @@ function extractPostalAddress(html: string): string | null {
   return null;
 }
 
+/**
+ * The linked contact page's HTML, or null when the page is not there to read:
+ * robots.txt disallows it, or it answers a client error such as 404 (a dead
+ * link). The homepage answer is then the product, and `fetched_urls` shows
+ * the contact page was not read.
+ *
+ * Everything else fails the call, unbilled (2026-11-06 swallowed-failures
+ * audit, row 32). Before, any failure here was swallowed and the result was
+ * billed with whatever the homepage alone held, usually no contacts at all,
+ * which reads as "this company publishes none". A block (401, 403, 407, 429,
+ * a challenge page, an unreadable robots.txt) is a refusal, as it is for the
+ * homepage. A 5xx, a 408, a timeout or a network error is the caller's site
+ * failing: `targetUnavailable`, unbilled and retryable, not counted against
+ * this capability.
+ */
+async function fetchContactPage(contactPageUrl: string, hostname: string): Promise<string | null> {
+  const site = `website ${hostname}`;
+  let resp: Response;
+  try {
+    // Same origin, so this reads the verdict cached a moment ago.
+    await assertRobotsAllowed(contactPageUrl);
+    resp = await safeFetch(contactPageUrl, {
+      headers: { "User-Agent": USER_AGENT },
+      timeoutMs: FETCH_TIMEOUT_MS,
+    });
+  } catch (err) {
+    // degraded-ok: robots.txt disallows this one path (a redirect hop included), so the contact page may not be read; the homepage answer is returned and fetched_urls omits the contact page. Every other failure throws.
+    if (err instanceof SiteAccessRefusedError && err.block.kind === "robots_disallow") return null;
+    if (isCapabilityRefusal(err)) throw err;
+    throw targetUnavailable(site, err);
+  }
+  if (!resp.ok) {
+    await discardBody(resp, "domain-contact-extract: contact page non-2xx");
+    assertNotBlockStatus(contactPageUrl, resp.status);
+    if (resp.status >= 500 || resp.status === 408) throw targetUnavailable(site, resp.status);
+    return null;
+  }
+  let html: string;
+  try {
+    html = decodeJsonUnicodeEscapes(await readTextTruncated(resp, MAX_SCRAPED_CONTACT_BYTES));
+  } catch (err) {
+    // The connection dropped or timed out mid-body.
+    if (isCapabilityRefusal(err)) throw err;
+    throw targetUnavailable(site, err);
+  }
+  if (looksLikeJsChallenge(html)) throw siteAccessRefusal(contactPageUrl, { kind: "challenge" });
+  return html;
+}
+
 registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
   const raw =
     (input.domain as string) ??
@@ -396,20 +446,10 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
   }
 
   if (contactPageUrl) {
-    try {
-      // Same origin, so this reads the verdict cached a moment ago. A
-      // disallowed contact page is skipped like any other failed fetch.
-      await assertRobotsAllowed(contactPageUrl);
-      const resp = await safeFetch(contactPageUrl, {
-        headers: { "User-Agent": USER_AGENT },
-        timeoutMs: FETCH_TIMEOUT_MS,
-      });
-      if (resp.ok) {
-        contactHtml = decodeJsonUnicodeEscapes(await readTextTruncated(resp, MAX_SCRAPED_CONTACT_BYTES));
-        fetchedUrls.push(contactPageUrl);
-      }
-    } catch {
-      // Contact-page fetch is best-effort; homepage data still returned.
+    const page = await fetchContactPage(contactPageUrl, hostname);
+    if (page !== null) {
+      contactHtml = page;
+      fetchedUrls.push(contactPageUrl);
     }
   }
 

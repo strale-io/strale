@@ -1,6 +1,9 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readPageHtml } from "../lib/resource-limits.js";
+import { assertNotBlockStatus } from "../lib/site-access.js";
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
+import { targetUnavailable } from "../lib/upstream-result.js";
 
 registerCapability("og-image-check", async (input: CapabilityInput) => {
   const rawUrl = ((input.url as string) ?? (input.task as string) ?? "").trim();
@@ -51,30 +54,22 @@ registerCapability("og-image-check", async (input: CapabilityInput) => {
 
   const imageToCheck = resolvedOgImage ?? resolvedTwitterImage;
   if (imageToCheck) {
-    try {
-      // F-0-006: the OG image URL came from the fetched page; treat as untrusted.
-      const imgResp = await safeFetch(imageToCheck, {
-        method: "HEAD",
-        headers: { "User-Agent": "Strale-Bot/1.0" },
-        signal: AbortSignal.timeout(10000),
-      });
-
-      imageExists = imgResp.ok;
-
-      const contentLength = imgResp.headers.get("content-length");
+    const imgHeaders = await probeImage(imageToCheck);
+    // null: the image URL answered a 4xx (404, 410), a real finding below.
+    imageExists = imgHeaders !== null;
+    if (imgHeaders) {
+      const contentLength = imgHeaders.get("content-length");
       if (contentLength) {
         imageSizeKb = Math.round(parseInt(contentLength, 10) / 1024);
       }
 
-      const contentType = imgResp.headers.get("content-type") ?? "";
+      const contentType = imgHeaders.get("content-type") ?? "";
       if (contentType.includes("jpeg") || contentType.includes("jpg")) imageFormat = "jpeg";
       else if (contentType.includes("png")) imageFormat = "png";
       else if (contentType.includes("webp")) imageFormat = "webp";
       else if (contentType.includes("gif")) imageFormat = "gif";
       else if (contentType.includes("svg")) imageFormat = "svg";
       else if (contentType.includes("image/")) imageFormat = contentType.split("/")[1];
-    } catch {
-      // Image fetch failed
     }
   }
 
@@ -184,6 +179,49 @@ registerCapability("og-image-check", async (input: CapabilityInput) => {
     },
   };
 });
+
+/**
+ * The image's response headers, or null when the image URL answered a
+ * client error (404, 410, ...): "og:image URL returns non-200 status" is
+ * then the finding the caller pays for.
+ *
+ * Every other failure throws, unbilled (2026-11-06 swallowed-failures audit,
+ * row 31). Before, a timeout, a network error or a 5xx was swallowed and
+ * reported as that same finding, which says the page is broken when only the
+ * check failed. A block (401, 403, 407, 429, robots.txt) ends the check as a
+ * refusal, as it does for the page itself. A 5xx, a 408, a timeout or a
+ * network error is the image host failing: `targetUnavailable`, worded and
+ * marked as the caller's target, retryable. A server that does not
+ * implement HEAD (405, 501) is asked again with GET, headers only.
+ */
+async function probeImage(imageUrl: string): Promise<Headers | null> {
+  const site = `image host ${extractDomain(imageUrl)}`;
+  let resp: Response;
+  try {
+    // F-0-006: the OG image URL came from the fetched page; treat as untrusted.
+    resp = await safeFetch(imageUrl, {
+      method: "HEAD",
+      headers: { "User-Agent": "Strale-Bot/1.0" },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (resp.status === 405 || resp.status === 501) {
+      await discardBody(resp, "og-image-check: HEAD not supported");
+      resp = await safeFetch(imageUrl, {
+        headers: { "User-Agent": "Strale-Bot/1.0" },
+        signal: AbortSignal.timeout(10000),
+      });
+    }
+  } catch (err) {
+    if (isCapabilityRefusal(err)) throw err;
+    throw targetUnavailable(site, err);
+  }
+  // Only the headers are read.
+  await discardBody(resp, "og-image-check: image header probe");
+  if (resp.ok) return resp.headers;
+  assertNotBlockStatus(imageUrl, resp.status);
+  if (resp.status >= 500 || resp.status === 408) throw targetUnavailable(site, resp.status);
+  return null;
+}
 
 function extractMeta(html: string, name: string, attr: string = "name"): string | null {
   // Match both orderings: attr before content, and content before attr

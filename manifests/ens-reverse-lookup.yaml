@@ -62,13 +62,12 @@ output_field_reliability:
   ens_name: common
   verified: common
 limitations:
-  - title: null
+  - title: An RPC failure fails the call
     text: >-
-      Output reflects Public Ethereum RPC (publicnode.com, llamarpc.com) at query time. Dependent on upstream API
-      availability; may degrade if the provider rate-limits or is temporarily unavailable.
+      Output reflects the Ethereum mainnet at query time, read through a licensed RPC provider. `verified` is false only when the name does not resolve back to the address. When the RPC provider does not answer (a server error, a 429, a timeout or a network error), including during the forward check, the call fails with an error and is not billed.
     category: availability
     severity: info
-    workaround: null
+    workaround: Retry after a short wait.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

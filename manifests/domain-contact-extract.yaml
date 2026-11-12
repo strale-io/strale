@@ -144,6 +144,12 @@ limitations:
       are not found.
     category: coverage
     severity: info
+  - title: A contact page that fails to load fails the call
+    text: >-
+      The home page and the linked contact page must both answer. When the contact page answers 404 or another client error, or robots.txt disallows it, the result comes from the home page alone and `fetched_urls` lists only the home page. When either page blocks the request (401, 403, 407, 429, robots.txt for the home page, or a bot challenge), answers a server error or 408, times out or cannot be reached, the call fails with an error and is not billed.
+    category: availability
+    severity: info
+    workaround: Check `fetched_urls` to see which pages were read; retry after a server error or a timeout.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

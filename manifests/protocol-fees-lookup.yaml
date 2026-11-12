@@ -25,15 +25,15 @@ output_schema:
   example:
     slug: parent#uniswap
     protocol: Uniswap
-    fees_7d_usd: 7424515
-    fees_24h_usd: 1100432
-    fees_30d_usd: 39302873
-    revenue_7d_usd: null
-    revenue_24h_usd: null
-    revenue_30d_usd: null
-    fees_all_time_usd: 5497395571
-    fees_48h_to_24h_usd: 1417183
-    revenue_all_time_usd: null
+    fees_7d_usd: 13435356
+    fees_24h_usd: 1564082
+    fees_30d_usd: 76015351
+    revenue_7d_usd: 1544123
+    revenue_24h_usd: 183026
+    revenue_30d_usd: 8140819
+    fees_all_time_usd: 6152364825
+    fees_48h_to_24h_usd: 2022931
+    revenue_all_time_usd: 64445266
   properties:
     protocol:
       type: string
@@ -76,13 +76,12 @@ output_field_reliability:
   revenue_30d_usd: common
   fees_all_time_usd: common
 limitations:
-  - title: null
+  - title: Revenue is null when DeFi Llama does not track it
     text: >-
-      Output reflects DefiLlama (Protocol Fees API) at query time. Dependent on upstream API availability; may degrade
-      if the provider rate-limits or is temporarily unavailable.
+      Figures are DeFi Llama's at query time. Revenue fields are null only when DeFi Llama tracks fees but not revenue for the protocol. When DeFi Llama does not answer either request (a server error, a 429, a timeout or an unreadable response), the call fails with an error and is not billed, rather than returning null revenue.
     category: availability
     severity: info
-    workaround: null
+    workaround: Retry after a server error, a 429 or a timeout.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

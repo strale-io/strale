@@ -114,9 +114,9 @@ export const toolPages: Partial<Record<string, ToolPage>> = {
     intro: "Send a DeFi protocol slug to Strale and get its reported fees and revenue from DefiLlama as JSON. The tool returns available totals for 24 hours, 7 days, 30 days and all time, ready for an app, agent or research workflow.",
     example: {
       input: { protocol: "uniswap" },
-      output: { protocol: "Uniswap", slug: "parent#uniswap", fees_24h_usd: 1100432, fees_7d_usd: 7424515, fees_30d_usd: 39302873, revenue_24h_usd: null },
+      output: { protocol: "Uniswap", slug: "parent#uniswap", fees_24h_usd: 1564082, fees_7d_usd: 13435356, fees_30d_usd: 76015351, revenue_24h_usd: 183026 },
       selected: true,
-      note: "Selected figures from the catalogue example, not current Uniswap totals. Run the call for a fresh response. null means revenue was unavailable in that response; it does not mean zero revenue.",
+      note: "Selected figures from the catalogue example, not current Uniswap totals. Run the call for a fresh response.",
     },
     uses: [
       "Add reported protocol fees and revenue to a research summary without processing the full upstream response.",
@@ -126,7 +126,7 @@ export const toolPages: Partial<Record<string, ToolPage>> = {
     results: [
       { label: "Fees and revenue", explanation: "Fees describe what users pay to use the protocol. Revenue is the portion retained by the protocol under DefiLlama’s methodology. They are different measures; neither is a quote for the gas cost of your next transaction." },
       { label: "Periods and currency", explanation: "Fields ending in _usd are amounts in US dollars, not cents or native tokens. fees_48h_to_24h_usd is the preceding 24-hour period. The 7-day and 30-day totals overlap: do not add them together. These are aggregate totals, without chain or product breakdowns." },
-      { label: "Missing values", explanation: "A metric can be null when the provider does not supply it. The revenue request is optional: it can fail while the fee request succeeds, leaving revenue fields null. Preserve null rather than turning it into zero. A zero value is retained when the provider supplies zero." },
+      { label: "Missing values", explanation: "A metric can be null when the provider does not supply it. Revenue fields are null when DefiLlama reports fees but does not track revenue for the protocol. If either request fails, the call fails and is not charged, rather than returning null revenue. Preserve null rather than turning it into zero. A zero value is retained when the provider supplies zero." },
       { label: "protocol and slug", explanation: "Use a supported DefiLlama URL slug such as uniswap as input. The output slug may be a different provider identifier, such as parent#uniswap; do not automatically reuse it as the next lookup input. An unknown protocol returns an error." },
     ],
     inputDescriptions: { protocol: "Supported DefiLlama protocol slug, such as uniswap or aave-v3. Use the source’s slug rather than guessing a display name." },

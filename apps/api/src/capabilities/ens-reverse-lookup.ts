@@ -3,6 +3,25 @@ import { createPublicClient, http, type Address } from "viem";
 import { mainnet } from "viem/chains";
 import { normalize } from "viem/ens";
 import { getEthRpcEndpoints, NO_LICENSED_ETH_RPC, rpcEndpointHost } from "../lib/eth-rpc-endpoints.js";
+import { fetchUnavailable, httpUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
+
+const RPC = "Ethereum RPC";
+
+/**
+ * The error for an RPC call that threw. viem wraps the transport failure
+ * (an HTTP status, a timeout, a network error) several causes deep
+ * (ContractFunctionExecutionError > CallExecutionError > HttpRequestError),
+ * so the chain is walked for it. Anything else keeps the message it had.
+ */
+function rpcFailure(err: unknown): Error {
+  for (let e: unknown = err, depth = 0; e && depth < 8; e = (e as { cause?: unknown }).cause, depth++) {
+    const status = (e as { status?: unknown }).status;
+    if (typeof status === "number") return httpUnavailable(RPC, status);
+    const typed = fetchUnavailable(RPC, e);
+    if (typed instanceof UpstreamUnavailableError) return typed;
+  }
+  return new Error(`ENS reverse lookup failed on all RPC endpoints: ${err instanceof Error ? err.message : String(err)}`);
+}
 
 function makeClient(rpcUrl: string) {
   return createPublicClient({
@@ -46,13 +65,22 @@ registerCapability("ens-reverse-lookup", async (input: CapabilityInput) => {
         };
       }
 
-      // Forward verification: confirm the name resolves back to this address
-      let verified = false;
+      // Forward verification: confirm the name resolves back to this address.
+      // viem answers null for a name with no resolver or no address, which is
+      // `verified: false`. An RPC failure is not (2026-11-06 swallowed-failures
+      // audit, row 35): before, it was caught here and billed as an
+      // unverified name; now it falls to the endpoint loop and throws.
+      let normalized: string | null;
       try {
-        const resolvedAddress = await client.getEnsAddress({ name: normalize(ensName) });
-        verified = resolvedAddress?.toLowerCase() === address.toLowerCase();
+        normalized = normalize(ensName);
       } catch {
-        // Verification failed — report as unverified
+        // degraded-ok: a reverse record whose name does not normalise cannot resolve forward, so it is genuinely unverified; no request was made.
+        normalized = null;
+      }
+      let verified = false;
+      if (normalized !== null) {
+        const resolvedAddress = await client.getEnsAddress({ name: normalized });
+        verified = resolvedAddress?.toLowerCase() === address.toLowerCase();
       }
 
       return {
@@ -65,12 +93,11 @@ registerCapability("ens-reverse-lookup", async (input: CapabilityInput) => {
         provenance: { source: `ens.domains (via ${rpcEndpointHost(rpcUrl)})`, fetched_at: now },
       };
     } catch (err) {
+      // degraded-ok: the failure is kept in lastError and the next endpoint is tried; the last endpoint's failure throws through rpcFailure, unbilled.
       lastError = err;
-      if (isLast) {
-        throw new Error(`ENS reverse lookup failed on all RPC endpoints: ${err instanceof Error ? err.message : String(err)}`);
-      }
+      if (isLast) throw rpcFailure(err);
     }
   }
 
-  throw new Error(`ENS reverse lookup failed on all RPC endpoints: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
+  throw rpcFailure(lastError);
 });
