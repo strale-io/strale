@@ -23,3 +23,16 @@ test("built signup ships the actual catalogue allowlist and an initially hidden 
   assert.match(html, /data-signup-continuation hidden/);
   assert.match(html, /data-signup-general-steps/);
 });
+
+test("built signup states the Terms and Privacy notice inside the form, before the submit button", () => {
+  const html = readFileSync(resolve(dist, "signup.html"), "utf8");
+  const form = html.match(/<form[^>]*data-signup-form[^>]*>([\s\S]*?)<\/form>/)?.[1];
+  assert.ok(form, "the signup form is in the page");
+  const notice = form.indexOf("data-signup-terms");
+  const submit = form.indexOf('type="submit"');
+  assert.ok(notice !== -1 && submit !== -1 && notice < submit, "the notice comes before the button that creates the account");
+  const p = form.slice(notice, form.indexOf("</p>", notice));
+  assert.match(p, /By creating an account, you agree to the/);
+  assert.match(p, /href="\/terms"[^>]*>Terms of Service<\/a>/);
+  assert.match(p, /href="\/privacy"[^>]*>Privacy Policy<\/a>/);
+});
