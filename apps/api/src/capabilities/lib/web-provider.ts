@@ -925,6 +925,7 @@ export async function assertPlainPreflightAllowed(
       signal: AbortSignal.timeout(8000),
     });
   } catch (err) {
+    // degraded-ok: a transport failure is left to the rendered route only where Strale can read that route's output (a challenge is caught there); for an opaque render it throws through targetUnavailable unless the failure is one only Node has (isNodeProtocolGap), recorded as residual risk under promise-audit (49). Everything else rethrows.
     const ssrf = ssrfRefusalIn(err);
     if (ssrf) throw ssrf;
     if (isPreflightTransportFailure(err)) {
@@ -960,6 +961,7 @@ async function readOpaquePreflightHead(res: Response, targetUrl: string): Promis
   try {
     return await readTextTruncated(res, 8192, "url");
   } catch (err) {
+    // degraded-ok: an empty head only for a failure Node has and Chrome does not (isNodeProtocolGap), so the page still renders, as the residual risk recorded under promise-audit (49); every other read failure throws through targetUnavailable, unbilled.
     if (isNodeProtocolGap(err)) return "";
     throw targetUnavailable(new URL(targetUrl).hostname, err);
   }
