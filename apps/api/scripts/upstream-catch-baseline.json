@@ -195,12 +195,6 @@
     },
     {
       "file": "apps/api/src/capabilities/email-pattern-discover.ts",
-      "fingerprint": "56d0b1b8033d0f05917c09fa79c797e8e4ac6ff20eb8a5339e5015782196ab64",
-      "count": 1,
-      "line": 149
-    },
-    {
-      "file": "apps/api/src/capabilities/email-pattern-discover.ts",
       "fingerprint": "5e9b97348060da170113792d1776e0a2412fd1544028db28dd4d34a2502d1778",
       "count": 1,
       "line": 45

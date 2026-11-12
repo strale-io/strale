@@ -1,8 +1,10 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readRobotsTxt } from "../lib/resource-limits.js";
-import { validateUrl } from "../lib/url-validator.js";
-import { isChallengeResponse, siteAccessRefusal } from "../lib/site-access.js";
+import { UrlValidationError, validateUrl } from "../lib/url-validator.js";
+import { assertNotBlockStatus, isChallengeResponse, siteAccessRefusal } from "../lib/site-access.js";
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
+import { targetUnavailable } from "../lib/upstream-result.js";
 
 /**
  * The fields output_field_reliability marks guaranteed, as a site without a
@@ -37,11 +39,22 @@ registerCapability("robots-txt-parse", async (input: CapabilityInput) => {
   const robotsUrl = `${base.protocol}//${base.hostname}/robots.txt`;
   await validateUrl(robotsUrl);
 
-  const response = await safeFetch(robotsUrl, {
-    purpose: "availability_probe",
-    signal: AbortSignal.timeout(10000),
-    headers: { "User-Agent": "StraleBot/1.0" },
-  });
+  // The caller's site. Its failures are the caller's target: unbilled and never
+  // counted against this capability. Before, a non-2xx was a plain error naming
+  // the status, and a timeout or network error went out raw; both were counted
+  // (promise-audit T1 follow-up 48).
+  const site = `website ${base.hostname}`;
+  let response: Response;
+  try {
+    response = await safeFetch(robotsUrl, {
+      purpose: "availability_probe",
+      signal: AbortSignal.timeout(10000),
+      headers: { "User-Agent": "StraleBot/1.0" },
+    });
+  } catch (err) {
+    if (err instanceof UrlValidationError || isCapabilityRefusal(err)) throw err;
+    throw targetUnavailable(site, err);
+  }
 
   if (response.status === 404) {
     await discardBody(response, "robots-txt-parse: no robots.txt");
@@ -54,7 +67,14 @@ registerCapability("robots-txt-parse", async (input: CapabilityInput) => {
     // Nothing below reads the body (#434). Cancel it rather than leaving
     // it to pin the keep-alive connection until GC.
     await discardBody(response, "robots-txt-parse: non-2xx");
-    throw new Error(`HTTP ${response.status} fetching robots.txt`);
+    // A challenge Cloudflare serves with an error status (a 503 interstitial)
+    // is a block, not the site being down. Only the header is read here: a
+    // body peek tees the stream and the cancel above would no longer free it.
+    if (response.headers.get("cf-mitigated")?.trim().toLowerCase() === "challenge") {
+      throw siteAccessRefusal(robotsUrl, { kind: "challenge" });
+    }
+    assertNotBlockStatus(robotsUrl, response.status);
+    throw targetUnavailable(site, response.status);
   }
 
   // An availability probe, so safeFetch does not stop at a challenge itself.
