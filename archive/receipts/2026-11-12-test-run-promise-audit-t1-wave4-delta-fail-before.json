@@ -1,0 +1,282 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "cd apps/api && AUDIT_HMAC_SECRET=<test value> npx vitest run src/capabilities/probe-failure-regressions.test.ts --reporter=json (domain-reputation.ts swapped to 83b6a290)",
+    "commit": "3ff64eb40e0a4a609230ab3fdd846f78a50caf21"
+  },
+  "at": "2026-11-12T04:25:30.807Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/wave4-delta-fail-before.json"
+  },
+  "summary": {
+    "failed": 5,
+    "expected": "the five new domain-reputation tests fail on the executor before the delta-review fixes"
+  },
+  "topic": "promise-audit-t1-wave4-delta-fail-before",
+  "raw": {
+    "numTotalTestSuites": 3,
+    "numPassedTestSuites": 1,
+    "numFailedTestSuites": 2,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 18,
+    "numPassedTests": 13,
+    "numFailedTests": 5,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794457340480,
+    "success": false,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) refuses a ToS-blocklisted domain rather than grading its HTTPS as failed",
+            "status": "passed",
+            "title": "refuses a ToS-blocklisted domain rather than grading its HTTPS as failed",
+            "duration": 78.40700700000002,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) refuses a redirect to a private address rather than grading it",
+            "status": "failed",
+            "title": "refuses a redirect to a private address rather than grading it",
+            "duration": 13.659716000000003,
+            "failureMessages": [
+              "AssertionError: expected 'private-hop.example.com redirected to…' to be 'private-hop.example.com redirected to…' // Object.is equality\n    at /home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts:98:35\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-pa-wave4/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) grades on the domain's own redirect when the hop it leads to does not answer",
+            "status": "failed",
+            "title": "grades on the domain's own redirect when the hop it leads to does not answer",
+            "duration": 4.165075000000002,
+            "failureMessages": [
+              "AssertionError: expected false to be true // Object.is equality\n    at /home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts:117:39\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-pa-wave4/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) asks the domain itself first and follows its redirect for the site's headers",
+            "status": "passed",
+            "title": "asks the domain itself first and follows its redirect for the site's headers",
+            "duration": 2.8291269999999713,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) names why a redirect was not followed when its scheme is refused",
+            "status": "failed",
+            "title": "names why a redirect was not followed when its scheme is refused",
+            "duration": 3.533194999999978,
+            "failureMessages": [
+              "AssertionError: expected 'ftp-hop.example.com redirected to a U…' to match /^ftp-hop\\.example\\.com redirected to …/\n    at /home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts:140:35\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-pa-wave4/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) grades a redirect chain past the cap on the 3xx it ends at, not as a failure",
+            "status": "passed",
+            "title": "grades a redirect chain past the cap on the 3xx it ends at, not as a failure",
+            "duration": 2.8985229999999547,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) grades no answer within 8 s under its own issue, not as a refused connection",
+            "status": "passed",
+            "title": "grades no answer within 8 s under its own issue, not as a refused connection",
+            "duration": 4.9205930000000535,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) still grades a TLS failure of the domain itself",
+            "status": "passed",
+            "title": "still grades a TLS failure of the domain itself",
+            "duration": 2.1547309999999698,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) does not grade a temporary failure of Strale's own resolver",
+            "status": "failed",
+            "title": "does not grade a temporary failure of Strale's own resolver",
+            "duration": 2.793203999999946,
+            "failureMessages": [
+              "AssertionError: expected 'target' to be 'provider' // Object.is equality\n    at expectResolverRetry (/home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts:64:25)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts:186:5\n    at file:///home/user/strale-wt-pa-wave4/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) does not grade a bare EAI_AGAIN either",
+            "status": "failed",
+            "title": "does not grade a bare EAI_AGAIN either",
+            "duration": 2.2239759999999933,
+            "failureMessages": [
+              "AssertionError: expected 'target' to be 'provider' // Object.is equality\n    at expectResolverRetry (/home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts:64:25)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts:193:5\n    at file:///home/user/strale-wt-pa-wave4/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) refuses Strale's own connect-time SSRF block rather than grading it",
+            "status": "passed",
+            "title": "refuses Strale's own connect-time SSRF block rather than grading it",
+            "duration": 1.515145000000075,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18)"
+            ],
+            "fullName": "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18) returns exists:false for an HTML page served with 200",
+            "status": "passed",
+            "title": "returns exists:false for an HTML page served with 200",
+            "duration": 14.305033999999978,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18)"
+            ],
+            "fullName": "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18) gives a 404 the fields the manifest guarantees",
+            "status": "passed",
+            "title": "gives a 404 the fields the manifest guarantees",
+            "duration": 2.7300379999999222,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18)"
+            ],
+            "fullName": "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18) keeps a robots.txt that opens with an HTML-style comment and has rules",
+            "status": "passed",
+            "title": "keeps a robots.txt that opens with an HTML-style comment and has rules",
+            "duration": 2.144302000000039,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18)"
+            ],
+            "fullName": "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18) reads an HTML page after a byte-order mark as no robots.txt",
+            "status": "passed",
+            "title": "reads an HTML page after a byte-order mark as no robots.txt",
+            "duration": 2.708986999999979,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18)"
+            ],
+            "fullName": "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18) reads an HTML page as no robots.txt even when it is served as text/plain",
+            "status": "passed",
+            "title": "reads an HTML page as no robots.txt even when it is served as text/plain",
+            "duration": 1.9153810000000249,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18)"
+            ],
+            "fullName": "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18) keeps an empty robots.txt as one that exists with no rules",
+            "status": "passed",
+            "title": "keeps an empty robots.txt as one that exists with no rules",
+            "duration": 1.8144740000000183,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18)"
+            ],
+            "fullName": "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18) keeps a real robots.txt served as text/html",
+            "status": "passed",
+            "title": "keeps a real robots.txt served as text/html",
+            "duration": 2.2170059999999694,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794457341214,
+        "endTime": 1794457341361.217,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts"
+      }
+    ]
+  }
+}

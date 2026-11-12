@@ -1,9 +1,18 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import dns from "node:dns/promises";
-import { dnsOrEmpty, isConnectionFailure, targetUnavailable } from "../lib/upstream-result.js";
+import { dnsOrEmpty, fetchUnavailable, isConnectionFailure, targetUnavailable } from "../lib/upstream-result.js";
 import { UrlValidationError, validateHost } from "../lib/url-validator.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { SiteAccessRefusedError, SourceBlockedError, isChallengeResponse, siteAccessRefusal } from "../lib/site-access.js";
+
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+
+/** EAI_AGAIN, bare or as a fetch failure's cause: Strale's own resolver could not answer for now. */
+function isResolverRetry(err: unknown): boolean {
+  return [err, (err as { cause?: unknown } | null)?.cause].some(
+    (e) => (e as { code?: unknown } | null)?.code === "EAI_AGAIN",
+  );
+}
 
 registerCapability("domain-reputation", async (input: CapabilityInput) => {
   let domain = ((input.domain as string) ?? (input.url as string) ?? (input.task as string) ?? "").trim().toLowerCase();
@@ -61,36 +70,65 @@ registerCapability("domain-reputation", async (input: CapabilityInput) => {
   // HTTPS. An anti-bot challenge marked by cf-mitigated is the one answer that
   // is refused, unbilled: its headers belong to the interstitial, not the
   // domain's site (a HEAD carries no body, so a body-only challenge is graded
-  // on the interstitial's headers). Only the domain's own HTTPS is graded: a
+  // on the interstitial's headers).
+  //
+  // Only the domain's own HTTPS is graded (promise-audit T1 follow-up 23): a
   // failure at its network or TLS layer ("HTTPS connection failed") or no
   // answer within the probe's 8 s ("HTTPS did not answer within 8 seconds";
   // undici's own connect timeout is 10 s, so a port that drops connections
-  // ends here, and a retry would not change it). Strale's own refusals and a
-  // redirect to a restricted address say nothing about the domain's HTTPS
-  // and are thrown, unbilled (promise-audit T1 follow-up 23). A redirect
-  // chain longer than safeFetch's cap is graded on the 3xx it ends at: an
-  // HTTPS answer is proof that HTTPS works.
+  // ends here, and a retry would not change it). So the domain is asked
+  // first on its own, with no redirect followed. If it answers with a
+  // redirect, its HTTPS works; the redirect is followed (two more hops) only
+  // to read the site's headers, and a hop that then does not answer leaves
+  // the grade on the redirect. Strale's own refusals, a URL Strale will not
+  // follow and a temporary failure of Strale's own resolver say nothing about
+  // the domain's HTTPS and are thrown, unbilled.
   const httpsUrl = `https://${domain}/`;
+  const probeSignal = AbortSignal.timeout(8000);
+  const probe = (url: string, maxRedirects: number) =>
+    // F-0-006: user-supplied domain → safeFetch validates + re-checks redirects.
+    safeFetch(url, { method: "HEAD", purpose: "availability_probe", signal: probeSignal, maxRedirects, returnOnRedirectCap: true });
+  /** The issue text when the failure is the probed host's own; otherwise throws the failure, unbilled. */
+  const ownFailure = (err: unknown, url: string): string => {
+    if (err instanceof SiteAccessRefusedError || err instanceof SourceBlockedError) throw err;
+    if (isResolverRetry(err)) throw fetchUnavailable(url, err);
+    if ((err as { name?: unknown } | null)?.name === "TimeoutError") return "HTTPS did not answer within 8 seconds";
+    if (isConnectionFailure(err)) return "HTTPS connection failed";
+    throw targetUnavailable(url, err);
+  };
+
   let resp: Response | null = null;
   try {
-    // F-0-006: user-supplied domain → safeFetch validates + re-checks redirects.
-    resp = await safeFetch(httpsUrl, {
-      method: "HEAD",
-      purpose: "availability_probe",
-      signal: AbortSignal.timeout(8000),
-      returnOnRedirectCap: true,
-    });
+    resp = await probe(httpsUrl, 0);
   } catch (err) {
-    // degraded-ok: a connection or TLS failure of the domain itself, or no answer in 8 s, is this check's finding, https_works false; anything else is rethrown, unbilled.
-    if (err instanceof SiteAccessRefusedError || err instanceof SourceBlockedError) throw err;
-    if (err instanceof UrlValidationError) {
-      throw new UrlValidationError(`${domain} redirected to a URL that targets a restricted address, so Strale did not follow it.`);
-    }
-    const timedOut = (err as { name?: unknown } | null)?.name === "TimeoutError";
-    if (!timedOut && !isConnectionFailure(err)) throw targetUnavailable(httpsUrl, err);
+    // degraded-ok: a connection or TLS failure of the domain itself, or no answer in 8 s, is this check's finding, https_works false; ownFailure rethrows anything else, unbilled.
+    const issue = ownFailure(err, httpsUrl);
     checks.https_works = false;
-    issues.push(timedOut ? "HTTPS did not answer within 8 seconds" : "HTTPS connection failed");
+    issues.push(issue);
     score -= 20;
+  }
+
+  const location = resp && REDIRECT_STATUSES.has(resp.status) ? resp.headers.get("location") : null;
+  if (resp && location) {
+    let next: string | null = null;
+    try {
+      next = new URL(location, httpsUrl).toString();
+    } catch {
+      // degraded-ok: a Location that is not a URL; the domain answered, so it is graded on that redirect.
+    }
+    if (next) {
+      try {
+        const followed = await probe(next, 2);
+        await discardBody(resp, "domain-reputation redirect");
+        resp = followed;
+      } catch (err) {
+        // degraded-ok: the domain's own HTTPS answered with this redirect; a hop that does not answer leaves the grade on it, and ownFailure rethrows anything else.
+        if (err instanceof UrlValidationError) {
+          throw new UrlValidationError(`${domain} redirected to a URL Strale did not follow. ${err.message}`);
+        }
+        ownFailure(err, next);
+      }
+    }
   }
 
   if (resp) {

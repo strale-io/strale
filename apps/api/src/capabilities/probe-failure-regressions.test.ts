@@ -49,6 +49,22 @@ async function run(slug: string, input: Record<string, unknown>) {
 
 /** The call must throw (a throw is never billed) and not count against the capability. */
 async function expectUnbilled(call: Promise<unknown>) {
+  const outcome = await expectThrown(call);
+  expect(outcome.counts_against_capability).toBe(false);
+  return outcome;
+}
+
+/**
+ * Strale's own resolver failing for now: thrown, unbilled and retried, filed
+ * as the DNS checks file it (the provider's fault, not the domain's).
+ */
+async function expectResolverRetry(call: Promise<unknown>) {
+  const outcome = await expectThrown(call);
+  expect(outcome.retryable).toBe(true);
+  expect(outcome.fault).toBe("provider");
+}
+
+async function expectThrown(call: Promise<unknown>) {
   const result = await call.then(
     (r) => ({ returned: r }),
     (e: unknown) => ({ thrown: e }),
@@ -56,7 +72,6 @@ async function expectUnbilled(call: Promise<unknown>) {
   expect("returned" in result ? (result.returned as any).output : null, "graded and billed as a finding").toBeNull();
   const outcome = outcomeFromError((result as { thrown: unknown }).thrown);
   expect(outcome.billable).toBe(false);
-  expect(outcome.counts_against_capability).toBe(false);
   return outcome;
 }
 
@@ -81,8 +96,49 @@ describe("domain-reputation grades only the domain's own HTTPS failure (follow-u
     const outcome = await expectUnbilled(run("domain-reputation", { domain: "private-hop.example.com" }));
     expect(outcome.fault).toBe("caller");
     expect(outcome.error_message).toBe(
-      "private-hop.example.com redirected to a URL that targets a restricted address, so Strale did not follow it.",
+      "private-hop.example.com redirected to a URL Strale did not follow. This URL targets a restricted address.",
     );
+  });
+
+  it("grades on the domain's own redirect when the hop it leads to does not answer", async () => {
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.startsWith("https://own-redirect.example.com")) {
+        const r = new Response(null, {
+          status: 301,
+          headers: { location: "https://slow-shop.example.net/", "strict-transport-security": "max-age=1" },
+        });
+        Object.defineProperty(r, "url", { value: url });
+        return r;
+      }
+      throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+    });
+    const { output } = await run("domain-reputation", { domain: "own-redirect.example.com" });
+    expect(output.checks.https_works).toBe(true);
+    expect(output.checks.https_status).toBe(301);
+    expect(output.issues).not.toContain("HTTPS did not answer within 8 seconds");
+    expect(outcomeFromOutput("domain-reputation", output).billable).toBe(true);
+  });
+
+  it("asks the domain itself first and follows its redirect for the site's headers", async () => {
+    const asked: string[] = [];
+    serve((url) => {
+      asked.push(url);
+      return url.startsWith("https://hop.example.com")
+        ? new Response(null, { status: 301, headers: { location: "https://www.hop.example.com/" } })
+        : new Response(null, { status: 200, headers: { "strict-transport-security": "max-age=1", "x-content-type-options": "nosniff" } });
+    });
+    const { output } = await run("domain-reputation", { domain: "hop.example.com" });
+    expect(asked).toEqual(["https://hop.example.com/", "https://www.hop.example.com/"]);
+    expect(output.checks.https_status).toBe(200);
+    expect(output.issues).toEqual([]);
+  });
+
+  it("names why a redirect was not followed when its scheme is refused", async () => {
+    serve(() => new Response(null, { status: 301, headers: { location: "ftp://files.example.com/" } }));
+    const outcome = await expectUnbilled(run("domain-reputation", { domain: "ftp-hop.example.com" }));
+    expect(outcome.error_message).toMatch(/^ftp-hop\.example\.com redirected to a URL Strale did not follow\. /);
+    expect(outcome.error_message).not.toContain("restricted address");
   });
 
   it("grades a redirect chain past the cap on the 3xx it ends at, not as a failure", async () => {
@@ -127,8 +183,14 @@ describe("domain-reputation grades only the domain's own HTTPS failure (follow-u
         cause: Object.assign(new Error("getaddrinfo EAI_AGAIN"), { code: "EAI_AGAIN" }),
       });
     });
-    const outcome = await expectUnbilled(run("domain-reputation", { domain: "resolver.example.com" }));
-    expect(outcome.retryable).toBe(true);
+    await expectResolverRetry(run("domain-reputation", { domain: "resolver.example.com" }));
+  });
+
+  it("does not grade a bare EAI_AGAIN either", async () => {
+    vi.stubGlobal("fetch", async () => {
+      throw Object.assign(new Error("getaddrinfo EAI_AGAIN bare.example.com"), { code: "EAI_AGAIN" });
+    });
+    await expectResolverRetry(run("domain-reputation", { domain: "bare.example.com" }));
   });
 
   it("refuses Strale's own connect-time SSRF block rather than grading it", async () => {
