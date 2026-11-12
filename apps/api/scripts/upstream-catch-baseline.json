@@ -752,12 +752,6 @@
       "line": 38
     },
     {
-      "file": "apps/api/src/capabilities/social-profile-check.ts",
-      "fingerprint": "ce058defbd0617e99a87ba3b6f8825fdedf7a3737dec4f2a790c6a610b0f06e5",
-      "count": 1,
-      "line": 137
-    },
-    {
       "file": "apps/api/src/capabilities/solana-address-validate.ts",
       "fingerprint": "fb9b685accfaa46c9412b04d3d88c07481e2eda53c048f38bfa3ecc1924a0953",
       "count": 1,

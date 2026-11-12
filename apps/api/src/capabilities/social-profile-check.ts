@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { STRALE_USER_AGENT, isBlockStatus } from "../lib/site-access.js";
+import { fetchUnavailable, httpUnavailable, quotedLegCodes, UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 /**
  * Is a name taken on the developer registries? npm package, PyPI project,
@@ -94,6 +95,32 @@ const REGISTRIES: Registry[] = [
   },
 ];
 
+/**
+ * Why a registry could not tell, kept off the output: when no registry
+ * answered, the call fails with these rather than billing three "not
+ * checked" rows (promise-audit T1 wave 6).
+ */
+const legFailures = new WeakMap<RegistryCheck, Error>();
+
+function unchecked(registry: Registry, url: string, statusCode: number | null, note: string, failure: Error): RegistryCheck {
+  const check: RegistryCheck = { platform: registry.platform, kind: registry.kind, url, exists: null, status_code: statusCode, note };
+  legFailures.set(check, failure);
+  return check;
+}
+
+/**
+ * A refusal (401, 403, 407, 429) from a registry is a rate limit or a block, not a
+ * credential problem: GitHub answers its anonymous limit with 403. Quoting the
+ * number would make the breaker read it as auth_expired and suspend the
+ * capability for half an hour (see httpUnavailable), so it is worded without it.
+ */
+function registryStatusFailure(platform: string, status: number): UpstreamUnavailableError {
+  if (isBlockStatus(status)) {
+    return new UpstreamUnavailableError(`${platform} API`, "declined the request; retry later.", { code: "declined", retryable: true });
+  }
+  return httpUnavailable(`${platform} API`, status);
+}
+
 async function checkRegistry(registry: Registry, name: string): Promise<RegistryCheck> {
   const normalised = registry.normalise(name);
   if (!normalised) {
@@ -116,6 +143,12 @@ async function checkRegistry(registry: Registry, name: string): Promise<Registry
     // Only the status is used; the metadata body (megabytes for a popular
     // npm package) is never read.
     await discardBody(resp, `${registry.platform} name check`);
+    // All three registries answer JSON. A 200 in any other type is a block
+    // or maintenance page, not the record, so it is no evidence of a taken name.
+    if (resp.status === 200 && !/json/i.test(resp.headers.get("content-type") ?? "")) {
+      return unchecked(registry, url, 200, `${registry.platform} did not answer with its API; not checked.`,
+        new UpstreamUnavailableError(`${registry.platform} API`, "the reply was not JSON; retry shortly.", { code: "unparseable" }));
+    }
     if (resp.status === 200) {
       return { platform: registry.platform, kind: registry.kind, url, exists: true, status_code: 200 };
     }
@@ -124,25 +157,18 @@ async function checkRegistry(registry: Registry, name: string): Promise<Registry
     }
     // A rate limit or refusal is the registry declining to answer — not
     // evidence either way, so it is reported as unknown rather than "free".
-    return {
-      platform: registry.platform,
-      kind: registry.kind,
+    return unchecked(
+      registry,
       url,
-      exists: null,
-      status_code: resp.status,
-      note: isBlockStatus(resp.status)
+      resp.status,
+      isBlockStatus(resp.status)
         ? `${registry.platform} declined the request (HTTP ${resp.status}); not checked.`
         : `${registry.platform} answered HTTP ${resp.status}; not checked.`,
-    };
-  } catch {
-    return {
-      platform: registry.platform,
-      kind: registry.kind,
-      url,
-      exists: null,
-      status_code: null,
-      note: `${registry.platform} could not be reached; not checked.`,
-    };
+      registryStatusFailure(registry.platform, resp.status),
+    );
+  } catch (err) {
+    // degraded-ok: one registry that cannot be reached reads exists:null with a note while the others answer; its classified error is kept, and the call throws it when no registry answered (promise-audit T1 wave 6).
+    return unchecked(registry, url, null, `${registry.platform} could not be reached; not checked.`, fetchUnavailable(`${registry.platform} API`, err));
   }
 }
 
@@ -180,6 +206,23 @@ registerCapability("social-profile-check", async (input: CapabilityInput) => {
   }
 
   const profiles = await Promise.all(REGISTRIES.map((r) => checkRegistry(r, name)));
+
+  // When every registry that could be asked failed, there is no answer to
+  // sell: fail unbilled, as the rail does for any upstream outage. A name
+  // valid on no registry at all is the caller's input, reported as is.
+  const failures = profiles.map((p) => legFailures.get(p)).filter((f): f is Error => f !== undefined);
+  const asked = profiles.filter((p) => p.url !== "").length;
+  if (asked > 0 && failures.length === asked) {
+    // An error that is not an outage (our own defect, a refusal) is thrown as
+    // itself, so it is not filed under the registries.
+    const other = failures.find((f) => !(f instanceof UpstreamUnavailableError));
+    if (other) throw other;
+    const outages = failures as UpstreamUnavailableError[];
+    throw new UpstreamUnavailableError("npm, PyPI and GitHub registries", `none answered (${quotedLegCodes(outages)}).`, {
+      code: outages[0].code,
+      retryable: outages.some((f) => f.retryable),
+    });
+  }
 
   const available = new Set(
     REGISTRIES.filter((r) => r.notFoundMeansAvailable).map((r) => r.platform),

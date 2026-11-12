@@ -8,6 +8,7 @@
  * vat-validate router handles the rest.
  */
 
+import { UpstreamUnavailableError } from "../../../lib/upstream-result.js";
 import type { ParsedVat, VatProvider, VatProviderResult } from "./types.js";
 
 const VIES_URL =
@@ -109,7 +110,18 @@ async function callVies(parsed: ParsedVat): Promise<VatProviderResult> {
     throw viesError ?? new Error("VIES did not return a response.");
   }
 
-  const valid = extractTag(xml, "valid") === "true";
+  // A reply with no <valid> element is not a VIES answer: a CDN block or
+  // maintenance page served with HTTP 200 would otherwise read as
+  // "not VAT-registered" and be billed (promise-audit T1 wave 6).
+  const validTag = extractTag(xml, "valid");
+  if (validTag !== "true" && validTag !== "false") {
+    throw new UpstreamUnavailableError(
+      "EU VIES VAT service",
+      "the reply was not a checkVat answer; retry shortly.",
+      { code: "unparseable" },
+    );
+  }
+  const valid = validTag === "true";
   const name = extractTag(xml, "name") || "";
   const address = extractTag(xml, "address") || "";
   const requestDate = extractTag(xml, "requestDate") || new Date().toISOString();

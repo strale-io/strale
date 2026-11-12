@@ -26,7 +26,10 @@ function rpcFailure(err: unknown): Error {
 function makeClient(rpcUrl: string) {
   return createPublicClient({
     chain: mainnet,
-    transport: http(rpcUrl),
+    // No transport retry: viem would wait out a provider's Retry-After up
+    // to three times per endpoint, hanging a 429 for minutes. The caller
+    // moves on to the next endpoint itself (promise-audit T1 wave 6).
+    transport: http(rpcUrl, { retryCount: 0, timeout: 10_000 }),
   });
 }
 
