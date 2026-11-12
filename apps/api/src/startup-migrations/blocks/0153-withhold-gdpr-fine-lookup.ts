@@ -58,10 +58,13 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
  * exact marker is still there (vendor-control-tower.ts). A bundle suspended
  * that way is off both rails, so it is matched by its marker instead, and
  * overwriting the marker makes the tower's restore a no-op: its open
- * vendor_solution_suspensions row stays unrestored and the tower records a
- * restore_error on each attempt. The tower's suspend step only takes rows with
- * no reason or a `vendor:` one, so it never touches the bundle again and the
- * two cannot loop. The same holds for a `vendor:` marker on the capability.
+ * vendor_solution_suspensions row stays unrestored (restored_at IS NULL), and
+ * each restore pass finds no suspension whose marker matches the current
+ * reason and skips the bundle without writing anything. Its restore_error
+ * branch runs only if the reason changes between its locked read and its
+ * update. The tower's suspend step only takes rows with no reason or a
+ * `vendor:` one, so it never touches the bundle again and the two cannot
+ * loop. The same holds for a `vendor:` marker on the capability.
  *
  * One capability row and the solutions with one step; no bulk operation
  * (DEC-20260504-B). Only strings are bound and timestamps are now() in SQL
