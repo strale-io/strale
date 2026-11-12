@@ -370,6 +370,8 @@ describe("promise-audit T1 follow-up 34: a failure that is not the site's is not
     const given = new UpstreamUnavailableError("website site.test", "network error; retry shortly.");
     const err = targetUnavailable("website site.test", given) as UpstreamUnavailableError;
     expect(err.upstream).not.toBe(TARGET_NETWORK);
+    expect(err.targetFault).toBe(true);
+    expect(err.message).toContain("URL did not answer");
   });
 
   it("a host that does not resolve (ENOTFOUND) is still the site's", () => {
@@ -483,5 +485,27 @@ describe("PR #1018 review round 2 nits", () => {
     expect(err).toMatchObject({ code: "HTTP 408", retryable: true, targetFault: true });
     expect(isUserInputError(err.message)).toBe(true);
     expect(targetUnavailable("website site.test", 503).message).toContain("a server error on the site itself");
+  });
+
+  // promise-audit T1 follow-up 39: every non-block status from the caller's
+  // site is the target's, so domain-contact-extract's homepage and
+  // og-image-check's own page can pass any status they cannot read.
+  it.each([400, 404, 410])("targetUnavailable files HTTP %i as the target's answer, not retryable", (status) => {
+    const err = targetUnavailable("website gone-403.test", status) as UpstreamUnavailableError;
+    expect(err.message).toBe(
+      `Upstream unavailable: website gone-403.test: URL returned HTTP ${status}, a client error status, so there was no page to read.`,
+    );
+    expect(err).toMatchObject({ code: `HTTP ${status}`, retryable: false, targetFault: true });
+    expect(err.message).not.toMatch(/not found|invalid|missing|required/i);
+    expect(isUserInputError(err.message)).toBe(true);
+    expect(outcomeFromError(err)).toMatchObject({ billable: false, fault: "target", counts_against_capability: false });
+  });
+
+  it.each([301, 308, 304])("targetUnavailable files an unfollowed HTTP %i as the target's, with the status on code only", (status) => {
+    const err = targetUnavailable("website gone-403.test", status) as UpstreamUnavailableError;
+    expect(err.message).not.toContain(String(status));
+    expect(err).toMatchObject({ code: `HTTP ${status}`, retryable: false, targetFault: true });
+    expect(isUserInputError(err.message)).toBe(true);
+    expect(outcomeFromError(err)).toMatchObject({ billable: false, fault: "target", counts_against_capability: false });
   });
 });

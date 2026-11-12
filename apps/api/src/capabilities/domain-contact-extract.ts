@@ -4,7 +4,7 @@ import { MAX_SCRAPED_CONTACT_BYTES, readTextTruncated } from "../lib/resource-li
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import { assertRedirectAllowed, assertRobotsAllowed } from "../lib/robots-txt.js";
 import { assertNotBlockStatus, siteAccessRefusal, SiteAccessRefusedError } from "../lib/site-access.js";
-import { targetUnavailable } from "../lib/upstream-result.js";
+import { targetUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
 import { looksLikeJsChallenge } from "./lib/web-provider.js";
 import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { ROLE_PREFIXES } from "./email-validate.js";
@@ -381,6 +381,7 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
 
   const fetchedUrls: string[] = [];
   const homepageUrl = `https://${hostname}/`;
+  const site = `website ${hostname}`;
   let homepageHtml = "";
 
   // DEC-20260427-H / commit 87b84db: refuse ToS-prohibited targets BEFORE
@@ -407,8 +408,11 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
       timeoutMs: FETCH_TIMEOUT_MS,
     });
     if (!resp.ok) {
+      await discardBody(resp, "domain-contact-extract: homepage non-2xx");
       assertNotBlockStatus(homepageUrl, resp.status);
-      throw new Error(`domain-contact-extract: ${hostname} returned HTTP ${resp.status}`);
+      // The caller's own site: unbilled, and never counted against this
+      // capability (promise-audit T1 follow-up 39).
+      throw targetUnavailable(site, resp.status);
     }
     // Decode at the boundary so every extractor below sees one canonical
     // form, whichever variant the origin served this region.
@@ -422,9 +426,14 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
     if (looksLikeJsChallenge(homepageHtml)) throw siteAccessRefusal(homepageUrl, { kind: "challenge" });
     fetchedUrls.push(homepageUrl);
   } catch (err) {
-    if (isCapabilityRefusal(err)) throw err;
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`Could not fetch ${hostname}: ${message}`);
+    // Refusals, and the status errors built above, pass through unchanged.
+    // Everything else from the homepage request is the caller's site failing,
+    // as for the contact page. Before, it was rewrapped as a plain error
+    // naming the host, which was counted against the capability, and the
+    // breaker read a host containing "403" or "gone" as a permanent failure
+    // (promise-audit T1 follow-up 39).
+    if (isCapabilityRefusal(err) || err instanceof UpstreamUnavailableError) throw err;
+    throw targetUnavailable(site, err);
   }
 
   // Locate at most one contact-page link and follow it (cap: 2 requests total).

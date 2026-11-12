@@ -12,22 +12,43 @@ registerCapability("og-image-check", async (input: CapabilityInput) => {
 
   const url = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`;
 
-  // F-0-006: safeFetch validates + re-validates redirects.
-  const resp = await safeFetch(url, {
-    headers: {
-      "User-Agent": "Strale-Bot/1.0",
-      Accept: "text/html,*/*",
-    },
-    signal: AbortSignal.timeout(15000),
-  });
+  // The caller's own page. Its failures are the caller's target: unbilled and
+  // never counted against this capability. Before, a non-2xx was a plain
+  // error naming the URL and the status, and a timeout or network error went
+  // out raw; both were counted, and the breaker read a 404, a 403 or a URL
+  // containing either as a permanent failure (promise-audit T1 follow-up 39).
+  const site = `website ${extractDomain(url)}`;
+  let resp: Response;
+  try {
+    // F-0-006: safeFetch validates + re-validates redirects.
+    resp = await safeFetch(url, {
+      headers: {
+        "User-Agent": "Strale-Bot/1.0",
+        Accept: "text/html,*/*",
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch (err) {
+    // The caller's URL failing Strale's URL guard is their input, as before.
+    if (err instanceof UrlValidationError || isCapabilityRefusal(err)) throw err;
+    throw targetUnavailable(site, err);
+  }
 
   if (!resp.ok) {
     // Nothing below reads the body (#434). Cancel it rather than leaving
     // it to pin the keep-alive connection until GC.
     await discardBody(resp, "og-image-check: non-2xx");
-    throw new Error(`HTTP ${resp.status} fetching ${url}.`);
+    assertNotBlockStatus(url, resp.status);
+    throw targetUnavailable(site, resp.status);
   }
-  const html = await readPageHtml(resp);
+  let html: string;
+  try {
+    html = await readPageHtml(resp);
+  } catch (err) {
+    // The connection dropped or timed out mid-body. A size cap is a refusal.
+    if (isCapabilityRefusal(err)) throw err;
+    throw targetUnavailable(site, err);
+  }
 
   // Extract Open Graph meta tags
   const ogImageUrl = extractMeta(html, "og:image", "property");
