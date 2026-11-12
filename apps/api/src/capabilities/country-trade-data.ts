@@ -902,9 +902,13 @@ function resolveCountryCode(input: string): string | null {
   // Check name mapping
   const lower = input.trim().toLowerCase();
   if (COUNTRY_NAMES[lower]) return COUNTRY_NAMES[lower];
-  // Partial match
-  for (const [name, code] of Object.entries(COUNTRY_NAMES)) {
-    if (name.includes(lower) || lower.includes(name)) return code;
+  // Partial match, only for an input longer than a code: a two-letter code
+  // the embedded table lacks (KE) is a substring of a country name
+  // ("turkey") and used to resolve to that country (PR #1018 review round 4, T3).
+  if (lower.length > 2) {
+    for (const [name, code] of Object.entries(COUNTRY_NAMES)) {
+      if (name.includes(lower) || lower.includes(name)) return code;
+    }
   }
   return clean.length === 2 ? clean : null;
 }
@@ -1061,6 +1065,10 @@ registerCapability("country-trade-data", async (input: CapabilityInput) => {
     country_code: countryCode,
     country_name: embedded?.country_name ?? rawCountry,
     year,
+    // The year the totals are for. Embedded totals are 2023 estimates, so a
+    // call for another year must not read them as that year's figures
+    // (review round 4, T3).
+    totals_year: liveData ? year : embedded!.year,
     total_exports_usd: totalExports,
     total_imports_usd: totalImports,
     trade_balance_usd: tradeBalance,

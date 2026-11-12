@@ -149,7 +149,7 @@ export const LIMITATIONS: LimitationDef[] = [
     workaround: "Use the abuse contact email from the WHOIS response to request registrant details through the registrar's disclosure process" },
   { capabilitySlug: "whois-lookup", category: "availability", severity: "info",
     title: "Rate-limited or failed lookups are not billed",
-    limitationText: "Registries rate-limit WHOIS queries. When the registry's reply is a rate-limit or refusal notice, or its WHOIS server does not answer, the call fails with an error and is not billed.",
+    limitationText: "Registries rate-limit WHOIS queries. When the registry's reply is a rate-limit or refusal notice, or its WHOIS server does not answer, the call fails with an error and is not billed. Any other reply is billed, including one this parser cannot split into fields: some registries answer in their own format, so such a reply is returned in raw_whois with no parsed fields.",
     workaround: "Batch lookups with 1-2 second delays between requests, or use the RDAP protocol endpoint when available" },
   { capabilitySlug: "whois-lookup", category: "coverage", severity: "info",
     title: "Only TLDs with a known registry server",
@@ -533,17 +533,15 @@ export const LIMITATIONS: LimitationDef[] = [
 
   // ── country-trade-data ──
   { capabilitySlug: "country-trade-data", category: "freshness", severity: "info",
-    title: "Trade statistics are based on AI knowledge and may lag 6-12 months behind actual trade flows",
-    limitationText: "Trade statistics based on AI knowledge — most recent data may lag 6-12 months behind actual trade flows",
-    workaround: "Cross-reference with UN Comtrade or national customs statistics for the most current trade figures" },
+    title: "Embedded figures are 2023 estimates, not updated",
+    limitationText: "The product and partner breakdown, and the totals whenever the World Bank does not supply them, come from an embedded table of 2023 estimates that is not updated. When the totals come from that table, totals_year is 2023 whatever year was requested.",
+    workaround: "Read totals_year before comparing years, and cross-reference UN Comtrade or national customs statistics for current product and partner figures." },
   { capabilitySlug: "country-trade-data", category: "availability", severity: "info",
     title: "World Bank outages fail without a charge",
-    limitationText: "Totals come from the World Bank for the requested year. When the World Bank has no figure for that year, or a figure for only one of exports and imports, the embedded estimates answer for both totals instead and data_source is embedded-trade-data; the two sources are never mixed. The embedded estimates are 2023 figures, returned under the requested year. When the World Bank does not answer (an error status, a timeout, an unreadable response or a rejected request), the call fails with an error and is not billed.",
-
-    workaround: "Retry after a short wait." },
+    limitationText: "Totals come from the World Bank for the requested year when it has both exports and imports. When it has neither, the embedded 2023 estimates answer for both totals and data_source is embedded-trade-data. When it has only one, the embedded estimates answer for both where the country has an entry; for a country without one, the World Bank's single figure is returned beside a null. The two sources are never mixed, and totals_year names the year the totals are for. When the World Bank does not answer (an error status, a timeout, an unreadable response or a rejected request), the call fails with an error and is not billed.",
+    workaround: "After a World Bank error status or timeout, retry after a short wait; a rejected or unreadable answer will not change on retry." },
 
   // ── crypto-price ──
-
   { capabilitySlug: "crypto-price", category: "freshness", severity: "info",
     title: "CoinGecko prices may have a 1-5 minute delay compared to real-time exchange prices",
     limitationText: "Prices from CoinGecko API — may have a 1-5 minute delay from real-time exchange prices",

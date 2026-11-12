@@ -52,6 +52,7 @@ import { outcomeFromError, assertBillableOutput } from "../lib/execution-outcome
 import { categorizeFailureReason, isRetryableFailure } from "../lib/trust-helpers.js";
 import { isUserInputError } from "../lib/circuit-breaker.js";
 import { isCapabilityRefusal } from "../lib/capability-refusal.js";
+import { withRetry } from "../lib/retry.js";
 import "./pricing-page-extract.js";
 import "./company-fundamentals.js";
 import "./country-trade-data.js";
@@ -159,10 +160,11 @@ describe("failure: pricing-page-extract does not bill a page that is not a prici
     expect(extractJsonWithLlm).not.toHaveBeenCalled();
   });
 
-  it("files the deterministic empty render as the target's fault, out of the quality floor (review round 2, S-b)", async () => {
+  it("counts an empty render against the capability: a degraded renderer produces the same shell (review round 4, B2)", async () => {
     fetchRenderedHtml.mockResolvedValue('<html><body><div id="root"></div><script>app()</script></body></html>');
     const err = await expectUnbilledUpstreamFailure(exec("pricing-page-extract")({ url: PRICING_URL }));
-    expect(outcomeFromError(err)).toMatchObject({ fault: "target", counts_against_capability: false });
+    expect((err as { targetFault?: boolean }).targetFault).toBe(false);
+    expect(outcomeFromError(err)).toMatchObject({ fault: "provider", counts_against_capability: true });
   });
 });
 
@@ -186,6 +188,18 @@ describe("negative: pricing-page-extract bills a real page", () => {
     extractJsonWithLlm.mockResolvedValue({ page_status: "page_error", plans: [{ name: "Starter", price: "$29/mo" }] });
     const out = await billed("pricing-page-extract", exec("pricing-page-extract")({ url: PRICING_URL }));
     expect(out.plans).toHaveLength(1);
+  });
+
+  it.each([
+    ["an invented status, with plans", "partial", [{ name: "Starter", price: "$29/mo" }], "pricing"],
+    ["an invented status, without plans", "unknown", [], "no_pricing"],
+    ["no status, with plans", undefined, [{ name: "Starter", price: "$29/mo" }], "pricing"],
+    ["no status, without plans", undefined, [], "no_pricing"],
+  ])("bills %s as page_status by its plans (review round 4, T8)", async (_label, pageStatus, plans, expected) => {
+    fetchRenderedHtml.mockResolvedValue(fullPage("Starter $29/mo. Pro $99/mo."));
+    extractJsonWithLlm.mockResolvedValue({ page_status: pageStatus, plans, enterprise_cta: false });
+    const out = await billed("pricing-page-extract", exec("pricing-page-extract")({ url: PRICING_URL }));
+    expect(out.page_status).toBe(expected);
   });
 
   it("bills that page as page_status 'pricing', never 'page_error' (review round 2, S-b)", async () => {
@@ -236,7 +250,7 @@ describe("failure: company-fundamentals does not report a metric the SEC did not
   const failures: Array<[string, () => Promise<Response>, boolean]> = [
     ["HTTP 503", async () => status(503), true],
     // The SEC's throttle page ("Request Rate Threshold Exceeded") is served as a 403.
-    ["HTTP 403 (the SEC's rate-threshold page)", async () => html("<html>Request Rate Threshold Exceeded</html>", 403), true],
+    ["HTTP 403 (the SEC's rate-threshold page)", async () => html("<html>Request Rate Threshold Exceeded</html>", 403), false],
     ["a network error", async () => { throw networkError(); }, true],
     ["a timeout", async () => { throw timeout(); }, true],
     ["an unparseable 200 body", async () => html("<html>Service notice</html>"), false],
@@ -251,7 +265,7 @@ describe("failure: company-fundamentals does not report a metric the SEC did not
     }, 20_000);
   }
 
-  it("files an SEC 403 as retryable throttling, not as expired credentials (review S2)", async () => {
+  it("files an SEC 403 as throttling, not as expired credentials (review S2)", async () => {
     secRoutes("NetIncomeLoss", async () => html("<html>Request Rate Threshold Exceeded</html>", 403));
     const err = await expectUnbilledUpstreamFailure(exec("company-fundamentals")({ cik: CIK }));
     expect(err.code).toBe("HTTP 403");
@@ -260,6 +274,17 @@ describe("failure: company-fundamentals does not report a metric the SEC did not
     // The breaker reads the message: a 403 in it would be auth_expired, opening it for 30 minutes.
     expect(categorizeFailureReason(err.message)).not.toBe("auth_expired");
     expect(isRetryableFailure(categorizeFailureReason(err.message))).toBe(true);
+  }, 20_000);
+
+  it("does not resend into an SEC block: a 403 is not retryable, and tells the caller when to retry (review round 4, B3)", async () => {
+    secRoutes("NetIncomeLoss", async () => html("<html>Request Rate Threshold Exceeded</html>", 403));
+    await thrown(exec("company-fundamentals")({ cik: CIK }));
+    const oneRun = fetchMock.mock.calls.length;
+    fetchMock.mockClear();
+    const err = await thrown(withRetry(() => exec("company-fundamentals")({ cik: CIK }), { baseDelayMs: 1, maxDelayMs: 1 }));
+    expect(err.retryable).toBe(false);
+    expect(err.message).toContain("retry in about ten minutes");
+    expect(fetchMock.mock.calls.length).toBe(oneRun);
   }, 20_000);
 
   it("lets every sibling request in the batch finish before failing", async () => {
@@ -435,6 +460,46 @@ describe("failure: country-trade-data never mixes a live total with an embedded 
   });
 });
 
+describe("failure: country-trade-data says which year its totals are for (review round 4, T3)", () => {
+  it("labels embedded totals as 2023 when another year was requested", async () => {
+    fetchMock.mockImplementation(async () => wbValue(null));
+    const out = await billed("country-trade-data", exec("country-trade-data")({ country_code: "SE", year: 2025 }));
+    expect(out).toMatchObject({ year: 2025, totals_year: 2023, data_source: "embedded-trade-data" });
+  });
+
+  it("labels live totals with the requested year", async () => {
+    fetchMock.mockImplementation(async (url: string) => wbValue(url.includes("NE.EXP") ? 300_000_000_000 : 280_000_000_000));
+    const out = await billed("country-trade-data", exec("country-trade-data")({ country_code: "SE", year: 2020 }));
+    expect(out).toMatchObject({ year: 2020, totals_year: 2020, data_source: "World Bank API + embedded product data" });
+  });
+});
+
+describe("failure: country-trade-data does not read a two-letter code as part of a country name (review round 4, T3)", () => {
+  it("asks the World Bank for KE, not Turkey", async () => {
+    fetchMock.mockImplementation(async (url: string) => wbValue(url.includes("NE.EXP") ? 15_000_000_000 : 25_000_000_000));
+    const out = await billed("country-trade-data", exec("country-trade-data")({ country_code: "KE", year: 2023 }));
+    expect(out.country_code).toBe("KE");
+    expect(out.country_name).toBe("KE");
+    expect(out.top_exports).toEqual([]);
+    expect(fetchMock.mock.calls.map(([url]) => url as string)).toEqual(
+      expect.arrayContaining([expect.stringContaining("/country/KE/indicator/")]),
+    );
+    expect(fetchMock.mock.calls.some(([url]) => (url as string).includes("/country/TR/"))).toBe(false);
+  });
+
+  it("says there is no trade data for an unknown code with nothing embedded and no World Bank figure", async () => {
+    fetchMock.mockImplementation(async () => wbValue(null));
+    const err = await thrown(exec("country-trade-data")({ country_code: "KE", year: 2023 }));
+    expect(err.message).toContain('No trade data available for country code "KE"');
+  });
+
+  it("still resolves a partial country name longer than two letters", async () => {
+    fetchMock.mockImplementation(async () => wbValue(null));
+    const out = await billed("country-trade-data", exec("country-trade-data")({ country: "swed", year: 2023 }));
+    expect(out.country_code).toBe("SE");
+  });
+});
+
 // ─── whois-lookup (row 28) ─────────────────────────────────────────────────
 
 type WhoisReply = { data: string } | { error: string } | "hang";
@@ -507,6 +572,35 @@ describe("failure: whois-lookup reads a fully qualified domain's TLD (review nit
     const out = await billed("whois-lookup", exec("whois-lookup")({ domain: "example.com." }));
     expect(hosts).toEqual(["whois.verisign-grs.com"]);
     expect(out.domain).toBe("example.com");
+  });
+});
+
+/** The order Verisign answers in: "Registrar WHOIS Server" before "Registrar". */
+const VERISIGN_GOOGLE =
+  "   Domain Name: GOOGLE.COM\r\n   Registry Domain ID: 2138514_DOMAIN_COM-VRSN\r\n   Registrar WHOIS Server: whois.markmonitor.com\r\n" +
+  "   Registrar URL: http://www.markmonitor.com\r\n   Updated Date: 2019-09-09T15:39:04Z\r\n   Creation Date: 1997-09-15T04:00:00Z\r\n" +
+  "   Registry Expiry Date: 2028-09-14T04:00:00Z\r\n   Registrar: MarkMonitor Inc.\r\n   Registrar IANA ID: 292\r\n" +
+  "   Registrar Abuse Contact Email: abusecomplaints@markmonitor.com\r\n   Registrar Abuse Contact Phone: +1.2086851750\r\n" +
+  "   Name Server: NS1.GOOGLE.COM\r\n";
+
+describe("failure: whois-lookup reads the registrar from the Registrar line (review round 4, T4)", () => {
+  it("returns the registrar's name, not its WHOIS server, for a .com record", async () => {
+    whoisServers({ data: VERISIGN_GOOGLE });
+    const out = await billed("whois-lookup", exec("whois-lookup")({ domain: "google.com" }));
+    expect(out.registrar).toBe("MarkMonitor Inc.");
+  });
+
+  it("takes a sponsoring-registrar line when the record has no plain Registrar line", async () => {
+    whoisServers({ data: "Domain Name: EXAMPLE.BIZ\r\nRegistrar WHOIS Server: whois.example-registrar.test\r\nSponsoring Registrar: Example Registrar LLC\r\n" });
+    const out = await billed("whois-lookup", exec("whois-lookup")({ domain: "example.biz" }));
+    expect(out.registrar).toBe("Example Registrar LLC");
+  });
+
+  it("does not take a registrar detail as the registrar when no line names it", async () => {
+    whoisServers({ data: "Domain Name: EXAMPLE.ORG\r\nRegistrar WHOIS Server: whois.example-registrar.test\r\nRegistrar IANA ID: 9999\r\nCreation Date: 2001-01-01T00:00:00Z\r\n" });
+    const out = await billed("whois-lookup", exec("whois-lookup")({ domain: "example.org" }));
+    expect(out.registrar).toBeUndefined();
+    expect(out.created).toBe("2001-01-01T00:00:00Z");
   });
 });
 

@@ -23,21 +23,18 @@ const MIN_PAGE_TEXT = 200;
  * one caller's walled site must not suspend the capability for everyone.
  * Not retryable: the same URL serves the same wall.
  *
- * `targetFault` (out of the quality floor) is set only for the deterministic
- * empty render. The model's `page_error` is a judgement: a prompt or model
- * regression would show up only as more of them, so those still count
- * against the capability (PR #1018 review round 2, S-b).
+ * Neither throw is marked `targetFault`, so both count against this
+ * capability's quality floor. The model's `page_error` is a judgement: a
+ * prompt or model regression would show up only as more of them (PR #1018
+ * review round 2, S-b). An empty render is also exactly what a degraded
+ * renderer produces, so filing it as the target's fault would hide a
+ * Browserless regression from the floor (review round 4, B2).
  */
-function unreadablePage(
-  fullUrl: string,
-  what: string,
-  code: string,
-  targetFault: boolean,
-): UpstreamUnavailableError {
+function unreadablePage(fullUrl: string, what: string, code: string): UpstreamUnavailableError {
   return new UpstreamUnavailableError(
     `website ${new URL(fullUrl).hostname}`,
     `URL did not answer with a readable pricing page: ${what}.`,
-    { code, retryable: false, targetFault },
+    { code, retryable: false },
   );
 }
 
@@ -49,7 +46,7 @@ registerCapability("pricing-page-extract", async (input: CapabilityInput) => {
   const html = await fetchRenderedHtml(fullUrl);
   const pageText = htmlToText(html).slice(0, 10000);
   if (pageText.trim().length < MIN_PAGE_TEXT) {
-    throw unreadablePage(fullUrl, "it rendered almost no text (an empty app shell or a blank page)", "empty", true);
+    throw unreadablePage(fullUrl, "it rendered almost no text (an empty app shell or a blank page)", "empty");
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -97,20 +94,20 @@ If page_status is "page_error", return "plans": [] and false for every boolean.`
   // that shows prices under a cookie banner is a pricing page, and dropping
   // the plans it read would fail a call that has an answer (PR #1018 review, S4).
   // It is then billed as "pricing", the manifest's enum being [pricing, no_pricing].
-  const plans = output.plans;
-  if (output.page_status === "page_error") {
-    if (!Array.isArray(plans) || plans.length === 0) {
-      throw unreadablePage(
-        fullUrl,
-        "it showed a cookie, consent or login wall, an error page or an empty app shell instead of the product's pricing",
-        "page_error",
-        false,
-      );
-    }
-    output.page_status = "pricing";
+  const hasPlans = Array.isArray(output.plans) && output.plans.length > 0;
+  if (output.page_status === "page_error" && !hasPlans) {
+    throw unreadablePage(
+      fullUrl,
+      "it showed a cookie, consent or login wall, an error page or an empty app shell instead of the product's pricing",
+      "page_error",
+    );
+  }
+  // Any value outside the manifest's enum (page_error with plans, a missing
+  // or invented status) is billed as what the plans show (review round 4, T8).
+  if (output.page_status !== "pricing" && output.page_status !== "no_pricing") {
+    output.page_status = hasPlans ? "pricing" : "no_pricing";
   }
   output.url = fullUrl;
-
 
   return {
     output,

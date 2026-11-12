@@ -660,7 +660,7 @@ export const SOLUTIONS: SolutionDef[] = [
     description:
       "Everything your agent needs to evaluate a domain: registration details, DNS setup, SSL health, and reputation score.",
     longDescription:
-      "Combines WHOIS registration data, DNS record analysis, SSL certificate validation, and domain reputation scoring into one report. Use when your agent is researching a company, vetting a vendor, qualifying a lead, or checking a link before following it.",
+      "Combines WHOIS registration data (for domains under common TLDs), DNS record analysis, SSL certificate validation, and domain reputation scoring into one report. Use when your agent is researching a company, vetting a vendor, qualifying a lead, or checking a link before following it.",
     agentDescription:
       "look up this domain, who owns this website, is this domain trustworthy, domain background check, domain registration info, check website reputation",
     category: "security-risk",
@@ -1123,7 +1123,7 @@ export const SOLUTIONS: SolutionDef[] = [
     description:
       "SEC data, sanctions screening, domain security — answers 'should we do business with this company?' in one call.",
     longDescription:
-      "Checks a company across 7 data sources in one call: SEC EDGAR, OFAC/EU/UN sanctions, WHOIS, DNS, SSL, domain reputation, and HTTP security headers. All steps run in parallel, quality-verified before delivery. Use before onboarding a vendor, signing a partnership, or approving a procurement request.",
+      "Checks a company across 7 data sources in one call: SEC EDGAR, OFAC/EU/UN sanctions, WHOIS (for domains under common TLDs), DNS, SSL, domain reputation, and HTTP security headers. All steps run in parallel, quality-verified before delivery. Use before onboarding a vendor, signing a partnership, or approving a procurement request.",
     agentDescription:
       "assess vendor risk, should we do business with this company, vendor due diligence, vendor security check, is this vendor safe, company risk assessment, supplier evaluation, partnership due diligence",
     category: "security-risk",
@@ -1220,7 +1220,7 @@ export const SOLUTIONS: SolutionDef[] = [
     description:
       "Everything your sales agent needs from one email address — validation, domain intel, reputation, registrar, and tech stack detection.",
     longDescription:
-      "Starting from just an email address: validates deliverability, checks DNS records, scores domain reputation, looks up WHOIS registration data, and detects the company's technology stack. Returns everything an outbound agent needs to qualify a prospect and personalize outreach. Use in CRM enrichment, SDR automation, or account research pipelines.",
+      "Starting from just an email address: validates deliverability, checks DNS records, scores domain reputation, looks up WHOIS registration data (for domains under common TLDs), and detects the company's technology stack. Returns everything an outbound agent needs to qualify a prospect and personalize outreach. Use in CRM enrichment, SDR automation, or account research pipelines.",
     agentDescription:
       "enrich this lead, prospect research from email, lead qualification, what company is this email from, CRM enrichment, sales prospecting data, who is this prospect",
     category: "sales-outreach",
@@ -1445,7 +1445,7 @@ export const SOLUTIONS: SolutionDef[] = [
     description:
       "Everything your SDR agent needs to decide whether to pursue a company: filing events, news sentiment, officers, tech stack, email patterns, social presence, domain age, and hiring signals. One call, 9 steps.",
     longDescription:
-      "The complete company research package for AI SDR agents. Given a company name and domain, returns: recent filing events (SEC/Companies House), news sentiment from global media, company officers and directors from public records, technology stack detection, email pattern discovery, social media presence across 11 platforms, domain registration age and registrar (WHOIS), and hiring activity from job boards. Replaces the manual process of querying 9+ APIs separately.",
+      "The complete company research package for AI SDR agents. Given a company name and domain, returns: recent filing events (SEC/Companies House), news sentiment from global media, company officers and directors from public records, technology stack detection, email pattern discovery, social media presence across 11 platforms, domain registration age and registrar (WHOIS, for domains under common TLDs), and hiring activity from job boards. Replaces the manual process of querying 9+ APIs separately.",
     agentDescription:
       "research this company for outreach, SDR company intelligence, should I pursue this company, company research for sales, prospect company analysis, pre-outreach research, is this company worth targeting",
     category: "sales-outreach",
@@ -1566,7 +1566,7 @@ export const SOLUTIONS: SolutionDef[] = [
     longDescription:
       "Checks five trust signals for a domain: WHOIS registration age and registrar (for domains under common TLDs), DNS configuration health, SSL certificate validity, a DNS-and-HTTPS hygiene score (no blocklist or threat-intelligence lookup), and HTTP security header grade. Use as one input to link safety checks and brand protection; for phishing screening, pair it with a dedicated blocklist, since a good result does not show a domain is safe.",
     agentDescription:
-      "is this domain trustworthy, check domain trust, domain reputation check, is this website safe to visit, phishing check, link safety verification, should I trust this domain",
+      "is this domain trustworthy, check domain trust, domain hygiene check, domain registration age and registrar, domain SSL and security headers, link safety input, should I trust this domain",
     category: "security-risk",
     priceCents: 40,
     componentSumCents: 29,
@@ -1589,7 +1589,7 @@ export const SOLUTIONS: SolutionDef[] = [
     },
     exampleInput: { domain: "example.com" },
     exampleOutput: {
-      registrar: "IANA",
+      registrar: "RESERVED-Internet Assigned Numbers Authority",
       registration_age_days: 10950,
       dns_records: true,
       ssl_valid: true,

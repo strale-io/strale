@@ -145,4 +145,20 @@ describe("page-exists, a live page that leads to a host that does not resolve (r
     });
     await expectNotBilled();
   });
+
+  // Review round 4, T7: the limitation says an unreadable robots.txt fails
+  // the call unbilled; this pins that a 5xx on robots.txt does.
+  it("fails unbilled, without fetching the page, when the site's robots.txt answers with a server error", async () => {
+    const fetchMock = wire((url) => {
+      if (url.pathname === "/robots.txt") return new Response("", { status: 503 });
+      return new Response("<html><body>listing</body></html>", { status: 200 });
+    });
+    const err = await runLive().then(
+      (r) => { throw new Error(`expected a throw, got ${JSON.stringify((r as { output?: unknown }).output)}`); },
+      (e: unknown) => e,
+    );
+    expect(err).toBeInstanceOf(Error);
+    expect(outcomeFromError(err)).toMatchObject({ billable: false });
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes("/listing/123"))).toBe(false);
+  });
 });

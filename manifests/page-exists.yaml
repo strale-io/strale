@@ -155,9 +155,10 @@ limitations:
       host name that does not resolve on a redirect is not that answer. When the host cannot be
       reached (another DNS failure, a redirect to a host that does not resolve, a refused or dropped
       connection, a timeout, a redirect loop), when the site refuses automated requests (HTTP 401,
-      403, 407 or 429, or a robots.txt Disallow for the page), or when it answers with a server
-      error, a request timeout (408) or another error status besides 404 and 410, the call fails
-      with an error and is not billed. Sites that block automated requests cannot be checked.
+      403, 407 or 429, or a robots.txt Disallow for the page), when its robots.txt cannot be read
+      (a server error or no answer), or when it answers with a server error, a request timeout
+      (408) or another error status besides 404 and 410, the call fails with an error and is not
+      billed. Sites that block automated requests cannot be checked.
     category: coverage
     severity: info
     workaround: For these domains, fall back to a manual check or a different data source.

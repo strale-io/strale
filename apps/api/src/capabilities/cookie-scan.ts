@@ -148,8 +148,6 @@ registerCapability("cookie-scan", async (input: CapabilityInput) => {
   }
   // Per-source ToS policy gates every arbitrary-URL fetch path (P1 review, 2026-08-12).
   assertTargetAllowed(url);
-  // DEC-20261023-A: robots.txt before either request.
-  await assertRobotsAllowed(url);
 
   const parsedUrl = new URL(url);
   const domain = parsedUrl.hostname;
@@ -162,6 +160,13 @@ registerCapability("cookie-scan", async (input: CapabilityInput) => {
   const cookies: CookieInfo[] = [];
   let httpResponse: Response;
   try {
+    // DEC-20261023-A: robots.txt before either request. Inside this try: for
+    // a host that does not resolve, the robots pre-check rethrows the
+    // resolver's own ENOTFOUND or EAI_AGAIN, which is the caller's site
+    // failing and must not reach the breaker or quality floor as this
+    // capability's fault (PR #1018 review round 4, B1). Its refusals pass
+    // through unchanged.
+    await assertRobotsAllowed(url);
     httpResponse = await safeFetch(url, {
       method: "GET",
       // safeFetch follows up to 3 hops with per-hop re-validation
@@ -175,6 +180,7 @@ registerCapability("cookie-scan", async (input: CapabilityInput) => {
     });
   } catch (err) {
     // Refusals, URL validation and Strale's own states pass through unchanged.
+    if (isCapabilityRefusal(err)) throw err;
     throw targetUnavailable(site, err);
   }
   // Only the headers are read here; release the body (#428).

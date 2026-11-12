@@ -64,6 +64,15 @@ const TLD_SERVERS: Record<string, string> = {
   biz: "whois.biz",
 };
 
+/** Keys (lower-cased) whose value is the registrar's name itself. */
+const REGISTRAR_NAME_KEYS = new Set(["registrar", "sponsoring registrar", "registrar name"]);
+
+/**
+ * Keys that mention the registrar but hold one of its details: its WHOIS
+ * server, URL, IANA id, abuse contact and so on. Never the registrar's name.
+ */
+const REGISTRAR_DETAIL_KEY = /whois|server|url|abuse|iana|\bid\b|phone|email|contact/;
+
 registerCapability("whois-lookup", async (input: CapabilityInput) => {
   const domain = ((input.domain as string) ?? (input.task as string) ?? "").trim().toLowerCase();
   if (!domain) {
@@ -91,6 +100,12 @@ registerCapability("whois-lookup", async (input: CapabilityInput) => {
     raw_whois: rawText.slice(0, 3000),
   };
 
+  // The registrar is the value of the "Registrar" line itself. A .com or
+  // .net record lists "Registrar WHOIS Server" first, and taking the first
+  // key that merely contains "registrar" billed the registrar's WHOIS host
+  // name as the registrar (PR #1018 review round 4, T4). A key naming the
+  // registrar outright wins over any looser match, wherever it appears.
+  let registrarNamed = false;
   const lines = rawText.split("\n");
   for (const line of lines) {
     const [key, ...valueParts] = line.split(":");
@@ -99,7 +114,10 @@ registerCapability("whois-lookup", async (input: CapabilityInput) => {
     const v = valueParts.join(":").trim();
     if (!v) continue;
 
-    if (k.includes("registrar") && !k.includes("url") && !k.includes("abuse") && !output.registrar) {
+    if (REGISTRAR_NAME_KEYS.has(k)) {
+      if (!registrarNamed) output.registrar = v;
+      registrarNamed = true;
+    } else if (k.includes("registrar") && !REGISTRAR_DETAIL_KEY.test(k) && !output.registrar) {
       output.registrar = v;
     } else if ((k.includes("creation") || k.includes("created") || k === "registered") && !output.created) {
       output.created = v;

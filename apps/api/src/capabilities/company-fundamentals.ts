@@ -216,12 +216,16 @@ registerCapability("company-fundamentals", async (input: CapabilityInput) => {
             // ("Request Rate Threshold Exceeded"). A "403" in the message
             // reads to the breaker as expired credentials and opens it for 30
             // minutes, and the SEC takes no credentials, so the status stays
-            // on `code` and the call is retryable (PR #1018 review, S2).
+            // on `code` (PR #1018 review, S2). Not retryable: the SEC's block
+            // lasts about ten minutes, and an automatic resend of up to five
+            // concept requests a second later can extend it (review round 4,
+            // B3). The caller is told when to try again instead.
             if (res.status === 403) {
-              throw new UpstreamUnavailableError(SEC_CONCEPTS, "the SEC is blocking or rate-limiting requests; retry shortly.", {
-                code: "HTTP 403",
-                retryable: true,
-              });
+              throw new UpstreamUnavailableError(
+                SEC_CONCEPTS,
+                "the SEC is blocking or rate-limiting requests; retry in about ten minutes.",
+                { code: "HTTP 403", retryable: false },
+              );
             }
             throw httpUnavailable(SEC_CONCEPTS, res.status);
           }
