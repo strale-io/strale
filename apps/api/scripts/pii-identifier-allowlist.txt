@@ -28,6 +28,7 @@ apps/api/scripts/seed-kyb-solutions.ts|DE89370400440532013000
 archive/growth-ops/tweets-v2.md|DE89370400440532013000
 archive/sessions/strale-usage-and-conversion-audit-2026-04-08.md|DE89370400440532013000
 archive/sessions/strale-usage-audit-real-users-only-2026-04-08.md|DE89370400440532013000
+archive/receipts/2026-11-12-check-strale-ai-sdk-and-strale-cli-0-1-0-production-smoke.json|DE89370400440532013000
 archive/submissions/bedrock-agentcore-submission/README.md|DE89370400440532013000
 archive/submissions/ibm-contextforge-submission/strale-integration.md|DE89370400440532013000
 archive/submissions/agentic-community-submission/docs/strale.md|DE89370400440532013000
