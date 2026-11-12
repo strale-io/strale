@@ -123,7 +123,8 @@ describe("business-day-check: Nager.Date failures throw (row 17)", () => {
       const err = (await exec({ date, country_code: "SE" }).catch((e: unknown) => e)) as Error;
       const { isCapabilityRefusal } = await import("../lib/capability-refusal.js");
       expect(isCapabilityRefusal(err)).toBe(true);
-      expect(err.message).toContain(`reaches ${outside}`);
+      expect(err.message).toContain(`'date' must be at least 15 days inside`);
+      expect(err.message).toContain(`from ${date} reaches ${outside}, which is outside them`);
       const { outcomeFromError } = await import("../lib/execution-outcome.js");
       expect(outcomeFromError(err)).toMatchObject({ billable: false, failure_class: "capability_refused", counts_against_capability: false });
     },
@@ -134,6 +135,7 @@ describe("business-day-check: Nager.Date failures throw (row 17)", () => {
     const err = (await exec({ date: "2026-06-03", country_code: code }).catch((e: unknown) => e)) as Error;
     const { outcomeFromError } = await import("../lib/execution-outcome.js");
     expect(outcomeFromError(err)).toMatchObject({ billable: false, failure_class: "capability_refused", counts_against_capability: false });
+    expect(err.message).toMatch(/^'country_code' must be a 2-letter ISO country code/);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

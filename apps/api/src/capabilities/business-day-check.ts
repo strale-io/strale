@@ -175,8 +175,11 @@ registerCapability("business-day-check", async (input: CapabilityInput) => {
   }
 
   const countryCode = ((input.country_code as string) ?? (input.country as string) ?? "").trim().toUpperCase();
-  if (!/^[A-Z]{2}$/.test(countryCode)) {
+  if (!countryCode) {
     throw inputRefusal("'country_code' is required (ISO 2-letter code).", "country_code", "Send 'country_code' as a 2-letter ISO country code such as SE.");
+  }
+  if (!/^[A-Z]{2}$/.test(countryCode)) {
+    throw inputRefusal("'country_code' must be a 2-letter ISO country code (letters A-Z).", "country_code", "Send 'country_code' as a 2-letter ISO country code such as SE.");
   }
 
   const date = new Date(dateStr + "T00:00:00Z");

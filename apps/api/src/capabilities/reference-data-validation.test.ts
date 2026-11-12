@@ -87,7 +87,3 @@ describe("business-day-check weekends", () => {
     expect(output.previous_business_day).toBe("2026-11-05");
   });
 });
-    expect(output.is_business_day).toBe(false);
-    expect(output.next_business_day).toBe("2026-11-08");
-  });
-});
