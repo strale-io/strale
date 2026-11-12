@@ -1,0 +1,269 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "c99e8a708fec85d27719276ff1fb2e960593568b"
+  },
+  "at": "2026-11-12T13:32:40.010Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/hdr429-af.json"
+  },
+  "summary": {
+    "numTotalTestSuites": 6,
+    "numPassedTestSuites": 6,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 17,
+    "numPassedTests": 17,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "startTime": 1794490358809,
+    "success": true
+  },
+  "topic": "header-security-429-site-refusal-after",
+  "raw": {
+    "numTotalTestSuites": 6,
+    "numPassedTestSuites": 6,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 17,
+    "numPassedTests": 17,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794490358809,
+    "success": true,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "header-security-check: a refusal is not graded"
+            ],
+            "fullName": "header-security-check: a refusal is not graded HTTP 401 fails the call unbilled as a site refusal, without retrying",
+            "status": "passed",
+            "title": "HTTP 401 fails the call unbilled as a site refusal, without retrying",
+            "duration": 6.005431000000044,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a refusal is not graded"
+            ],
+            "fullName": "header-security-check: a refusal is not graded HTTP 403 fails the call unbilled as a site refusal, without retrying",
+            "status": "passed",
+            "title": "HTTP 403 fails the call unbilled as a site refusal, without retrying",
+            "duration": 0.9861849999999777,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a refusal is not graded"
+            ],
+            "fullName": "header-security-check: a refusal is not graded HTTP 407 fails the call unbilled as a site refusal, without retrying",
+            "status": "passed",
+            "title": "HTTP 407 fails the call unbilled as a site refusal, without retrying",
+            "duration": 0.8655790000000252,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a refusal is not graded"
+            ],
+            "fullName": "header-security-check: a refusal is not graded HTTP 429 fails the call unbilled as a site refusal, without retrying",
+            "status": "passed",
+            "title": "HTTP 429 fails the call unbilled as a site refusal, without retrying",
+            "duration": 0.6174710000000232,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a refusal is not graded"
+            ],
+            "fullName": "header-security-check: a refusal is not graded the site's own 404 is still graded as it stands",
+            "status": "passed",
+            "title": "the site's own 404 is still graded as it stands",
+            "duration": 0.986925000000042,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a site that does not answer is the site's fault"
+            ],
+            "fullName": "header-security-check: a site that does not answer is the site's fault a reset connection fails unbilled and does not count against the capability",
+            "status": "passed",
+            "title": "a reset connection fails unbilled and does not count against the capability",
+            "duration": 0.9852399999999761,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a site that does not answer is the site's fault"
+            ],
+            "fullName": "header-security-check: a site that does not answer is the site's fault a timeout fails unbilled and does not count against the capability",
+            "status": "passed",
+            "title": "a timeout fails unbilled and does not count against the capability",
+            "duration": 0.7612080000000105,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a site that does not answer is the site's fault"
+            ],
+            "fullName": "header-security-check: a site that does not answer is the site's fault a host that does not resolve fails unbilled and does not count against the capability",
+            "status": "passed",
+            "title": "a host that does not resolve fails unbilled and does not count against the capability",
+            "duration": 0.2847830000000613,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a site that does not answer is the site's fault"
+            ],
+            "fullName": "header-security-check: a site that does not answer is the site's fault a redirect loop fails unbilled and does not count against the capability",
+            "status": "passed",
+            "title": "a redirect loop fails unbilled and does not count against the capability",
+            "duration": 0.6047610000000532,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a site that does not answer is the site's fault"
+            ],
+            "fullName": "header-security-check: a site that does not answer is the site's fault a host whose name contains \"restricted\" fails unbilled and does not count against the capability",
+            "status": "passed",
+            "title": "a host whose name contains \"restricted\" fails unbilled and does not count against the capability",
+            "duration": 0.3977939999999762,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a failure that does not say whose it was counts, with no host in it (follow-up 34)"
+            ],
+            "fullName": "header-security-check: a failure that does not say whose it was counts, with no host in it (follow-up 34) EAI_AGAIN wrapped by fetch fails unbilled and retryable, counted against the capability",
+            "status": "passed",
+            "title": "EAI_AGAIN wrapped by fetch fails unbilled and retryable, counted against the capability",
+            "duration": 0.526087000000075,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a failure that does not say whose it was counts, with no host in it (follow-up 34)"
+            ],
+            "fullName": "header-security-check: a failure that does not say whose it was counts, with no host in it (follow-up 34) a bare EAI_AGAIN fails unbilled and retryable, counted against the capability",
+            "status": "passed",
+            "title": "a bare EAI_AGAIN fails unbilled and retryable, counted against the capability",
+            "duration": 0.34712100000001556,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a failure that does not say whose it was counts, with no host in it (follow-up 34)"
+            ],
+            "fullName": "header-security-check: a failure that does not say whose it was counts, with no host in it (follow-up 34) a network error with no code fails unbilled and retryable, counted against the capability",
+            "status": "passed",
+            "title": "a network error with no code fails unbilled and retryable, counted against the capability",
+            "duration": 0.28653800000006413,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: Strale's own refusals pass through unchanged"
+            ],
+            "fullName": "header-security-check: Strale's own refusals pass through unchanged a robots.txt or challenge refusal from the fetch layer",
+            "status": "passed",
+            "title": "a robots.txt or challenge refusal from the fetch layer",
+            "duration": 0.32556499999998323,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: Strale's own refusals pass through unchanged"
+            ],
+            "fullName": "header-security-check: Strale's own refusals pass through unchanged an SSRF refusal on a redirect hop",
+            "status": "passed",
+            "title": "an SSRF refusal on a redirect hop",
+            "duration": 0.2046699999999646,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: Strale's own refusals pass through unchanged"
+            ],
+            "fullName": "header-security-check: Strale's own refusals pass through unchanged a redirect to a restricted address caught by the URL validator",
+            "status": "passed",
+            "title": "a redirect to a restricted address caught by the URL validator",
+            "duration": 0.17287999999996373,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "header-security-check: a bug of our own is not blamed on the site"
+            ],
+            "fullName": "header-security-check: a bug of our own is not blamed on the site a non-network error passes through and counts against the capability",
+            "status": "passed",
+            "title": "a non-network error passes through and counts against the capability",
+            "duration": 0.8114349999999604,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794490359658,
+        "endTime": 1794490359673.8115,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale-wt-hdr429/apps/api/src/capabilities/header-security-check.test.ts"
+      }
+    ]
+  }
+}

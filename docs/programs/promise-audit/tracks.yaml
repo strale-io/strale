@@ -328,7 +328,13 @@ tracks:
       bundle whose every step failed answers retryable true and drops each
       step's refusal details, even when every step was a site refusal that a
       retry will not change (refunded, so not a billing defect).
-      Next: (38), (36) and (32), (33); then measuring past billed calls from
+      (38) fixed on branch fix/header-security-429-site-refusal:
+      header-security-check alone answered a site's 429 as a retryable
+      target fault, while url-to-markdown and every other page fetcher that
+      reads isBlockStatus refuse it as the site declining Strale. It is now
+      refused the same way, unbilled, not counted and not retryable; the
+      special 429 branch is removed.
+      Next: (36) and (32), (33); then measuring past billed calls from
       the affected paths since their earliest releases, deciding refunds per
       policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against
       listed and dry-run prices (P-011, P-008). Do not assume the proposed
@@ -431,6 +437,8 @@ tracks:
       - archive/receipts/2026-11-12-test-run-caller-host-out-of-breaker-after.json
       - archive/receipts/2026-11-12-test-run-url-validation-by-type-fail-before.json
       - archive/receipts/2026-11-12-test-run-url-validation-by-type-after.json
+      - archive/receipts/2026-11-12-test-run-header-security-429-site-refusal-fail-before.json
+      - archive/receipts/2026-11-12-test-run-header-security-429-site-refusal-after.json
 
   - id: T2
     title: "T2: Compliance-answer correctness (reference answers)"
