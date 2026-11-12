@@ -259,17 +259,11 @@ tracks:
     depends_on:
       - T2
     owner: session
-    next_action: "composio-strale 0.1.6 is live on PyPI (2026-11-12, published on
-      Petter's go after he added its trusted publisher; production smoke in
-      archive/receipts/2026-11-12-check-composio-strale-0-1-6-production-smoke.json).
-      langchain-strale 0.2.0, straleio 0.1.5 and crewai-strale 0.1.5 are merged
-      but not on PyPI (live is 0.1.4, with strale.dev links and 250+ counts).
-      Each waits on its PyPI trusted publisher, which only a signed-in owner can
-      add (steps in docs/research/2026-11-06-distribution-listings-audit.md,
-      step F), and Petter's publish go. Then publish under the
-      section 9 item 7 grant with the steps in
-      handoff/_general/from-code/2026-10-29-langchain-strale-0.2.0.md and run the
-      smoke test. strale-semantic-kernel is deprecated on npm (2026-11-06,
+    next_action: "All four PyPI packages are live and smoke-tested from a clean
+      install on 2026-11-12: composio-strale 0.1.6, straleio 0.1.5, crewai-strale
+      0.1.5 and langchain-strale 0.2.0, each with strale.io links and listing 297
+      tools (receipts in evidence). Petter deletes any old PyPI API token that can
+      upload them; trusted publishing replaces it. strale-semantic-kernel is deprecated on npm (2026-11-06,
       docs/release/directory-submissions/package-housekeeping.md). The four directory submissions (awesome-remote-mcp-servers,
       Docker PR 2202 update, Cursor plugin, Cline) were refreshed for strale.io and
       the 2026-11-06 versions in docs/release/directory-submissions/README.md and are
@@ -281,4 +275,8 @@ tracks:
       - Housekeeping package and registry corrections and PR outcomes are
         recorded.
       - Petter's branch cleanup is reported when performed.
-    evidence: []
+    evidence:
+      - archive/receipts/2026-11-12-check-composio-strale-0-1-6-production-smoke.json
+      - archive/receipts/2026-11-12-check-straleio-0-1-5-production-smoke.json
+      - archive/receipts/2026-11-12-check-crewai-strale-0-1-5-production-smoke.json
+      - archive/receipts/2026-11-12-check-langchain-strale-0-2-0-production-smoke.json
