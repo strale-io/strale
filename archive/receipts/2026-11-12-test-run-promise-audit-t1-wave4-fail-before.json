@@ -1,0 +1,192 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "AUDIT_HMAC_SECRET=<test> npx vitest run src/capabilities/probe-failure-regressions.test.ts (executors at origin/main 4bc6d23c)",
+    "commit": "4bc6d23cf1bb3cd2f2b9f5c2d35dac677830c8a8"
+  },
+  "at": "2026-11-12T04:07:38.472Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/wave4-before.json"
+  },
+  "summary": {
+    "tests": 10,
+    "passed": 3,
+    "failed": 7,
+    "note": "the 7 regression tests fail on the unfixed executors; the 3 passing tests guard behaviour the fix must keep"
+  },
+  "topic": "promise-audit-t1-wave4-fail-before",
+  "raw": {
+    "numTotalTestSuites": 3,
+    "numPassedTestSuites": 0,
+    "numFailedTestSuites": 3,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 10,
+    "numPassedTests": 3,
+    "numFailedTests": 7,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794456109026,
+    "success": false,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) refuses a ToS-blocklisted domain rather than grading its HTTPS as failed",
+            "status": "failed",
+            "title": "refuses a ToS-blocklisted domain rather than grading its HTTPS as failed",
+            "duration": 72.23314600000003,
+            "failureMessages": [
+              "AssertionError: graded and billed as a finding: expected { domain: 'trustpilot.com', …(5) } to be null\n    at expectUnbilled (/home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts:55:107)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts:73:21\n    at file:///home/user/strale-wt-pa-wave4/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) refuses a redirect to a private address rather than grading it",
+            "status": "failed",
+            "title": "refuses a redirect to a private address rather than grading it",
+            "duration": 3.9104350000000068,
+            "failureMessages": [
+              "AssertionError: graded and billed as a finding: expected { …(6) } to be null\n    at expectUnbilled (/home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts:55:107)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts:80:5\n    at file:///home/user/strale-wt-pa-wave4/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) does not grade a redirect loop as an HTTPS failure",
+            "status": "failed",
+            "title": "does not grade a redirect loop as an HTTPS failure",
+            "duration": 4.089057000000025,
+            "failureMessages": [
+              "AssertionError: graded and billed as a finding: expected { domain: 'loop.example.com', …(5) } to be null\n    at expectUnbilled (/home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts:55:107)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts:86:21\n    at file:///home/user/strale-wt-pa-wave4/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) does not grade its own probe timeout as an HTTPS failure",
+            "status": "failed",
+            "title": "does not grade its own probe timeout as an HTTPS failure",
+            "duration": 2.2121080000000575,
+            "failureMessages": [
+              "AssertionError: graded and billed as a finding: expected { domain: 'slow.example.com', …(5) } to be null\n    at expectUnbilled (/home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts:55:107)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts:94:21\n    at file:///home/user/strale-wt-pa-wave4/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) still grades a TLS failure of the domain itself",
+            "status": "passed",
+            "title": "still grades a TLS failure of the domain itself",
+            "duration": 1.8984159999999974,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "domain-reputation grades only the domain's own HTTPS failure (follow-up 23)"
+            ],
+            "fullName": "domain-reputation grades only the domain's own HTTPS failure (follow-up 23) refuses Strale's own connect-time SSRF block rather than grading it",
+            "status": "failed",
+            "title": "refuses Strale's own connect-time SSRF block rather than grading it",
+            "duration": 2.1057270000000017,
+            "failureMessages": [
+              "AssertionError: graded and billed as a finding: expected { domain: 'rebind.example.com', …(5) } to be null\n    at expectUnbilled (/home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts:55:107)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts:115:5\n    at file:///home/user/strale-wt-pa-wave4/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18)"
+            ],
+            "fullName": "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18) returns exists:false for an HTML page served with 200",
+            "status": "failed",
+            "title": "returns exists:false for an HTML page served with 200",
+            "duration": 15.847729999999956,
+            "failureMessages": [
+              "AssertionError: expected true to be false // Object.is equality\n    at /home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts:124:27\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-pa-wave4/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18)"
+            ],
+            "fullName": "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18) reads an HTML page as no robots.txt even when it is served as text/plain",
+            "status": "failed",
+            "title": "reads an HTML page as no robots.txt even when it is served as text/plain",
+            "duration": 5.24539900000002,
+            "failureMessages": [
+              "AssertionError: expected true to be false // Object.is equality\n    at /home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts:131:27\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-pa-wave4/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18)"
+            ],
+            "fullName": "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18) keeps an empty robots.txt as one that exists with no rules",
+            "status": "passed",
+            "title": "keeps an empty robots.txt as one that exists with no rules",
+            "duration": 2.0403949999999895,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18)"
+            ],
+            "fullName": "robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18) keeps a real robots.txt served as text/html",
+            "status": "passed",
+            "title": "keeps a real robots.txt served as text/html",
+            "duration": 2.4743570000000545,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794456109757,
+        "endTime": 1794456109870.4744,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale-wt-pa-wave4/apps/api/src/capabilities/probe-failure-regressions.test.ts"
+      }
+    ]
+  }
+}

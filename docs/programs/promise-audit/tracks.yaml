@@ -199,6 +199,25 @@ tracks:
       publishing block on Petter's OK: the cz not-registered limitation and
       nullable types from this wave, and a proposed domain-reputation
       limitation that a challenge answer fails unbilled with no score.
+      Wave 4, PR #1025: (18) and (23) fixed. robots-txt-parse reads an
+      HTML page answered at /robots.txt with no rules or sitemaps (a soft
+      404) as no robots.txt, as a 404 reads, and both absent answers carry
+      the fields the manifest guarantees. domain-reputation grades only the
+      domain's own HTTPS: a connection or TLS failure, or no answer within
+      8 s (its own issue text); a ToS-blocklisted domain, a redirect to a
+      restricted address, Strale's SSRF block and a temporary failure of
+      Strale's own resolver (EAI_AGAIN) throw, unbilled. The domain is
+      asked first with no redirect followed; a redirect it answers is
+      followed only for the site's headers, and a hop that then does not
+      answer leaves the grade on the redirect. Two independent reviews
+      (billing GO; data and copy NO-GO, fixed) and a delta review (GO, its
+      three should-fixes applied); fail-before and after receipts are in
+      evidence. Found, not
+      fixed: (27) a soft 404 answered as JSON or plain text (\"Not found\")
+      still reads as a robots.txt with no rules; (28) the domain-reputation
+      manifest limitation text is partly stale (a temporary DNS failure no
+      longer lowers the score), and it is a compliance capability, so its
+      copy waits for Petter as (26).
       Next: the Nager.Date no-calendar path
       (a weekends-only answer for countries such as TH, still billed) as a
       follow-up candidate; recordings for the network executors that have
@@ -240,6 +259,11 @@ tracks:
       - archive/receipts/2026-11-12-test-run-upstream-failure-replay-wave3-after.json
       - archive/receipts/2026-11-12-test-run-upstream-failure-replay-wave3-review-fixes.json
       - archive/receipts/2026-11-12-test-run-promise-audit-t1-wave3-billing-review-fix.json
+      - archive/receipts/2026-11-12-test-run-promise-audit-t1-wave4-fail-before.json
+      - archive/receipts/2026-11-12-test-run-promise-audit-t1-wave4-after.json
+      - archive/receipts/2026-11-12-test-run-promise-audit-t1-wave4-review-fixes.json
+      - archive/receipts/2026-11-12-test-run-promise-audit-t1-wave4-delta-fail-before.json
+      - archive/receipts/2026-11-12-test-run-promise-audit-t1-wave4-delta-after.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-fail-before.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-after.json
       - archive/receipts/2026-11-11-check-upstream-catch-guard-wave2a.json
