@@ -253,16 +253,24 @@ tracks:
       after receipts are in evidence. Block 0155 (#1033, b5564fd2, live
       2026-11-12) published the corrected cz-unreliable-vat-payer
       limitations and nullable output types and the domain-reputation
-      limitations, approved by Petter; that closes (26) and (28). Found,
-      not fixed: (30) header-security-check grades a 401, 403 or 407 and a
-      raw transport error; (31) checked and not a leak: the six other
+      limitations, approved by Petter; that closes (26) and (28). (30)
+      fixed in #1035 (2d7beb87, deployed 2026-11-12): header-security-check
+      refuses a 401, 403 or 407 unbilled (siteAccessRefusal) and wraps a
+      transport failure as the target's fault; its review left (34) shared
+      targetUnavailable gives targetFault to EAI_AGAIN and unknown \"fetch
+      failed\" causes, (35) page-exists matches the validator's refusal by
+      the word \"restricted\", (36) no manifest limitation says a block or
+      challenge page is refused unbilled, (37) how solution billing treats a
+      refused step (header-security-check is a step in 3 solutions), (38)
+      429 is a retryable targetFault here but not in url-to-markdown. Found,
+      not fixed: (31) checked and not a leak: the six other
       Alchemy executors call it through lib/alchemy-client.ts, whose
       errors carry the chain name and status only, never the key URL; (32)
       paid-api-preflight's ssl_valid; (33) smaller wave-6 items: a JSON
       401 from Alchemy is not read as auth_expired, a swallowed ENS avatar
       failure is billed, and the JSON-RPC 429 is untyped.
-      Next: (30), which bills; (27) robots-txt-parse non-HTML
-      soft 404s; then measuring past billed calls from
+      Next: (27) robots-txt-parse non-HTML soft 404s; then (34) to
+      (38) and (32), (33); then measuring past billed calls from
       the affected paths since their earliest releases, deciding refunds per
       policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against
       listed and dry-run prices (P-011, P-008). Do not assume the proposed
@@ -315,6 +323,10 @@ tracks:
       - archive/receipts/2026-11-12-test-run-unrecorded-failure-replay-wave6-after.json
       - archive/receipts/2026-11-12-test-run-unrecorded-failure-replay-wave6-review-fail-before.json
       - archive/receipts/2026-11-12-test-run-unrecorded-failure-replay-wave6-review-after.json
+      - archive/receipts/2026-11-12-test-run-header-security-check-refusals-fail-before.json
+      - archive/receipts/2026-11-12-test-run-header-security-check-refusals-after.json
+      - archive/receipts/2026-11-12-test-run-header-security-check-review-fixes-fail-before.json
+      - archive/receipts/2026-11-12-test-run-header-security-check-review-fixes-after.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-fail-before.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-after.json
       - archive/receipts/2026-11-11-check-upstream-catch-guard-wave2a.json

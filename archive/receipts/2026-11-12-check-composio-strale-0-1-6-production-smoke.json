@@ -1,0 +1,87 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "b00364f61f12bc2540ca19032d15a1700aaeff53"
+  },
+  "at": "2026-11-12T09:28:55.961Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/smoke016.json"
+  },
+  "summary": {
+    "package": "composio-strale",
+    "version": "0.1.6",
+    "release_run": "https://github.com/strale-io/strale/actions/runs/43189918739",
+    "release_commit": "b00364f61f12bc2540ca19032d15a1700aaeff53",
+    "published_at": "2026-11-12T09:16:58Z",
+    "install": "pip install composio-strale==0.1.6 from PyPI into a fresh venv (python 3.13), composio 0.32.0 resolved",
+    "release_smoke": "pypi-release.py smoke --dir packages/composio-strale --version 0.1.6 on the installed artefact: smoke ok: GET /v1/suggest/typeahead?q=smoke&limit=10&type=capability sent X-Strale-Client: composio-strale/0.1.6",
+    "price_in_search_results": false,
+    "client_header": "composio-strale/0.1.6",
+    "execute_without_key": "STRALE_API_KEY required. Get one at https://strale.io/signup (trial credits where eligible).",
+    "degradations_logged": 0,
+    "paid_calls_made": 0,
+    "verdict": "pass"
+  },
+  "topic": "composio-strale-0-1-6-production-smoke",
+  "raw": {
+    "package": "composio-strale",
+    "version": "0.1.6",
+    "release_run": "https://github.com/strale-io/strale/actions/runs/43189918739",
+    "release_commit": "b00364f61f12bc2540ca19032d15a1700aaeff53",
+    "published_at": "2026-11-12T09:16:58Z",
+    "files": [
+      "composio_strale-0.1.6-py3-none-any.whl",
+      "composio_strale-0.1.6.tar.gz"
+    ],
+    "install": "pip install composio-strale==0.1.6 from PyPI into a fresh venv (python 3.13), composio 0.32.0 resolved",
+    "release_smoke": "pypi-release.py smoke --dir packages/composio-strale --version 0.1.6 on the installed artefact: smoke ok: GET /v1/suggest/typeahead?q=smoke&limit=10&type=capability sent X-Strale-Client: composio-strale/0.1.6",
+    "registered_tools": [
+      "strale_balance",
+      "strale_execute",
+      "strale_search"
+    ],
+    "production_searches": [
+      {
+        "query": "iban",
+        "results": 3,
+        "slugs": [
+          "iban-validate",
+          "iban-to-bank",
+          "sepa-xml-validate"
+        ]
+      },
+      {
+        "query": "company data",
+        "category": "company-data",
+        "results": 10,
+        "categories": [
+          "company-data"
+        ]
+      },
+      {
+        "query": "sanctions screening",
+        "results": 7,
+        "first": "sanctions-check",
+        "categories": [
+          "compliance"
+        ]
+      },
+      {
+        "query": "x",
+        "results": 0,
+        "error": "query must be at least 2 characters"
+      }
+    ],
+    "price_in_search_results": false,
+    "requests_sent_to": [
+      "https://api.strale.io/v1/suggest/typeahead",
+      "https://api.strale.io/v1/capabilities"
+    ],
+    "client_header": "composio-strale/0.1.6",
+    "execute_without_key": "STRALE_API_KEY required. Get one at https://strale.io/signup (trial credits where eligible).",
+    "degradations_logged": 0,
+    "paid_calls_made": 0,
+    "verdict": "pass"
+  }
+}

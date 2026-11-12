@@ -259,18 +259,18 @@ tracks:
     depends_on:
       - T2
     owner: session
-    next_action: "langchain-strale 0.2.0 is merged but not on PyPI (live is 0.1.4);
-      straleio, crewai-strale and composio-strale also have unpublished repo
-      versions (0.1.5 each) while PyPI shows 0.1.4 with strale.dev links and
-      250+ counts. All four wait on PyPI trusted publishers, which only a
-      signed-in owner can add (steps in
-      docs/research/2026-11-06-distribution-listings-audit.md, step F), and
-      composio-strale is missing from release-pypi.yml. Then publish under the
+    next_action: "composio-strale 0.1.6 is live on PyPI (2026-11-12, published on
+      Petter's go after he added its trusted publisher; production smoke in
+      archive/receipts/2026-11-12-check-composio-strale-0-1-6-production-smoke.json).
+      langchain-strale 0.2.0, straleio 0.1.5 and crewai-strale 0.1.5 are merged
+      but not on PyPI (live is 0.1.4, with strale.dev links and 250+ counts).
+      Each waits on its PyPI trusted publisher, which only a signed-in owner can
+      add (steps in docs/research/2026-11-06-distribution-listings-audit.md,
+      step F), and Petter's publish go. Then publish under the
       section 9 item 7 grant with the steps in
       handoff/_general/from-code/2026-10-29-langchain-strale-0.2.0.md and run the
       smoke test. strale-semantic-kernel is deprecated on npm (2026-11-06,
-      docs/release/directory-submissions/package-housekeeping.md); crewai and
-      composio stay frozen. The four directory submissions (awesome-remote-mcp-servers,
+      docs/release/directory-submissions/package-housekeeping.md). The four directory submissions (awesome-remote-mcp-servers,
       Docker PR 2202 update, Cursor plugin, Cline) were refreshed for strale.io and
       the 2026-11-06 versions in docs/release/directory-submissions/README.md and are
       still unsubmitted, for whoever holds the GitHub and Cursor accounts; record
