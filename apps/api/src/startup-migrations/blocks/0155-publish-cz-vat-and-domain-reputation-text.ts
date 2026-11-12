@@ -106,13 +106,13 @@ export const CZ_VAT_PAYER_0155: Publication0155 = {
           properties: {
             published_at: { type: "string" },
             account_number: { type: "string" },
-            bank_code: { type: "string" },
+            bank_code: { type: ["string", "null"] },
             is_standard: { type: "boolean" },
           },
         },
       },
       published_account_count: { type: "integer" },
-      response_generated_at: { type: "string" },
+      response_generated_at: { type: ["string", "null"] },
       joint_liability_risk: { type: "string" },
     },
   },
@@ -222,7 +222,7 @@ export const DOMAIN_REPUTATION_0155: Publication0155 = {
     {
       title: "Some domains are not checked",
       limitationText:
-        "The call fails unbilled, with no score, when Strale will not make the HTTPS request: for a domain on Strale's list of sites whose terms forbid automated access, a domain that resolves or redirects to a private or otherwise restricted network address, or a domain that redirects to an address Strale does not follow, such as an ftp:// link.",
+        "The call fails unbilled, with no score, when Strale will not make the HTTPS request: for a domain on Strale's list of sites whose terms forbid automated access or that redirects to one, a domain that resolves or redirects to a private or otherwise restricted network address, or a domain that redirects to an address Strale does not follow, such as an ftp:// link.",
       category: "coverage",
       severity: "info",
       workaround: null,

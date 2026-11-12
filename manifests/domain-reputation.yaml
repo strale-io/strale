@@ -116,8 +116,8 @@ limitations:
   - title: Some domains are not checked
     text: >-
       The call fails unbilled, with no score, when Strale will not make the HTTPS request: for a domain on Strale's list
-      of sites whose terms forbid automated access, a domain that resolves or redirects to a private or otherwise
-      restricted network address, or a domain that redirects to an address Strale does not follow, such as an ftp://
+      of sites whose terms forbid automated access or that redirects to one, a domain that resolves or redirects to a
+      private or otherwise restricted network address, or a domain that redirects to an address Strale does not follow, such as an ftp://
       link.
     category: coverage
     severity: info

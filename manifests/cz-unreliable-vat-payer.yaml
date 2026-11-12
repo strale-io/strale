@@ -42,13 +42,13 @@ output_schema:
           account_number:
             type: string
           bank_code:
-            type: string
+            type: ["string", "null"]
           is_standard:
             type: boolean
     published_account_count:
       type: integer
     response_generated_at:
-      type: string
+      type: ["string", "null"]
     joint_liability_risk:
       type: string
 # SA.2b: per-capability PII classification (F-A-003, F-A-009)

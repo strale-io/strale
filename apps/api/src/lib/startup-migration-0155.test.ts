@@ -149,6 +149,8 @@ describe("block 0155: publish the cz-unreliable-vat-payer and domain-reputation 
     expect(props.dic.type).toEqual(["string", "null"]);
     expect(props.is_unreliable_payer.type).toEqual(["boolean", "null"]);
     expect(props.financial_office_code.type).toEqual(["string", "null"]);
+    expect(props.response_generated_at.type).toEqual(["string", "null"]);
+    expect(props.published_accounts.items.properties.bank_code.type).toEqual(["string", "null"]);
     const notFound = CZ_VAT_PAYER_0155.limitations.find((l) => l.title === "A DIČ not in the VAT-payer register is not explained further");
     expect(notFound?.limitationText).toContain(
       "is returned as is_registered_vat_payer false, with dic, is_unreliable_payer and financial_office_code null",

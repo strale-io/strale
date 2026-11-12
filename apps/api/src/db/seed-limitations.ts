@@ -183,7 +183,7 @@ export const LIMITATIONS: LimitationDef[] = [
     workaround: "Check the site's security headers another way, for example in a browser's developer tools" },
   { capabilitySlug: "domain-reputation", category: "coverage", severity: "info",
     title: "Some domains are not checked",
-    limitationText: "The call fails unbilled, with no score, when Strale will not make the HTTPS request: for a domain on Strale's list of sites whose terms forbid automated access, a domain that resolves or redirects to a private or otherwise restricted network address, or a domain that redirects to an address Strale does not follow, such as an ftp:// link." },
+    limitationText: "The call fails unbilled, with no score, when Strale will not make the HTTPS request: for a domain on Strale's list of sites whose terms forbid automated access or that redirects to one, a domain that resolves or redirects to a private or otherwise restricted network address, or a domain that redirects to an address Strale does not follow, such as an ftp:// link." },
 
   // ── sanctions-check ──
   { capabilitySlug: "sanctions-check", category: "freshness", severity: "info",
