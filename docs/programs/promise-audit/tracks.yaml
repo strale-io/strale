@@ -219,10 +219,27 @@ tracks:
       manifest limitation text is partly stale (a temporary DNS failure no
       longer lowers the score), and it is a compliance capability, so its
       copy waits for Petter as (26).
-      Next: the Nager.Date no-calendar path
-      (a weekends-only answer for countries such as TH, still billed) as a
-      follow-up candidate; recordings for the network executors that have
-      none; then measuring past billed calls from
+      Wave 5, merged 2026-11-12: business-day-check. #1027 (ff1b6bdc,
+      deployed): a country Nager.Date has no calendar for (204, e.g. TH, AE,
+      SA, KW, QA, OM, JO, MV, AF, IR, IL, NP) or does not recognise (404,
+      e.g. ZZ) is refused unbilled instead of billed as weekends only; a code
+      that is not two letters is refused before the call; the next and
+      previous business day count the adjacent year's holidays, and that
+      fetch failing throws, unbilled. #1028 (02db1693, deployed): only entries typed
+      Public or Bank count as days off (school, government-office, optional
+      and observance days were billed as \"not a business day\"); regional
+      Public and Bank holidays still count for the whole country, because
+      Nager.Date lists some nationwide days as regional (GB New Year's Day,
+      CH Good Friday), and the manifest says so. Dates now answered
+      \"business day\" that some callers treat as days off: NL 2026-04-03
+      and 05-05, PT 02-17, ME Orthodox Christmas and Easter. Independent
+      reviews on each, should-fixes applied; fail-before and after receipts
+      are in evidence. Found, not fixed: (29) no region input, so a regional
+      holiday answers \"not a business day\" for the whole country; a
+      bank-only day's reason reads \"public_holiday\"; a date whose 15-day
+      search reaches a year outside Nager.Date's window is refused.
+      Next: recordings for the network executors that have none; (27)
+      robots-txt-parse non-HTML soft 404s; then measuring past billed calls from
       the affected paths since their earliest releases, deciding refunds per
       policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against
       listed and dry-run prices (P-011, P-008). Do not assume the proposed
@@ -236,7 +253,8 @@ tracks:
       404s and unavailable sources and nothing queryable bills an empty audit
       (requireSomeAnswer edge); business-day-check next and previous business
       day use only the current year's holidays (wrong on 31 Dec), and a 404 for
-      an unknown country code such as ZZ is billed as weekends-only;
+      an unknown country code such as ZZ is billed as weekends-only (both
+      fixed in #1027);
       eori-validate bills valid false for GB EORI numbers (the EU service says
       Not valid); package-security-audit with a nonexistent explicit npm version
       gets an empty OSV answer and is billed low; holiday-calendar getHolidays
@@ -260,6 +278,11 @@ tracks:
       - archive/receipts/2026-11-12-test-run-upstream-failure-replay-wave3-after.json
       - archive/receipts/2026-11-12-test-run-upstream-failure-replay-wave3-review-fixes.json
       - archive/receipts/2026-11-12-test-run-promise-audit-t1-wave3-billing-review-fix.json
+      - archive/receipts/2026-11-12-test-run-promise-audit-t1-nager-no-calendar-fail-before.json
+      - archive/receipts/2026-11-12-test-run-promise-audit-t1-nager-no-calendar-after.json
+      - archive/receipts/2026-11-12-test-run-promise-audit-t1-nager-no-calendar-review-fixes-2.json
+      - archive/receipts/2026-11-12-test-run-promise-audit-t1-business-day-types-final-fail-before.json
+      - archive/receipts/2026-11-12-test-run-promise-audit-t1-business-day-types-final-after.json
       - archive/receipts/2026-11-12-test-run-promise-audit-t1-wave4-fail-before.json
       - archive/receipts/2026-11-12-test-run-promise-audit-t1-wave4-after.json
       - archive/receipts/2026-11-12-test-run-promise-audit-t1-wave4-review-fixes.json
