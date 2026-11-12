@@ -116,7 +116,9 @@ tracks:
       dailyRevenue endpoint (the old one answered 500, so revenue was always
       null and billed) and throws when either request fails;
       ens-reverse-lookup throws on an RPC failure in the forward check. Four
-      reviews in separate contexts ended GO (PR 1021 body). Deploy check pending.
+      reviews in separate contexts ended GO (PR 1021 body). Deployed as 70f5f849 (/health,
+      2026-11-12); public detail shows ens-resolve and ens-reverse-lookup
+      data_source as Alchemy and port-check's output_schema with state.
       Found in wave 2d, not fixed there (none overcharges): (13) a 401, 403
       or 429, or a robots disallow, on the og:image host refuses the whole
       call, so a dead S3 image (S3 answers 403) loses its answer;
