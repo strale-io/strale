@@ -411,6 +411,21 @@ tracks:
       (compliance category), so the boot sync does not publish its manifest
       text: that limitation reaches production only through a startup block
       once Petter approves the wording.
+      (42) fixed (#1051, merged 2026-11-12): a refunded
+      bundle answered retryable true whatever its steps' failures were, and
+      each step's advice was rebuilt from its error text after the run, which
+      dropped a refusal's own fix and a typed failure's retryable flag. Each
+      step's advice is now read from its error when the step fails; a bundle
+      is retryable only when it was refunded, the canonical outcome does not
+      call the run final (a tripped gate or a withheld step), and at least one
+      failed step could change on a retry. Both bundle rails list each failed
+      step's advice with its capability slug; the x402 rail answered retryable
+      true for a tripped gate too. The wallet rail's refund wording now
+      follows the refund rather than whether every step failed, so a withheld
+      run that returned some output no longer says a rerun charges again.
+      Billing is unchanged. Regression tests in
+      solution-executor-retry.test.ts, actionable-errors-round2.test.ts and
+      x402-settlement-characterization.test.ts fail against the previous code.
       (41) guarded on branch fix/target-status-accept-guard: a tool that files
       a site's status as the target's (targetUnavailable) must not send an
       Accept header the site can refuse with 406, or a 406 caused by Strale's
@@ -421,7 +436,8 @@ tracks:
       through their import declarations (an alias or a namespace import is
       still seen), pins the full list of eleven tools, and fails on options
       or headers it cannot read (a variable, a spread, a computed key, a
-      shorthand headers or Accept). Every current tool already complies, so
+      shorthand headers or Accept, spread arguments, and any use of safeFetch
+      other than a direct call), and pins each file's count of direct calls. Every current tool already complies, so
       the guard ships with no executor change. Recorded, not fixed: a 406
       from a firewall rule matching Strale's honest user agent is a block of
       Strale but is filed as the target failing (unbilled and uncounted
@@ -429,7 +445,7 @@ tracks:
       Node's HTTP/1.1-only fetch could draw, is filed the same way; the scan
       covers top-level capability files only, not helpers in
       capabilities/lib or src/lib, and checks safeFetch only.
-      In flight: (42) on #1051 and (45) to (48) on #1052.
+      In flight: (45) to (48) on #1052.
       Open, found while doing (43) to (48):
       (49) html-to-pdf and screenshot-url: after a preflight transport
       failure the Chrome render is not checked for a challenge page, so a

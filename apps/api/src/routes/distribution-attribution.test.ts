@@ -109,7 +109,7 @@ describe("real distribution entry routes", () => {
     expect(mocks.executor).toHaveBeenCalledWith({value:"hello"});
   });
   it.each([false, true])("x402 solution records src on the transaction (gated=%s)", async gated => {
-    mocks.solution.mockResolvedValueOnce({steps: gated ? {} : {fixture:{valid:true}}, errors:[], gated, latency_ms:1, step_count:1});
+    mocks.solution.mockResolvedValueOnce({steps: gated ? {} : {fixture:{valid:true}}, errors:[], failures:[], gated, latency_ms:1, step_count:1});
     const res = await new Hono().route("/x402", x402GatewayV2).request("/x402/solutions/fixture?value=hello&src=context7&utm_source=listing");
     expect(res.status).toBe(gated ? 502 : 200);
     const write = mocks.writes.find(w => w.table === transactions);

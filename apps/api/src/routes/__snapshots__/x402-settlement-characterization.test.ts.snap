@@ -2324,7 +2324,7 @@ exports[`H7b solution settlement characterization > confirmed decline: no settle
 
 exports[`H7b solution settlement characterization > failed execution never opens an intent or settles 1`] = `
 {
-  "body": "{"details":{"retryable":true,"next_step":"Retry with exponential backoff or choose another enabled tool from GET /x402/catalog."},"error":"Solution failed — no steps produced output. No payment was taken.","solution":"test-solution","failure_class":"output_unusable","steps":{},"errors":[]}",
+  "body": "{"details":{"retryable":false,"next_step":"A retry with the same input gets the same answer; check the input (and each failed step's advice under 'errors'), or choose another enabled tool from GET /x402/catalog."},"error":"Solution failed — no steps produced output. No payment was taken.","solution":"test-solution","failure_class":"output_unusable","steps":{},"errors":[]}",
   "events": [
     "verify",
     "claim",
