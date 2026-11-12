@@ -99,6 +99,14 @@ limitations:
       route.
     category: coverage
     severity: info
+  - title: A page that refuses or fails the request is not read
+    text: >-
+      When the site answers HTTP 401, 403, 407 or 429, shows an anti-bot challenge page instead of the content, or disallows the page in robots.txt, or its robots.txt cannot be fetched (a network or server error), the call fails with an error and is not billed. Strale does not try another route around the block. Any other error status, a timeout or a network error also fails the call unbilled, because the page was not read.
+    category: availability
+    severity: info
+    workaround: >-
+      Retry after a server error, a timeout or a network error. When robots.txt could not be fetched, wait at least
+      5 minutes before trying again; any other block gets the same answer while the site keeps refusing.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

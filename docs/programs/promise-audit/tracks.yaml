@@ -349,6 +349,20 @@ tracks:
       completed over TLS with a trusted certificate; a rejected certificate is
       named in issues by its TLS code, a redirect to http is named and answers
       avoid, and the manifest documents what the field does and does not check.
+      (44) fixed on branch fix/page-fetcher-block-status: meta-extract,
+      link-extract and gdpr-website-check threw a non-2xx as a generic error
+      naming the caller's URL and let a network error, a timeout or a body
+      dropped mid-read out raw, so a 401, 403 or 429 was not refused, and a
+      5xx, timeout or network error was counted against the capability with
+      the caller's URL in the message. Their page read now follows
+      og-image-check's: a 401, 403, 407 or 429 is refused (assertNotBlockStatus),
+      unbilled and not counted; any other status, a timeout or a coded
+      network error goes through targetUnavailable as the target's, unbilled
+      and not counted; EAI_AGAIN or an uncoded network error is counted under
+      fixed text with no host; a URL validation refusal and the size cap pass
+      through. Their custom user agents are removed, so safeFetch sends
+      Strale's honest one, and each manifest gains a limitation saying a page
+      that refuses or fails the request is not read and the call is unbilled.
       Next: (36), (33), (43), (44); then measuring past billed calls from
       the affected paths since their earliest releases, deciding refunds per
       policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against
