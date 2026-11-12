@@ -16,6 +16,7 @@ import { persistCallCost } from "../lib/persist-call-cost.js";
  */
 
 import { refusalDetails } from "../lib/capability-refusal.js";
+import { sourceBlockDetails } from "../lib/site-access.js";
 import { callerKeyForRequest, runAsCaller } from "../lib/caller-scope.js";
 
 import { Hono } from "hono";
@@ -1887,7 +1888,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     // the agent this may be an upstream failure, not necessarily bad input
     // — so it can back off instead of mutating a valid request and paying
     // to retry it.
-    return schemaBadRequest(c, sanitized, cap.inputSchema, "execution_failed", refusalDetails(err), { kind: "capability", slug: cap.slug });
+    return schemaBadRequest(c, sanitized, cap.inputSchema, "execution_failed", refusalDetails(err) ?? sourceBlockDetails(err), { kind: "capability", slug: cap.slug });
   }
 
   const latencyMs = Date.now() - startMs;

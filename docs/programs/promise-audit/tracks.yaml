@@ -411,6 +411,23 @@ tracks:
       (compliance category), so the boot sync does not publish its manifest
       text: that limitation reaches production only through a startup block
       once Petter approves the wording.
+      (51) fixed on branch fix/source-block-retry-advice: a failure from a
+      source Strale chose that blocks Strale (SourceBlockedError) no longer
+      gets the generic retry-with-backoff advice on any rail.
+      sourceBlockDetails (site-access.ts) reads the block from the error or
+      from its sanitised message: a rate limit, an explicit retry time or an
+      unreadable robots.txt stays retryable with a wait; every other block is
+      retryable false, telling the caller to choose another tool. recoveryDetails consults it
+      after refusalDetails, and the x402 and batch rails that spread details
+      from the thrown object use it too. package-docs' npm 403/429 message
+      now starts with the source-block prefix, so every rail agrees.
+      A bundle step's advice (solution-step-failure.ts, from (42)) reads the
+      block from the error object, so a bundle whose every step was blocked
+      is not retryable and a long host cannot truncate the marker away.
+      Found in its review, not fixed there: the batch replay path rebuilds
+      failed items without source-block or refusal advice; the x402
+      next_step names GET /v1/capabilities rather than GET /x402/catalog;
+      invoice-counterparty/compose.ts re-wraps a step's block.
       (42) fixed (#1051, merged 2026-11-12): a refunded
       bundle answered retryable true whatever its steps' failures were, and
       each step's advice was rebuilt from its error text after the run, which

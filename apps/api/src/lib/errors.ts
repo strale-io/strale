@@ -1,5 +1,6 @@
 import { classifyTransactionFailure } from "./transaction-failure-taxonomy.js";
 import { refusalDetails } from "./capability-refusal.js";
+import { sourceBlockDetails } from "./site-access.js";
 
 // Stable error codes per DEC-19
 export type ErrorCode =
@@ -122,7 +123,7 @@ export function recoveryDetails(
     case "capability_degraded":
       advice = { retryable: true, next_step: details.next_retry_at ? `Retry after ${details.next_retry_at}.` : "Retry with exponential backoff or choose another tool from GET /v1/capabilities." }; break;
     case "execution_failed":
-      advice = refusalDetails(details.error) ?? (classifyTransactionFailure(typeof details.error === "string" ? details.error : message) === "caller_input"
+      advice = refusalDetails(details.error) ?? sourceBlockDetails(details.error) ?? (classifyTransactionFailure(typeof details.error === "string" ? details.error : message) === "caller_input"
         ? { retryable: false, fix: "Correct the input per the tool's input_schema at GET /v1/capabilities/:slug and resend." }
         : { retryable: true, next_step: "Retry with exponential backoff; contact support with the transaction_id if the failure continues." }); break;
     case "timeout_exceeded":
