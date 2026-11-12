@@ -15,25 +15,31 @@ import ts from "typescript";
 //
 // The check is fail-closed: options or headers it cannot read statically (a
 // variable, a spread, a computed key, a shorthand `headers` or `Accept`) fail
-// the test rather than pass it. Both functions are found through their import
-// declarations, so importing under another name or as a namespace is still
-// seen.
+// the test rather than pass it, and so does any use of safeFetch other than a
+// direct call (an alias, .call, an element access, spread arguments). Both
+// functions are found through their import declarations, so importing under
+// another name or as a namespace is still seen.
 const dir = new URL("../capabilities/", import.meta.url);
 
 /** Every capability that calls targetUnavailable today. A tool added or removed changes this list on purpose. */
-const EXPECTED_FILES = [
-  "cookie-scan.ts",
-  "domain-contact-extract.ts",
-  "domain-reputation.ts",
-  "gdpr-website-check.ts",
-  "header-security-check.ts",
-  "link-extract.ts",
-  "meta-extract.ts",
-  "og-image-check.ts",
-  "page-exists.ts",
-  "port-check.ts",
-  "website-carbon-estimate.ts",
-];
+// How many direct safeFetch calls each file makes. Pinned so a call the
+// checker cannot see (through another module, or a pattern it does not parse)
+// shows up as a count that no longer matches; update a count only after
+// reading the new call.
+const EXPECTED_CALLS: Record<string, number> = {
+  "cookie-scan.ts": 1,
+  "domain-contact-extract.ts": 2,
+  "domain-reputation.ts": 1,
+  "gdpr-website-check.ts": 1,
+  "header-security-check.ts": 1,
+  "link-extract.ts": 1,
+  "meta-extract.ts": 1,
+  "og-image-check.ts": 3,
+  "page-exists.ts": 1,
+  "port-check.ts": 0,
+  "website-carbon-estimate.ts": 1,
+};
+const EXPECTED_FILES = Object.keys(EXPECTED_CALLS);
 
 function nodes<T extends ts.Node>(root: ts.Node, predicate: (n: ts.Node) => n is T): T[] {
   const found: T[] = [];
@@ -55,12 +61,30 @@ function importedAs(src: ts.SourceFile, module: string, name: string) {
       if ((el.propertyName ?? el.name).text === name) direct.add(el.name.text);
     }
   }
-  return (call: ts.CallExpression) => {
+  const isCall = (call: ts.CallExpression) => {
     const callee = call.expression;
     if (ts.isIdentifier(callee)) return direct.has(callee.text);
     return ts.isPropertyAccessExpression(callee) && ts.isIdentifier(callee.expression)
       && namespaces.has(callee.expression.text) && callee.name.text === name;
   };
+  /**
+   * Every use of the binding that is NOT a direct call `name(...)` or
+   * `ns.name(...)`: an alias (`const f = safeFetch`), `.call`/`.apply`, an
+   * element access, parentheses or `!` around the callee. Each one could call
+   * the function out of the checker's sight, so each one fails the test.
+   */
+  const indirectUses = (root: ts.SourceFile): ts.Node[] => nodes(root, ts.isIdentifier).filter(id => {
+    if (ts.findAncestor(id, ts.isImportDeclaration)) return false;
+    const parent = id.parent;
+    if (direct.has(id.text)) return !(ts.isCallExpression(parent) && parent.expression === id);
+    if (!namespaces.has(id.text)) return false;
+    if (ts.isPropertyAccessExpression(parent) && parent.expression === id) {
+      if (parent.name.text !== name) return false; // another export of the module
+      return !(ts.isCallExpression(parent.parent) && parent.parent.expression === parent);
+    }
+    return true; // the namespace object itself escapes: an element access, a spread, an argument
+  });
+  return { isCall, indirectUses };
 }
 
 function keyName(name: ts.PropertyName): string | null {
@@ -99,16 +123,20 @@ function acceptsAnything(accept: string): boolean {
     const [range, ...params] = part.split(";").map(s => s.trim());
     if (range !== "*/*") return false;
     const q = params.find(p => /^q\s*=/i.test(p));
-    return q === undefined || Number(q.split("=")[1]) > 0;
+    if (q === undefined) return true;
+    const value = Number(q.split("=")[1]);
+    return value > 0 && value <= 1; // RFC 9110 §12.4.2: q is 0 to 1
   });
 }
 
 const files = readdirSync(dir).filter(f => f.endsWith(".ts") && !f.endsWith(".test.ts")).sort().flatMap(file => {
   const src = ts.createSourceFile(file, readFileSync(new URL(file, dir), "utf8"), ts.ScriptTarget.Latest, true);
-  const isTarget = importedAs(src, "../lib/upstream-result.js", "targetUnavailable");
-  const isSafeFetch = importedAs(src, "../lib/safe-fetch.js", "safeFetch");
+  const target = importedAs(src, "../lib/upstream-result.js", "targetUnavailable");
+  const safeFetch = importedAs(src, "../lib/safe-fetch.js", "safeFetch");
   const calls = nodes(src, ts.isCallExpression);
-  return calls.some(isTarget) ? [{ file, src, fetches: calls.filter(isSafeFetch) }] : [];
+  return calls.some(target.isCall)
+    ? [{ file, src, fetches: calls.filter(safeFetch.isCall), indirect: safeFetch.indirectUses(src) }]
+    : [];
 });
 
 describe("a tool that files a site's status as the target's sends an Accept the site cannot refuse", () => {
@@ -124,12 +152,19 @@ describe("a tool that files a site's status as the target's sends an Accept the 
     expect(acceptsAnything("text/html, */*;q=0")).toBe(false);
     expect(acceptsAnything("text/html, */*;q=0.0")).toBe(false);
     expect(acceptsAnything("text/*")).toBe(false);
+    expect(acceptsAnything("text/html, */*;q=5")).toBe(false);
   });
 
-  for (const { file, src, fetches } of files) {
+  for (const { file, src, fetches, indirect } of files) {
+    const at = (n: ts.Node) => `${file}:${src.getLineAndCharacterOfPosition(n.getStart()).line + 1}`;
     it(`${file}: every safeFetch accepts */*`, () => {
+      expect(fetches.length, `${file}: direct safeFetch calls`).toBe(EXPECTED_CALLS[file]);
+      for (const use of indirect) {
+        expect.fail(`${at(use)}: safeFetch is used other than as a direct call, so its Accept cannot be verified`);
+      }
       for (const call of fetches) {
-        const where = `${file}:${src.getLineAndCharacterOfPosition(call.getStart()).line + 1}`;
+        const where = at(call);
+        expect(call.arguments.some(ts.isSpreadElement), `${where}: spread arguments hide the options`).toBe(false);
         const init = call.arguments[1];
         if (!init) continue;
         expect(ts.isObjectLiteralExpression(init), `${where}: options must be an object literal to verify`).toBe(true);
