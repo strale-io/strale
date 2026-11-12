@@ -168,15 +168,22 @@ export const LIMITATIONS: LimitationDef[] = [
     limitationText: "Validates chain to known root CAs — private/internal CAs will show as untrusted",
     workaround: "If you use a private CA, compare the returned issuer fingerprint against your internal CA's known fingerprint" },
 
-  // ── domain-reputation ──
+  // ── domain-reputation ── (the manifest's text; published by block 0155)
   { capabilitySlug: "domain-reputation", category: "accuracy", severity: "warning",
     title: "No blocklist or threat-intelligence lookup",
-    limitationText: "The score comes only from the domain's DNS records (A, MX, SPF, DMARC), one HTTPS request for security headers, and name patterns such as suspicious TLDs. It does not consult blocklists, threat-intelligence feeds or domain age, so a high score does not mean the domain is safe.",
+    limitationText: "The score comes only from the domain's DNS records (A, MX, SPF, DMARC), a header-only HTTPS request to the domain's home page (following up to three redirects) for security headers, and name patterns such as suspicious TLDs. It does not consult blocklists, threat-intelligence feeds or domain age, so a high score does not mean the domain is safe.",
     workaround: "For phishing or malware screening, combine this with a dedicated blocklist or threat-intelligence source; use whois-lookup for domain age" },
   { capabilitySlug: "domain-reputation", category: "freshness", severity: "info",
     title: "Computed live on every call",
-    limitationText: "Every call reads the domain's current DNS and HTTPS responses, so a fixed record shows at once, and a timeout or temporary DNS failure lowers the score for that call only.",
-    workaround: "If a result looks wrong for a domain that normally works, re-run the check before acting on the score" },
+    limitationText: "Every call reads the domain's current DNS records and HTTPS response, so a fixed record shows at once. If the domain's HTTPS connection fails, a TLS certificate error included, or the domain does not answer within 8 seconds, the check reports its HTTPS as failing (https_works false) and lowers the score for that call. If a DNS lookup fails without an answer (a timeout or server failure, rather than \"no such record\"), or Strale's own resolver fails temporarily while connecting over HTTPS, the call fails unbilled instead of lowering the score.",
+    workaround: "If a result looks wrong for a domain that normally works, re-run the check before acting on the score; a call that failed on a DNS lookup can be retried" },
+  { capabilitySlug: "domain-reputation", category: "accuracy", severity: "info",
+    title: "An anti-bot challenge fails the call, with no score",
+    limitationText: "If the domain, or the site it redirects to, answers with an anti-bot challenge marked by the cf-mitigated: challenge response header, the call fails unbilled and returns no score, because those headers belong to the challenge page, not the site. The check reads headers only, never the page itself, so a challenge that is not marked by that header is not recognised, and the domain is then graded on the challenge page's headers.",
+    workaround: "Check the site's security headers another way, for example in a browser's developer tools" },
+  { capabilitySlug: "domain-reputation", category: "coverage", severity: "info",
+    title: "Some domains are not checked",
+    limitationText: "The call fails unbilled, with no score, when Strale will not make the HTTPS request: for a domain on Strale's list of sites whose terms forbid automated access or that redirects to one, a domain that resolves or redirects to a private or otherwise restricted network address, or a domain that redirects to an address Strale does not follow, such as an ftp:// link." },
 
   // ── sanctions-check ──
   { capabilitySlug: "sanctions-check", category: "freshness", severity: "info",

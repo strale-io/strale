@@ -154,21 +154,13 @@ describe("block 0143: publish the narrowed domain-reputation text", () => {
     expect(DOMAIN_TRUST_NEW_LONG_DESCRIPTION).not.toContain("threat intelligence feeds");
   });
 
-  // PR #927 changes the manifest to this text. Until it is merged the manifest
-  // still carries the old overclaim, so the comparison is skipped; it runs, and
-  // must pass, as soon as the manifest is corrected.
+  // PR #927 changed the manifest to this text. Its data_source still equals the
+  // manifest. Its two limitations were superseded on 2026-11-12 by the four of
+  // block 0155 (wave 4, #1025), whose test asserts manifest equality; this
+  // block's rows stay as history, since a ledgered block is never edited.
   const manifestPath = resolve(import.meta.dirname, "../../../../manifests/domain-reputation.yaml");
-  const manifest = yaml.load(readFileSync(manifestPath, "utf8")) as {
-    data_source: string;
-    limitations: { title: string; text: string; category: string; severity: string; workaround: string }[];
-  };
-  const manifestCorrected = !/threat intelligence feeds \(multi-source/i.test(manifest.data_source);
-  it.skipIf(!manifestCorrected)("equals manifests/domain-reputation.yaml exactly", () => {
+  const manifest = yaml.load(readFileSync(manifestPath, "utf8")) as { data_source: string };
+  it("sets the data_source manifests/domain-reputation.yaml carries", () => {
     expect(DOMAIN_REPUTATION_NEW_DATA_SOURCE).toBe(manifest.data_source);
-    expect(
-      DOMAIN_REPUTATION_LIMITATIONS.map((l) => ({
-        title: l.title, text: l.limitationText, category: l.category, severity: l.severity, workaround: l.workaround,
-      })),
-    ).toEqual(manifest.limitations);
   });
 });

@@ -86,15 +86,41 @@ output_field_reliability:
   reputation_score: guaranteed
 limitations:
   - title: No blocklist or threat-intelligence lookup
-    text: The score comes only from the domain's DNS records (A, MX, SPF, DMARC), one HTTPS request for security headers, and name patterns such as suspicious TLDs. It does not consult blocklists, threat-intelligence feeds or domain age, so a high score does not mean the domain is safe.
+    text: >-
+      The score comes only from the domain's DNS records (A, MX, SPF, DMARC), a header-only HTTPS request to the
+      domain's home page (following up to three redirects) for security headers, and name patterns such as suspicious
+      TLDs. It does not consult blocklists, threat-intelligence feeds or domain age, so a high score does not mean the
+      domain is safe.
     category: accuracy
     severity: warning
     workaround: For phishing or malware screening, combine this with a dedicated blocklist or threat-intelligence source; use whois-lookup for domain age
   - title: Computed live on every call
-    text: Every call reads the domain's current DNS and HTTPS responses, so a fixed record shows at once, and a timeout or temporary DNS failure lowers the score for that call only.
+    text: >-
+      Every call reads the domain's current DNS records and HTTPS response, so a fixed record shows at once. If the
+      domain's HTTPS connection fails, a TLS certificate error included, or the domain does not answer within 8 seconds,
+      the check reports its HTTPS as failing (https_works false) and lowers the score for that call. If a DNS lookup
+      fails without an answer (a timeout or server failure, rather than "no such record"), or Strale's own resolver
+      fails temporarily while connecting over HTTPS, the call fails unbilled instead of lowering the score.
     category: freshness
     severity: info
-    workaround: If a result looks wrong for a domain that normally works, re-run the check before acting on the score
+    workaround: If a result looks wrong for a domain that normally works, re-run the check before acting on the score; a call that failed on a DNS lookup can be retried
+  - title: An anti-bot challenge fails the call, with no score
+    text: >-
+      If the domain, or the site it redirects to, answers with an anti-bot challenge marked by the cf-mitigated:
+      challenge response header, the call fails unbilled and returns no score, because those headers belong to the
+      challenge page, not the site. The check reads headers only, never the page itself, so a challenge that is not
+      marked by that header is not recognised, and the domain is then graded on the challenge page's headers.
+    category: accuracy
+    severity: info
+    workaround: Check the site's security headers another way, for example in a browser's developer tools
+  - title: Some domains are not checked
+    text: >-
+      The call fails unbilled, with no score, when Strale will not make the HTTPS request: for a domain on Strale's list
+      of sites whose terms forbid automated access or that redirects to one, a domain that resolves or redirects to a
+      private or otherwise restricted network address, or a domain that redirects to an address Strale does not follow, such as an ftp://
+      link.
+    category: coverage
+    severity: info
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:
