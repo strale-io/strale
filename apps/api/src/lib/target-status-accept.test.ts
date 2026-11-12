@@ -37,6 +37,7 @@ const EXPECTED_CALLS: Record<string, number> = {
   "og-image-check.ts": 3,
   "page-exists.ts": 1,
   "port-check.ts": 0,
+  "robots-txt-parse.ts": 1,
   "website-carbon-estimate.ts": 1,
 };
 const EXPECTED_FILES = Object.keys(EXPECTED_CALLS);

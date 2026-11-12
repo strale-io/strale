@@ -11,7 +11,7 @@ import {
   readJsonWithLimit,
 } from "../lib/resource-limits.js";
 import { discardBody } from "../lib/safe-fetch.js";
-import { STRALE_USER_AGENT, assertNotBlockStatus } from "../lib/site-access.js";
+import { STRALE_USER_AGENT, asSourceBlocked, isBlockStatus, siteAccessRefusal } from "../lib/site-access.js";
 
 // Estonian company data via ariregister.rik.ee — FREE, no auth
 import { classifyNameMatch } from "../lib/company-name-match.js";
@@ -169,8 +169,8 @@ async function extractCompanyName(text: string): Promise<string> {
  * Until 2026-10-24 any failure here — including the registry's own 403 to a
  * non-EU IP — was retried through Browserless "to bypass geo-restriction".
  * DEC-20261023-A puts retrying a blocked request through another route in the
- * never lane, so a block (401/403/407/429) is now a site-access refusal and
- * every other failure surfaces as itself. If the registry refuses Strale's
+ * never lane, so a block (401/403/407/429) now stops the call as the source
+ * being unavailable to Strale, and every other failure surfaces as itself. If the registry refuses Strale's
  * egress region, the compliant routes are an EU-hosted deployment or RIK's
  * open-data files, not a proxy.
  */
@@ -187,7 +187,10 @@ async function fetchApi(path: string): Promise<unknown> {
     return await readJsonWithLimit(resp, MAX_FETCHED_API_RESPONSE_BYTES, "query");
   }
   await discardBody(resp, `ariregister HTTP ${resp.status}`);
-  assertNotBlockStatus(url, resp.status);
+  // The registry is the source Strale chose, so its block is Strale's source
+  // being unavailable, not the caller's site refusing them (promise-audit T1
+  // follow-up 46).
+  if (isBlockStatus(resp.status)) throw asSourceBlocked(siteAccessRefusal(url, { kind: "http", status: resp.status }), url);
   throw new Error(`Äriregister API returned HTTP ${resp.status}.`);
 }
 
