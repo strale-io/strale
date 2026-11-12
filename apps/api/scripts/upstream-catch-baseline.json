@@ -477,12 +477,6 @@
     },
     {
       "file": "apps/api/src/capabilities/lib/web-provider.ts",
-      "fingerprint": "0c8ee1893d42fe35471a7221e092767f2b1ac1248190789fc889a66c436d52da",
-      "count": 1,
-      "line": 783
-    },
-    {
-      "file": "apps/api/src/capabilities/lib/web-provider.ts",
       "fingerprint": "cde53ab7ecdb5698026aff1c10627f3d8b2cdf497f57f7cf87f565739cc8cf57",
       "count": 1,
       "line": 395

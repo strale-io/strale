@@ -26,6 +26,7 @@ import { getDirectExecutor } from "./index.js";
 import { outcomeFromError, assertBillableOutput } from "../lib/execution-outcome.js";
 import { SourceBlockedError } from "../lib/site-access.js";
 import { inputRefusal } from "../lib/capability-refusal.js";
+import { renderingServiceServerError } from "./lib/web-provider.js";
 import "./container-track.js";
 
 const exec = () => getDirectExecutor("container-track")!;
@@ -70,7 +71,7 @@ const CARRIER_FAILURES: Array<[string, () => Error, boolean, string | null]> = [
 const RENDERING_FAILURES: Array<[string, () => Error, boolean, string | null]> = [
   ["a network error reaching Browserless", () => Object.assign(new TypeError("fetch failed"), { cause: Object.assign(new Error("read ECONNRESET"), { code: "ECONNRESET" }) }), true, "ECONNRESET"],
   ["a timeout on the Browserless request", () => new DOMException("The operation was aborted due to timeout", "TimeoutError"), true, "timeout"],
-  ["Browserless's own 5xx", () => new Error("The target site (www.msc.com) returned a server error (HTTP 503). This is usually transient — try again in a few minutes."), true, "HTTP 503"],
+  ["Browserless's own 5xx", () => new Error(renderingServiceServerError(503)), true, "HTTP 503"],
   ["Browserless's rate limit", () => new Error("The web scraping service is temporarily rate-limited. Please try again in a few minutes."), true, "HTTP 429"],
   ["an empty render", () => new Error("Browserless returned empty or too-short HTML response."), true, "empty"],
 ];

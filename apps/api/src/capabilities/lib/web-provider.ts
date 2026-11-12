@@ -371,6 +371,25 @@ function netErrorMessage(bodyText: string, domain: string): string | null {
   return null;
 }
 
+/**
+ * A Chrome navigation failure on the target page, as Browserless relays it in
+ * a 5xx body: a `net::ERR_*` (DNS, refused or reset connection, certificate)
+ * or the page.goto timeout ("TimeoutError: Navigation timeout of 25000 ms
+ * exceeded", recorded at HTTP 500 in apps/api/audit-report.json), which is the
+ * target being slow, not Browserless failing. Either keeps the target wording.
+ */
+const TARGET_NAVIGATION_FAILURE_RE = /net::ERR_[A-Z_]+|Navigation timeout/;
+
+/**
+ * A 5xx from Browserless itself (promise-audit (59)). Fixed string, status
+ * only: no upstream bytes reach the caller. Deliberately not the
+ * "The target site … returned a server error" shape, which the breaker
+ * excuses as the caller's site failing.
+ */
+export function renderingServiceServerError(status: number): string {
+  return `The page-rendering service (Browserless) returned a server error (HTTP ${status}). This is usually transient — try again in a few minutes.`;
+}
+
 /** Map a non-OK Browserless response status into an honest, actionable message. */
 function humanizeBrowserlessStatus(status: number, targetUrl: string, bodyText = ""): string {
   let hostname = "";
@@ -727,6 +746,18 @@ async function fetchPageOnce(
             );
             continue;
           }
+          // promise-audit (59): /content answers 200 for a rendered page
+          // whatever the target said (its status is in X-Response-Code), and
+          // wraps Chrome's navigation failures on the target (a net::ERR_* or
+          // the navigation timeout) in a 5xx. A 5xx without one is worded as
+          // the rendering service's, not the target's: the breaker excuses
+          // the target-site shape, and a Browserless outage must count
+          // against the tools that depend on it. Residual: other page-side
+          // errors Browserless relays as a 5xx ("Execution context was
+          // destroyed", a crashed page) land on the rendering service too.
+          if (response.status >= 500 && !TARGET_NAVIGATION_FAILURE_RE.test(errText)) {
+            throw new Error(renderingServiceServerError(response.status));
+          }
           const humanMsg = humanizeBrowserlessStatus(response.status, targetUrl, errText);
           throw new Error(humanMsg);
         }
@@ -764,6 +795,7 @@ async function fetchPageOnce(
 
         return { html, cached: false, fetchTimeMs, attempt: attempt + 1 };
       } catch (err) {
+        // degraded-ok: retries the Browserless request only for a transport failure (timeout, refused or unresolved connection, fetch failed, abort) with an attempt left; a size refusal, a site refusal and every last-attempt failure rethrow.
         // #428: an oversize refusal is deterministic — the page is the size it
         // is — so it must not consume a retry. Re-rendering it would transfer
         // 16 MiB+ again to reach the identical answer.
