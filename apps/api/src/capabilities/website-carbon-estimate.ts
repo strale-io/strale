@@ -26,6 +26,8 @@ registerCapability("website-carbon-estimate", async (input: CapabilityInput) => 
   // error naming the URL and the status, and a timeout or network error went
   // out raw; both were counted, and the breaker read a 404, a 403 or a URL
   // containing either as a permanent failure (promise-audit T1 follow-up 40).
+  // EAI_AGAIN and network errors with no code are still counted, since they
+  // may be ours, but under fixed text that names no host.
   // The User-Agent is safeFetch's honest one: a page read sets it.
   const site = `website ${hostOf(url)}`;
   let resp: Response;

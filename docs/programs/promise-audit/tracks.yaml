@@ -318,10 +318,11 @@ tracks:
       network error, timeout or body that dropped mid-read went out raw and
       was counted against the capability with the caller's URL in the
       message. It now goes through targetUnavailable: a 4xx is the target's
-      answer, not retryable; a 5xx, 408, timeout or dropped body is the
-      target's, retryable; a 401, 403 or 429 is a refusal; the size cap
-      stays a refusal; EAI_AGAIN and uncoded network errors are counted
-      under fixed text with no host. Its user agent is safeFetch's honest
+      answer, not retryable; a 5xx, 408, timeout or a body dropped with a
+      network code is the target's, retryable; a 401, 403, 407 or 429 is a
+      refusal; the size cap stays a refusal; EAI_AGAIN and network errors
+      with no code (an uncoded mid-body drop included) are counted under
+      fixed text with no host. Its user agent is safeFetch's honest
       one. Regression tests in caller-host-out-of-breaker.test.ts fail
       against the previous executor.
       (35) fixed on branch fix/url-validation-by-type: page-exists
