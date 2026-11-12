@@ -341,7 +341,15 @@ tracks:
       is fetched once); (44) meta-extract, gdpr-website-check and
       link-extract refuse no block status: a 401, 403 or 429 is a generic
       HTTP error, not a site refusal.
-      Next: (36) and (32), (33), (43), (44); then measuring past billed calls from
+      (32) fixed on branch fix/preflight-ssl-valid-from-tls: paid-api-preflight
+      set ssl_valid from the URL scheme alone, so an https URL whose certificate
+      the runtime rejected, or that redirected to plain http, still read
+      ssl_valid true (and on a TLS failure the unreachable answer said so too).
+      ssl_valid is now true only when the connection to the URL that answered
+      completed over TLS with a trusted certificate; a rejected certificate is
+      named in issues by its TLS code, a redirect to http is named and answers
+      avoid, and the manifest documents what the field does and does not check.
+      Next: (36), (33), (43), (44); then measuring past billed calls from
       the affected paths since their earliest releases, deciding refunds per
       policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against
       listed and dry-run prices (P-011, P-008). Do not assume the proposed
@@ -446,6 +454,8 @@ tracks:
       - archive/receipts/2026-11-12-test-run-url-validation-by-type-after.json
       - archive/receipts/2026-11-12-test-run-header-security-429-site-refusal-fail-before.json
       - archive/receipts/2026-11-12-test-run-header-security-429-site-refusal-after.json
+      - archive/receipts/2026-11-12-test-run-paid-api-preflight-ssl-valid-fail-before.json
+      - archive/receipts/2026-11-12-test-run-paid-api-preflight-ssl-valid-after.json
 
   - id: T2
     title: "T2: Compliance-answer correctness (reference answers)"

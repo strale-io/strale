@@ -89,6 +89,7 @@ describe("paid-api-preflight output contract", () => {
     expect(result.output).toMatchObject({
       is_reachable: true,
       status_code: 402,
+      ssl_valid: true,
       payment_protocol: "x402",
       payment_handshake_valid: true,
       facilitator_reachable: null,
@@ -117,5 +118,64 @@ describe("paid-api-preflight output contract", () => {
     expect(result.output.issues).toEqual([
       "Unreachable: fixture refused connection",
     ]);
+    // No TLS connection completed, so validity is not claimed (follow-up 32).
+    expect(result.output.ssl_valid).toBe(false);
+  });
+});
+
+// Promise-audit T1 follow-up 32: ssl_valid used to be the URL's scheme alone,
+// so an https URL whose certificate the runtime rejected, or that redirected
+// to plain http, still read as ssl_valid: true.
+describe("paid-api-preflight ssl_valid reflects the TLS connection", () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it("is false, with the TLS code named, when the certificate is rejected", async () => {
+    const failure = new TypeError("fetch failed", {
+      cause: Object.assign(new Error("certificate has expired"), { code: "CERT_HAS_EXPIRED" }),
+    });
+    fetchMock.mockRejectedValue(failure);
+
+    const exec = getDirectExecutor("paid-api-preflight")!;
+    const result = await exec({ url: "https://expired.example/resource" });
+
+    expect(result.output.ssl_valid).toBe(false);
+    expect(result.output.recommendation).toBe("avoid");
+    expect(result.output.issues).toContain("TLS certificate rejected: CERT_HAS_EXPIRED");
+  });
+
+  it("is false when an https URL redirects to plain http", async () => {
+    const res = new Response("{}", { status: 200 });
+    Object.defineProperty(res, "url", { value: "http://plain.example/resource" });
+    fetchMock.mockResolvedValue(res);
+
+    const exec = getDirectExecutor("paid-api-preflight")!;
+    const result = await exec({ url: "https://seller.example/resource" });
+
+    expect(result.output.is_reachable).toBe(true);
+    expect(result.output.ssl_valid).toBe(false);
+    expect(result.output.recommendation).toBe("avoid");
+    expect(result.output.issues).toContain("Redirected from HTTPS to plain HTTP");
+  });
+
+  it("does not read a timeout or DNS failure as a certificate problem", async () => {
+    fetchMock.mockRejectedValue(
+      new TypeError("fetch failed", { cause: Object.assign(new Error("getaddrinfo ENOTFOUND"), { code: "ENOTFOUND" }) }),
+    );
+
+    const exec = getDirectExecutor("paid-api-preflight")!;
+    const result = await exec({ url: "https://missing.example/resource" });
+
+    expect(result.output.ssl_valid).toBe(false);
+    expect((result.output.issues as string[]).some((i) => i.startsWith("TLS"))).toBe(false);
   });
 });
