@@ -104,6 +104,14 @@ limitations:
       track URLs. Changes to YouTube's frontend may break extraction.
     category: dependency
     severity: warning
+  - title: YouTube can refuse Strale's requests
+    text: >-
+      YouTube often refuses automated requests from cloud servers. When it refuses the video page,
+      with a block status, a "confirm you're not a bot" page or its robots.txt, Strale does not route
+      around that refusal: the call fails with a "Source unavailable to Strale" error and is not
+      charged. That error is about YouTube's block, not about the video's captions.
+    category: dependency
+    severity: warning
   - title: AI-generated summary
     text: >-
       Generated summaries, key points and sentiment may not accurately represent the video content.

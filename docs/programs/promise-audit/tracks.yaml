@@ -411,6 +411,33 @@ tracks:
       (compliance category), so the boot sync does not publish its manifest
       text: that limitation reaches production only through a startup block
       once Petter approves the wording.
+      (45) to (48) fixed on branch fix/source-and-target-failure-attribution:
+      email-pattern-discover's homepage leg failed silently, so an empty
+      public_emails_found read the same whether the page was searched or never
+      read; it now reports website_checked and a website_note reason. A block
+      status from Estonia's registry (46) and a YouTube block or bot check (47)
+      stop the call as the source being unavailable to Strale (upstream,
+      unbilled) instead of a refusal blamed on the caller or, for YouTube, 'the
+      video may not have captions'. robots-txt-parse (48) files the caller's
+      site failing as the target's (unbilled, not counted) and refuses a block
+      status or challenge. Manifests for the three data tools say so; the boot
+      sync publishes them. robots-txt-parse now calls targetUnavailable, so
+      the (41) Accept guard pins it as a twelfth tool; it sends no Accept,
+      so Node's */* applies. Independent review GO. Found, not fixed: (52)
+      youtube-summarize fetches the caption track (youtube.com/api/timedtext)
+      with a plain fetch, no robots check and no Strale user agent, and
+      YouTube's robots.txt disallows /api/ for every agent, so each successful
+      call reads a path robots.txt disallows (DEC-20261023-A asks for robots.txt
+      to be honoured); a non-2xx there, and on the oEmbed read, is not
+      cancelled, and a block at that step still reads 'may not have captions'.
+      Its manifest's checks_note already marks the tool pending, since the rule
+      allows YouTube only through its official API; the fix likely ends the
+      tool's direct reads and is a product decision, not an inline repair.
+      (53) a Browserless outage on youtube-summarize's render fallback is
+      reported as 'may not have captions' (unbilled and not counted; wording
+      only). (54) robots-txt-parse answers a robots.txt 410 or 451 as the
+      target's failure, where RFC 9309 reads any 4xx as 'no robots.txt', and
+      it still sends 'StraleBot/1.0' rather than STRALE_USER_AGENT.
       (51) fixed on branch fix/source-block-retry-advice: a failure from a
       source Strale chose that blocks Strale (SourceBlockedError) no longer
       gets the generic retry-with-backoff advice on any rail.
@@ -494,15 +521,11 @@ tracks:
       nit, still unbilled). Regression tests in site-access-executors.test.ts
       fail against the previous code. Independent same-provider review in a
       separate context: GO; its body-read and refused-leg findings are fixed.
-      In flight: (45) to (48) on #1052; (51) on #1053.
       Open, found while doing (43) to (48):
       (50) domain-reputation grades and bills a 401, 403 or 429 from the
       caller's site. Its manifest is report-only (compliance), so the fix
       needs Petter's approval of the wording plus a startup block; it goes
       to him with a recommendation.
-      (51) SourceBlockedError is answered retryable (lib/errors.ts), where a
-      source's block repeats on retry; it should be retryable only for a
-      429 or an unreadable robots.txt. Seen in nta-corporate.
       (55) fixed: web-provider's plain fetch and preflight, url-to-markdown
       and tech-stack-detect now add */*;q=0.8 to their Accept, so a 406 can
       no longer be filed as the site's answer. The (41) guard also scans

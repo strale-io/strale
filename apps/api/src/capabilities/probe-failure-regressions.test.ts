@@ -212,6 +212,34 @@ describe("domain-reputation grades only the domain's own HTTPS failure (follow-u
   });
 });
 
+describe("robots-txt-parse files the caller's site failing as the caller's target (follow-up 48)", () => {
+  it("a 503 from the site is unbilled and not counted against the capability", async () => {
+    serve(() => new Response("down", { status: 503 }));
+    const outcome = await expectUnbilled(run("robots-txt-parse", { url: "https://down.example.com" }));
+    expect(outcome.fault).not.toBe("capability");
+  });
+
+  it("CONTROL: a host that does not resolve stays unbilled and not counted", async () => {
+    vi.stubGlobal("fetch", async () => {
+      throw Object.assign(new TypeError("fetch failed"), { cause: Object.assign(new Error("getaddrinfo ENOTFOUND"), { code: "ENOTFOUND" }) });
+    });
+    await expectUnbilled(run("robots-txt-parse", { url: "https://nxdomain.example.com" }));
+  });
+
+  it("a 403 is the site's refusal, unbilled", async () => {
+    serve(() => new Response("no", { status: 403 }));
+    const err = await run("robots-txt-parse", { url: "https://forbidden.example.com" }).catch((e: unknown) => e);
+    expect((err as Error).message).toMatch(/^Site refused automated access/);
+    await expectUnbilled(Promise.reject(err));
+  });
+
+  it("a Cloudflare challenge served as 503 is a refusal, not the site being down", async () => {
+    serve(() => new Response("<html>Just a moment...</html>", { status: 503, headers: { "cf-mitigated": "challenge", "content-type": "text/html" } }));
+    const err = await run("robots-txt-parse", { url: "https://challenge503.example.com" }).catch((e: unknown) => e);
+    expect((err as Error).message).toMatch(/^Site refused automated access/);
+  });
+});
+
 describe("robots-txt-parse reads an HTML soft 404 as no robots.txt (follow-up 18)", () => {
   it("returns exists:false for an HTML page served with 200", async () => {
     const page = "<!DOCTYPE html><html><head><title>Not found</title></head><body><h1>Oops</h1></body></html>";

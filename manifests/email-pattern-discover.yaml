@@ -39,6 +39,14 @@ output_schema:
       type: array
     recommendation:
       type: string
+    website_checked:
+      type: boolean
+      description: True when the domain's homepage was read and searched for published addresses. Absent when the domain has no MX records.
+    website_note:
+      type:
+        - string
+        - "null"
+      description: When website_checked is false, why the homepage was not read (robots.txt, a refusal, an HTTP status, no answer, too large, or a site Strale does not fetch). Null when it was read; absent when the domain has no MX records.
 data_source: DNS protocol + public website HTML
 data_source_type: api
 transparency_tag: algorithmic
@@ -80,6 +88,8 @@ output_field_reliability:
   inferred_pattern: rare
   public_emails_found: rare
   common_pattern_addresses: common
+  website_checked: common
+  website_note: common
 limitations:
   - title: Pattern inference is heuristic, not verified per-address
     text: Returned patterns are based on email-provider conventions and any public emails found on the domain's homepage. Individual addresses must still be validated with email-validate before sending.
@@ -90,11 +100,19 @@ limitations:
     text: Returns the likely format pattern (e.g. first.last@example.com), not a list of employees. Personnel discovery is not supported.
     category: coverage
     severity: info
+  - title: The homepage is read only when the site allows it
+    text: >-
+      Published addresses are searched for on the domain's homepage only. When robots.txt disallows
+      it, the site refuses automated access, it answers an error, it does not answer, or it is a site
+      Strale does not fetch, the call still succeeds on the DNS answer with website_checked false and
+      a website_note giving the reason; an empty public_emails_found then means the page was not read, not that it lists none.
+    category: coverage
+    severity: info
   - title: Pages are limited to 16 MiB of HTML
     text: >-
-      Pages with more than 16 MiB of HTML are refused with a caller_input error naming the input
-      field. The call is not charged, and the page is not retried through another fetch or rendering
-      route.
+      A homepage with more than 16 MiB of HTML is not searched for published addresses. The call
+      still succeeds on the DNS answer, with website_checked false and a website_note saying the page
+      was too large; the page is not retried through another fetch or rendering route.
     category: coverage
     severity: info
 

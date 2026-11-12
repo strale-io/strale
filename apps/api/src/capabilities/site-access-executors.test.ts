@@ -257,10 +257,13 @@ describe("domain-contact-extract", () => {
 });
 
 describe("estonian-company-data", () => {
-  it("REGRESSION: the registry's 403 is a refusal; it is not retried through a Browserless proxy", async () => {
+  it("REGRESSION: the registry's 403 stops the call as Strale's source being unavailable, not retried through a Browserless proxy", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("geo-blocked", { status: 403 })));
     const err = await run("estonian-company-data", { registry_code: "10238429" });
-    expect(err).toBeInstanceOf(SiteAccessRefusedError);
+    // promise-audit T1 follow-up 46: the registry is the source Strale chose, so
+    // its block is upstream, never the caller's site refusing them.
+    expect(err).toBeInstanceOf(SourceBlockedError);
+    expect(classifyTransactionFailure((err as Error).message)).toBe("upstream");
     expect(browserlessFetchMock).not.toHaveBeenCalled();
   });
 
@@ -436,28 +439,41 @@ describe("screenshots and PDFs of a block page are refused, not billed", () => {
 describe("youtube-summarize", () => {
   it("REGRESSION: YouTube's HTTP-200 'confirm you're not a bot' page is a block, not a reason to render", async () => {
     pageResponse = () => html("<html><body>Sign in to confirm you’re not a bot</body></html>");
-    await run("youtube-summarize", { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" });
+    const err = await run("youtube-summarize", { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" });
     expect(fetchRenderedHtml).not.toHaveBeenCalled();
+    // promise-audit T1 follow-up 47: YouTube's block is Strale's source being
+    // unavailable, not "the video may not have captions".
+    expect(err).toBeInstanceOf(SourceBlockedError);
+    expect((err as Error).message).not.toMatch(/captions/i);
+    expect(classifyTransactionFailure((err as Error).message)).toBe("upstream");
   });
 
   it("a robots.txt disallow on the watch page is a block too", async () => {
     robotsBody = "User-agent: *\nDisallow: /watch\n";
-    await run("youtube-summarize", { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" });
+    const err = await run("youtube-summarize", { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" });
     expect(fetchRenderedHtml).not.toHaveBeenCalled();
     expect(pageCalls()).toHaveLength(0);
+    expect(err).toBeInstanceOf(SourceBlockedError);
+    expect(classifyTransactionFailure((err as Error).message)).toBe("upstream");
   });
 
   it("POSITIVE CONTROL: a 200 page without captions and without a block still renders", async () => {
     pageResponse = () => html("<html><body>watch page, captions load via JS</body></html>");
     fetchRenderedHtml.mockResolvedValue("<html>no captions here either</html>");
-    await run("youtube-summarize", { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" });
+    const err = await run("youtube-summarize", { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" });
     expect(fetchRenderedHtml).toHaveBeenCalledTimes(1);
+    // Neither route found captions and nothing blocked: that one stays the
+    // video's own limitation.
+    expect(err).not.toBeInstanceOf(SourceBlockedError);
+    expect((err as Error).message).toMatch(/captions/i);
   });
 
   it("REGRESSION: a refused watch page is not re-fetched through Browserless", async () => {
     pageResponse = () => html("no", 429);
-    await run("youtube-summarize", { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" });
+    const err = await run("youtube-summarize", { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" });
     expect(fetchRenderedHtml).not.toHaveBeenCalled();
+    expect(err).toBeInstanceOf(SourceBlockedError);
+    expect(classifyTransactionFailure((err as Error).message)).toBe("upstream");
   });
 });
 

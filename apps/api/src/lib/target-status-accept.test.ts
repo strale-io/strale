@@ -108,6 +108,7 @@ const EXPECTED_CALLS: Record<string, number> = {
   "lib/web-provider.ts": 2,
   "page-exists.ts": 1,
   "port-check.ts": 0,
+  "robots-txt-parse.ts": 1,
   "tech-stack-detect.ts": 1,
   "url-to-markdown.ts": 1,
   "website-carbon-estimate.ts": 1,

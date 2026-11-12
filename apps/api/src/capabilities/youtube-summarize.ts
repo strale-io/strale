@@ -8,7 +8,14 @@ import {
   readTextWithLimit,
 } from "../lib/resource-limits.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
-import { STRALE_USER_AGENT, SiteAccessRefusedError, SourceBlockedError, isBlockStatus } from "../lib/site-access.js";
+import {
+  STRALE_USER_AGENT,
+  SiteAccessRefusedError,
+  SourceBlockedError,
+  asSourceBlocked,
+  isBlockStatus,
+  siteAccessRefusal,
+} from "../lib/site-access.js";
 import { assertRobotsAllowed } from "../lib/robots-txt.js";
 import { looksLikeJsChallenge } from "./lib/web-provider.js";
 import type Anthropic from "@anthropic-ai/sdk";
@@ -117,8 +124,14 @@ async function fetchTranscript(videoId: string): Promise<string | null> {
   // disallowing the page, HTTP 401/403/407/429, an anti-bot challenge, or
   // YouTube's own soft block — HTTP 200 with "Sign in to confirm you're not a
   // bot" and no captions, which it serves to datacenter IPs.
+  //
+  // YouTube is the source this capability reads, chosen by Strale, so a block
+  // stops the call as the source being unavailable to Strale (classified
+  // upstream, unbilled). Before promise-audit T1 follow-up 47 it returned null
+  // and the caller was told the video "may not have captions available",
+  // which blamed their video for Strale's block.
   let pageHtml: string | null = null;
-  let blocked = false;
+  let blocked: SourceBlockedError | null = null;
 
   try {
     await assertRobotsAllowed(ytUrl);
@@ -129,19 +142,26 @@ async function fetchTranscript(videoId: string): Promise<string | null> {
     if (pageRes.ok) {
       const html = await readPageHtml(pageRes);
       if (html.includes('"captions"')) pageHtml = html;
-      else blocked = looksLikeJsChallenge(html) || looksLikeYouTubeBotCheck(html);
+      else if (looksLikeJsChallenge(html) || looksLikeYouTubeBotCheck(html)) {
+        blocked = asSourceBlocked(siteAccessRefusal(ytUrl, { kind: "challenge" }), ytUrl);
+      }
     } else {
       await discardBody(pageRes, `youtube watch page HTTP ${pageRes.status}`);
-      blocked = isBlockStatus(pageRes.status);
+      if (isBlockStatus(pageRes.status)) {
+        blocked = asSourceBlocked(siteAccessRefusal(ytUrl, { kind: "http", status: pageRes.status }), ytUrl);
+      }
     }
   } catch (err) {
-    // degraded-ok: a robots.txt refusal or a source block (safeFetch stops at a challenge) sets blocked, which skips the rendered fetch; any other direct-fetch failure falls through to the render, and a page neither route read makes the call throw, unbilled.
-    blocked = err instanceof SiteAccessRefusedError || err instanceof SourceBlockedError;
+    // degraded-ok: a robots.txt refusal or a source block (safeFetch stops at a challenge) is kept and thrown below, without the rendered fetch; any other direct-fetch failure falls through to the render, and a page neither route read makes the call throw, unbilled.
+    if (err instanceof SourceBlockedError) blocked = err;
+    else if (err instanceof SiteAccessRefusedError) blocked = asSourceBlocked(err, ytUrl);
   }
 
-  // Fallback: Browserless renders full JS and gets captions — only when the
-  // direct fetch was not refused.
-  if (!pageHtml && !blocked) {
+  // A refused direct fetch is never retried through Browserless.
+  if (blocked) throw blocked;
+
+  // Fallback: Browserless renders full JS and gets captions.
+  if (!pageHtml) {
     try {
       const html = await fetchRenderedHtml(ytUrl, { source: "strale" });
       if (html.includes('"captions"') || html.includes('captionTracks')) pageHtml = html;

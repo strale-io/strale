@@ -1,10 +1,12 @@
-import { STRALE_USER_AGENT } from "../lib/site-access.js";
+import { STRALE_USER_AGENT, SiteAccessRefusedError, SourceBlockedError, isBlockStatus } from "../lib/site-access.js";
 import { assertRobotsAllowed } from "../lib/robots-txt.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import dns from "node:dns/promises";
 import { dnsOrEmpty } from "../lib/upstream-result.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
-import { readPageHtml } from "../lib/resource-limits.js";
+import { ResourceLimitError, readPageHtml } from "../lib/resource-limits.js";
+import { TOS_REFUSAL_MARKER } from "../lib/tos-blocklist.js";
+import { UrlValidationError } from "../lib/url-validator.js";
 
 /**
  * Email Pattern Discovery — detect email format for a domain.
@@ -121,8 +123,16 @@ registerCapability("email-pattern-discover", async (input: CapabilityInput) => {
       : "possible" as string,
   }));
 
-  // Step 4: Check website for publicly listed emails
+  // Step 4: Check website for publicly listed emails.
+  //
+  // This leg is best-effort: a homepage that cannot be read never fails the
+  // call. Before promise-audit T1 follow-up 45 every failure was swallowed
+  // silently, so `public_emails_found: []` looked the same whether the page
+  // was read and had no addresses or was never read at all. The outcome is
+  // now reported in `website_checked` and, when false, `website_note`.
   let publicEmails: string[] = [];
+  let websiteChecked = false;
+  let websiteNote: string | null = null;
   try {
     // DEC-20261023-A: robots.txt first; a disallow skips this best-effort
     // step (the catch below), as any failed fetch does.
@@ -142,15 +152,17 @@ registerCapability("email-pattern-discover", async (input: CapabilityInput) => {
       // Filter to same domain and deduplicate
       const domainEmails = found.filter(e => e.endsWith(`@${targetDomain}`));
       publicEmails = Array.from(new Set(domainEmails)).slice(0, 10);
+      websiteChecked = true;
     } else {
       // Body unread on the non-2xx path (#434) — cancel it.
       await discardBody(resp, "email-pattern-discover: non-2xx");
+      websiteNote = isBlockStatus(resp.status)
+        ? `The homepage refused automated access (HTTP ${resp.status}), so it was not searched for published addresses.`
+        : `The homepage answered HTTP ${resp.status}, so it was not searched for published addresses.`;
     }
-  } catch {
-    // Website fetch failed — not critical. A size refusal is swallowed here
-    // too, deliberately (#432): this leg is an optional enrichment whose
-    // existing design already degrades silently on DNS/5xx/timeout, and it
-    // never reaches the caller as an error, so it cannot trip the breaker.
+  } catch (err) {
+    // degraded-ok: the homepage is an optional enrichment; any failure (a size refusal included, #432) is reported in website_checked:false with a website_note reason, and the call answers on its DNS result.
+    websiteNote = describeWebsiteFailure(err);
   }
 
   // Infer pattern from public emails if found
@@ -173,6 +185,8 @@ registerCapability("email-pattern-discover", async (input: CapabilityInput) => {
       inferred_pattern: inferredPattern,
       patterns,
       public_emails_found: publicEmails,
+      website_checked: websiteChecked,
+      website_note: websiteNote,
       common_pattern_addresses: commonPatternAddresses,
       recommendation: emailProvider
         ? `${targetDomain} uses ${emailProvider}. Most common pattern is first.last@${targetDomain}. Verify individual addresses with email-validate before sending.`
@@ -184,3 +198,24 @@ registerCapability("email-pattern-discover", async (input: CapabilityInput) => {
     },
   };
 });
+
+/** Why the homepage leg read nothing, in words the caller can act on. */
+function describeWebsiteFailure(err: unknown): string {
+  if (err instanceof SiteAccessRefusedError || err instanceof SourceBlockedError) {
+    switch (err.block.kind) {
+      case "robots_disallow":
+        return "The site's robots.txt does not allow the homepage to be read, so it was not searched for published addresses.";
+      case "robots_unavailable":
+        return "The site's robots.txt could not be read, so the homepage was not fetched or searched for published addresses.";
+      default:
+        return "The homepage refused automated access, so it was not searched for published addresses.";
+    }
+  }
+  if (err instanceof UrlValidationError || (err instanceof Error && err.message.includes(TOS_REFUSAL_MARKER))) {
+    return "Strale does not fetch this site's homepage (a private address, or a site whose terms prohibit automated access), so it was not searched for published addresses.";
+  }
+  if (err instanceof ResourceLimitError) {
+    return "The homepage was too large to read, so it was not searched for published addresses.";
+  }
+  return "The homepage could not be reached, so it was not searched for published addresses.";
+}
