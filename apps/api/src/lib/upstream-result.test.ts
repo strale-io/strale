@@ -15,6 +15,7 @@ import {
   quotedLegCodes,
   requireAnyLeg,
   ssrfBlocked,
+  TARGET_NETWORK,
   targetUnavailable,
   UpstreamUnavailableError,
 } from "./upstream-result.js";
@@ -295,34 +296,34 @@ describe("PR #1018 review B1: fetchUnavailable converts a bare errno Error", () 
 });
 
 describe("promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's", () => {
-  // EAI_AGAIN is a temporary failure of Strale's own resolver (#1025), and a
-  // network error with no code says nothing about whose it was. Neither is
-  // the target's fault: both stay retryable and unbilled, but count against
-  // the capability and its breaker, as fetchUnavailable files them.
+  // EAI_AGAIN (a resolver failing for now, most often Strale's own, #1025)
+  // and a network error with no code do not say whose failure it was. Both
+  // stay retryable and unbilled and count against the capability, under the
+  // fixed label TARGET_NETWORK, never the caller's host name.
   const notTheSite: Array<[string, unknown, string | null, string]> = [
     [
       "Strale's resolver failing for now (EAI_AGAIN, bare errno)",
       Object.assign(new Error("getaddrinfo EAI_AGAIN site.test"), { code: "EAI_AGAIN", syscall: "getaddrinfo" }),
       "EAI_AGAIN",
-      "Upstream unavailable: website site.test: network error (EAI_AGAIN); retry shortly.",
+      "Upstream unavailable: the network path to the requested site: network error (EAI_AGAIN); retry shortly.",
     ],
     [
       "Strale's resolver failing for now (EAI_AGAIN, wrapped by fetch)",
       Object.assign(new TypeError("fetch failed"), { cause: { code: "EAI_AGAIN" } }),
       "EAI_AGAIN",
-      "Upstream unavailable: website site.test: network error (EAI_AGAIN); retry shortly.",
+      "Upstream unavailable: the network path to the requested site: network error (EAI_AGAIN); retry shortly.",
     ],
     [
       "a network error with no code",
       Object.assign(new TypeError("fetch failed"), { cause: {} }),
       null,
-      "Upstream unavailable: website site.test: network error; retry shortly.",
+      "Upstream unavailable: the network path to the requested site: network error; retry shortly.",
     ],
     [
       "a stream cut off with no code",
       new TypeError("terminated"),
       null,
-      "Upstream unavailable: website site.test: network error; retry shortly.",
+      "Upstream unavailable: the network path to the requested site: network error; retry shortly.",
     ],
   ];
 
@@ -330,7 +331,7 @@ describe("promise-audit T1 follow-up 34: a failure that is not the site's is not
     const err = targetUnavailable("website site.test", failure) as UpstreamUnavailableError;
     expect(err).toBeInstanceOf(UpstreamUnavailableError);
     expect(err.message).toBe(message);
-    expect(err).toMatchObject({ code, retryable: true, targetFault: false });
+    expect(err).toMatchObject({ code, retryable: true, targetFault: false, upstream: TARGET_NETWORK });
     expect(isUserInputError(err.message)).toBe(false);
     expect(outcomeFromError(err)).toMatchObject({
       success: false,
@@ -338,6 +339,37 @@ describe("promise-audit T1 follow-up 34: a failure that is not the site's is not
       fault: "provider",
       counts_against_capability: true,
     });
+  });
+
+  // Independent review of follow-up 34: a counted failure's message reaches
+  // the breaker, which categorises it by substring before it looks for
+  // "network error". A caller's host name containing "403", "gone" or "301"
+  // in that message would read as auth_expired, endpoint_gone or
+  // permanent_move, not retryable, and suspend the capability for everyone.
+  it.each([
+    ["website x403.example", "x403.example"],
+    ["host gone.example", "gone.example"],
+    ["https://moved301.example/", "moved301.example"],
+    ["website unauthorized-404.example", "unauthorized-404.example"],
+  ])("a counted failure for %s names no host, so the breaker reads it as transient", (site, host) => {
+    for (const failure of [
+      Object.assign(new Error(`getaddrinfo EAI_AGAIN ${host}`), { code: "EAI_AGAIN", syscall: "getaddrinfo" }),
+      Object.assign(new TypeError("fetch failed"), { cause: { code: "EAI_AGAIN" } }),
+      Object.assign(new TypeError("fetch failed"), { cause: {} }),
+      new TypeError("terminated"),
+    ]) {
+      const err = targetUnavailable(site, failure) as UpstreamUnavailableError;
+      expect(outcomeFromError(err)).toMatchObject({ counts_against_capability: true });
+      expect(err.message).not.toContain(host);
+      expect(categorizeFailureReason(err.message)).toBe("transient");
+      expect(isRetryableFailure(categorizeFailureReason(err.message))).toBe(true);
+    }
+  });
+
+  it("an UpstreamUnavailableError passed in is not relabelled", () => {
+    const given = new UpstreamUnavailableError("website site.test", "network error; retry shortly.");
+    const err = targetUnavailable("website site.test", given) as UpstreamUnavailableError;
+    expect(err.upstream).not.toBe(TARGET_NETWORK);
   });
 
   it("a host that does not resolve (ENOTFOUND) is still the site's", () => {

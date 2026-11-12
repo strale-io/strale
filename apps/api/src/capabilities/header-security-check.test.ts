@@ -83,6 +83,24 @@ describe("header-security-check: a site that does not answer is the site's fault
   }
 });
 
+describe("header-security-check: a failure that does not say whose it was counts, with no host in it (follow-up 34)", () => {
+  const cases: Array<[string, unknown]> = [
+    ["EAI_AGAIN wrapped by fetch", Object.assign(new TypeError("fetch failed"), { cause: { code: "EAI_AGAIN" } })],
+    ["a bare EAI_AGAIN", Object.assign(new Error("getaddrinfo EAI_AGAIN example.com"), { code: "EAI_AGAIN" })],
+    ["a network error with no code", Object.assign(new TypeError("fetch failed"), { cause: {} })],
+  ];
+  for (const [label, thrown] of cases) {
+    it(`${label} fails unbilled and retryable, counted against the capability`, async () => {
+      fetcher.mockRejectedValue(thrown);
+      const err = await failure();
+      expect(err).toBeInstanceOf(UpstreamUnavailableError);
+      expect(err).toMatchObject({ targetFault: false, retryable: true });
+      expect((err as Error).message).not.toContain("example.com");
+      expect(outcomeFromError(err)).toMatchObject({ billable: false, fault: "provider", counts_against_capability: true });
+    });
+  }
+});
+
 describe("header-security-check: Strale's own refusals pass through unchanged", () => {
   it("a robots.txt or challenge refusal from the fetch layer", async () => {
     const refusal = siteAccessRefusal("https://example.com", { kind: "challenge" });

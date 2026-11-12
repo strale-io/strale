@@ -303,15 +303,29 @@ export function fetchUnavailable(upstream: string, err: unknown): Error {
  * broken site retried three times must not suspend the capability for
  * everyone (PR #1015 review). Every error it builds carries `targetFault`, so
  * it does not count against the capability's quality floor either (PR #1018
- * review, S1), except Strale's own resolver failing for now (EAI_AGAIN) and a
- * network error with no code, which it leaves as fetchUnavailable files them
- * (promise-audit T1 follow-up 34). Called by cookie-scan, page-exists,
+ * review, S1), except a resolver that fails for now (EAI_AGAIN) and a network
+ * error with no code, which stay retryable, unbilled and counted against the
+ * capability (promise-audit T1 follow-up 34). Neither code says whose failure
+ * it was: EAI_AGAIN is most often Strale's own resolver, but getaddrinfo also
+ * returns it when the site's own nameservers fail. They are counted, as
+ * isConnectionFailure and the DNS checks treat EAI_AGAIN (PR #1025 review),
+ * under the fixed label TARGET_NETWORK and never the caller's host name: the
+ * breaker categorises a counted failure by its message, and a host name
+ * containing "403" or "gone" would read as a permanent failure and suspend
+ * the capability for everyone on one call. Called by cookie-scan, page-exists,
  * port-check, og-image-check, domain-contact-extract, header-security-check
  * and domain-reputation. pricing-page-extract's `unreadablePage` keeps
  * the target wording but is deliberately not target-marked, so it counts
  * against that capability. Anything else passes through as fetchUnavailable
  * leaves it.
  */
+/**
+ * The upstream named for a failure targetUnavailable counts against the
+ * capability. A fixed phrase, never the caller's input, so the breaker's
+ * categorizeFailureReason reads only Strale's own words.
+ */
+export const TARGET_NETWORK = "the network path to the requested site";
+
 export function targetUnavailable(site: string, failure: number | unknown): Error {
   if (typeof failure === "number") {
     const what = failure === 408 ? "the site timed out the request" : "a server error on the site itself";
@@ -333,12 +347,16 @@ export function targetUnavailable(site: string, failure: number | unknown): Erro
   }
   const err = fetchUnavailable(site, failure);
   if (!(err instanceof UpstreamUnavailableError)) return err;
-  // EAI_AGAIN is a temporary failure of Strale's own resolver (as in
-  // isConnectionFailure above), and a network error with no code says nothing
-  // about whose it was. Neither is the target's fault, so both stay as
-  // fetchUnavailable files them: retryable, unbilled, and counted against the
-  // capability (promise-audit T1 follow-up 34).
-  if (err.code === "EAI_AGAIN" || err.code === null) return err;
+  // A resolver failing for now (EAI_AGAIN) and a network error with no code
+  // do not say whose failure it was, so they are counted against the
+  // capability (promise-audit T1 follow-up 34), under TARGET_NETWORK: a
+  // counted failure's message reaches the breaker, and the caller's host name
+  // must not (see the docstring). An UpstreamUnavailableError passed in keeps
+  // the handling below.
+  if (err !== failure && (err.code === "EAI_AGAIN" || err.code === null)) {
+    const detail = `network error${err.code ? ` (${err.code})` : ""}; retry shortly.`;
+    return new UpstreamUnavailableError(TARGET_NETWORK, detail, { code: err.code, retryable: err.retryable, cause: failure });
+  }
   // A name the resolver says does not resolve will not start resolving on a
   // retry (Node reports NXDOMAIN and NODATA alike as ENOTFOUND).
   if (err.code === "ENOTFOUND") {

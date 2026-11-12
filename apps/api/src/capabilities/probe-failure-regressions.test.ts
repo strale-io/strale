@@ -64,6 +64,7 @@ async function expectResolverRetry(call: Promise<unknown>) {
   const outcome = await expectThrown(call);
   expect(outcome.retryable).toBe(true);
   expect(outcome.fault).toBe("provider");
+  return outcome;
 }
 
 async function expectThrown(call: Promise<unknown>) {
@@ -185,14 +186,20 @@ describe("domain-reputation grades only the domain's own HTTPS failure (follow-u
         cause: Object.assign(new Error("getaddrinfo EAI_AGAIN"), { code: "EAI_AGAIN" }),
       });
     });
-    await expectResolverRetry(run("domain-reputation", { domain: "resolver.example.com" }));
+    const outcome = await expectResolverRetry(run("domain-reputation", { domain: "resolver.example.com" }));
+    // It counts against the capability, so its message reaches the breaker:
+    // the caller's domain must not be in it (follow-up 34 review).
+    expect(outcome.error_message).not.toContain("resolver.example.com");
   });
 
   it("does not grade a bare EAI_AGAIN either", async () => {
     vi.stubGlobal("fetch", async () => {
       throw Object.assign(new Error("getaddrinfo EAI_AGAIN bare.example.com"), { code: "EAI_AGAIN" });
     });
-    await expectResolverRetry(run("domain-reputation", { domain: "bare.example.com" }));
+    const outcome = await expectResolverRetry(run("domain-reputation", { domain: "bare.example.com" }));
+    // It counts against the capability, so its message reaches the breaker:
+    // the caller's domain must not be in it (follow-up 34 review).
+    expect(outcome.error_message).not.toContain("bare.example.com");
   });
 
   it("refuses Strale's own connect-time SSRF block rather than grading it", async () => {
