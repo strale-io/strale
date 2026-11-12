@@ -1,0 +1,50 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "10f87b51cba0b0907e152ded7070ae1230677888"
+  },
+  "at": "2026-11-12T00:05:42.506Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/r4/fail-before-summary.json"
+  },
+  "summary": {
+    "tests_total": 105,
+    "tests_passed": 88,
+    "tests_failed": 17,
+    "source_commit": "72afe178",
+    "tests_commit": "10f87b51"
+  },
+  "topic": "swallowed-failures-wave2c-r4-fail-before",
+  "raw": {
+    "summary": {
+      "phase": "fail-before",
+      "source_commit": "72afe178",
+      "files": 4,
+      "tests_total": 105,
+      "tests_passed": 88,
+      "tests_failed": 17,
+      "suites_failed": 11,
+      "review_tests_failed": 16
+    },
+    "failed_tests": [
+      "src/capabilities/cookie-scan-dns.test.ts :: cookie-scan, real safeFetch and robots pre-check, resolver mocked (review round 4, B1) files a host that does not resolve as the target's failure: unbilled, not counted, not retried",
+      "src/capabilities/cookie-scan-dns.test.ts :: cookie-scan, real safeFetch and robots pre-check, resolver mocked (review round 4, B1) files a resolver that fails for now as the target's failure, retryable",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: pricing-page-extract does not bill a page that is not a pricing page counts an empty render against the capability: a degraded renderer produces the same shell (review round 4, B2)",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: negative: pricing-page-extract bills a real page bills an invented status, with plans as page_status by its plans (review round 4, T8)",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: negative: pricing-page-extract bills a real page bills an invented status, without plans as page_status by its plans (review round 4, T8)",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: negative: pricing-page-extract bills a real page bills no status, with plans as page_status by its plans (review round 4, T8)",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: negative: pricing-page-extract bills a real page bills no status, without plans as page_status by its plans (review round 4, T8)",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: company-fundamentals does not report a metric the SEC did not answer for as unreported throws when one concept request fails with HTTP 403 (the SEC's rate-threshold page)",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: company-fundamentals does not report a metric the SEC did not answer for as unreported does not resend into an SEC block: a 403 is not retryable, and tells the caller when to retry (review round 4, B3)",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: country-trade-data says which year its totals are for (review round 4, T3) labels embedded totals as 2023 when another year was requested",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: country-trade-data says which year its totals are for (review round 4, T3) labels live totals with the requested year",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: country-trade-data does not read a two-letter code as part of a country name (review round 4, T3) asks the World Bank for KE, not Turkey",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: country-trade-data does not read a two-letter code as part of a country name (review round 4, T3) says there is no trade data for an unknown code with nothing embedded and no World Bank figure",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: whois-lookup reads the registrar from the Registrar line (review round 4, T4) returns the registrar's name, not its WHOIS server, for a .com record",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: whois-lookup reads the registrar from the Registrar line (review round 4, T4) takes a sponsoring-registrar line when the record has no plain Registrar line",
+      "src/capabilities/extraction-and-lookup.upstream-failures.test.ts :: failure: whois-lookup reads the registrar from the Registrar line (review round 4, T4) does not take a registrar detail as the registrar when no line names it",
+      "src/lib/startup-migration-0154.test.ts :: block 0154: narrow the WHOIS and phishing claims in solution copy (PR #1018 review round 4, T1 and T5) writes exactly what db/solution-catalogue.ts now says, so the catalogue and the live rows agree"
+    ]
+  }
+}

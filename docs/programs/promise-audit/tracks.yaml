@@ -43,25 +43,37 @@ tracks:
       the separate PR that withholds the capability (Petter's decision: the
       enforcementtracker.com data is CC BY-NC-SA 4.0 with a TDM reservation,
       and its substring match billed other companies' fines), and closes with
-      that PR. Wave 2c's fail-before, after, guard and full API suite receipts
-      (round 1, r2 and r3 sets) are in evidence. Its review round 3 billed
+      that PR. Wave 2c's receipts are in evidence, one set per coordinator
+      round: the build (no suffix), then r2, r3 and r4 for the fixes made in
+      coordinator rounds 2, 3 and 4 (a commit message names the review it
+      answers, so r3's commit 332cbd8a says \"review round 2\"). Round 3 billed
       page-exists dns_nxdomain only for the requested host, counted pricing's
       model-judged page_error against the capability, stopped
       country-trade-data mixing live and embedded totals, and narrowed the
-      Domain Trust Check solution copy to WHOIS age for domains under common
-      TLDs and to one input for link safety rather than phishing detection;
-      that copy reaches the live solutions row only through a seed-solutions
-      run or a guarded startup block, not yet done. Found in wave 2c, not fixed
-      there: country-trade-data returns its embedded 2023 estimates under the
-      requested year (stated in its limitation and description), and its
-      partial country-name match reads KE as Turkey; an empty pricing render caused by
-      Strale's own Browserless is filed as the target's fault (unbilled,
-      breaker-exempt and outside the quality floor), a blind spot to follow up;
-      whois-lookup no longer covers TLDs outside its registry map (following
-      IANA refer: would restore them; until then the Domain Trust Check
-      solution's WHOIS step refuses .xyz and .top, and its example output
-      shows registrar \"IANA\"), and an unparsed registry reply that is not a
-      rate-limit or refusal notice is still billed raw. Next: wave 2d, rows 30, 31, 32, 33 and 35,
+      Domain Trust Check copy. Round 4 filed cookie-scan's robots.txt
+      pre-check failures as the target's (a dead host no longer counts or
+      retries), counted an empty pricing render against the capability (the
+      earlier Browserless blind spot), made the SEC 403 not retryable, added
+      country-trade-data totals_year and stopped two-letter codes matching
+      country names (KE read as Turkey), took the whois registrar from the
+      Registrar line, and narrowed the copy of country-trade-data, whois-lookup,
+      page-exists and five WHOIS solutions. Startup block 0154 (ledger M097;
+      0153 and M096 are PR 1019's, which merges first, then main is merged
+      into this branch) delivers the solution copy to the live rows; after
+      deploy, read long_description, target_audience, agent_description and
+      example_output of domain-trust, domain-intel, vendor-risk-assess,
+      lead-enrich and company-intelligence-sdr to confirm it landed (each
+      guard is the repository text, unchanged since March or April 2026;
+      production was not queried, so a row edited by hand stays as it is).
+      Found in wave 2c, not fixed there: web-provider fetchPage
+      (capabilities/lib/web-provider.ts, the robots.txt pre-check in
+      fetchPageOnce) rethrows a bare ENOTFOUND for pricing-page-extract and
+      every other render caller, so a dead host still counts against those
+      capabilities; page-exists bills dns_nxdomain on the resolver's ENOTFOUND
+      without a second resolver confirming it; whois-lookup no longer covers
+      TLDs outside its registry map (following IANA refer: would restore them;
+      until then the WHOIS step of those solutions refuses .xyz and .top).
+      Next: wave 2d, rows 30, 31, 32, 33 and 35,
       reconciled first against later repairs such as customs PR999. Then wave 3; the Nager.Date
       no-calendar path (a weekends-only answer for countries such as TH, still
       billed) as a follow-up candidate; the perturbation replays (http_503,
@@ -126,6 +138,9 @@ tracks:
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r3-fail-before.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r3-after.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2c-r3-full-api-suite.json
+      - archive/receipts/2026-11-12-test-run-swallowed-failures-wave2c-r4-fail-before.json
+      - archive/receipts/2026-11-12-test-run-swallowed-failures-wave2c-r4-after.json
+      - archive/receipts/2026-11-12-test-run-swallowed-failures-wave2c-r4-full-api-suite.json
 
   - id: T2
     title: "T2: Compliance-answer correctness (reference answers)"
