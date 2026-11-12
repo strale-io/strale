@@ -66,12 +66,15 @@ describe("cookie-scan, real safeFetch and robots pre-check, resolver mocked (rev
     expect(outcomeFromError(err)).toMatchObject({ billable: false, fault: "target", counts_against_capability: false });
   });
 
-  it("files a resolver that fails for now as the target's failure, retryable", async () => {
+  // promise-audit T1 follow-up 34: EAI_AGAIN is Strale's own resolver failing
+  // for now, not the caller's site, so it counts against the capability.
+  it("files Strale's resolver failing for now as its own failure: unbilled, counted, retryable", async () => {
     resolverFails("EAI_AGAIN");
     const err = await scanFails();
-    expect(err.message).toContain("URL did not answer (EAI_AGAIN)");
+    expect(err.message).toContain("network error (EAI_AGAIN); retry shortly.");
     expect(err.retryable).toBe(true);
-    expect(isUserInputError(err.message)).toBe(true);
-    expect(outcomeFromError(err)).toMatchObject({ billable: false, fault: "target", counts_against_capability: false });
+    expect(isUserInputError(err.message)).toBe(false);
+    expect(shouldCountAgainstCapability(err)).toBe(true);
+    expect(outcomeFromError(err)).toMatchObject({ billable: false, fault: "provider", counts_against_capability: true });
   });
 });

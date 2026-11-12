@@ -15,6 +15,7 @@ import {
   quotedLegCodes,
   requireAnyLeg,
   ssrfBlocked,
+  TARGET_NETWORK,
   targetUnavailable,
   UpstreamUnavailableError,
 } from "./upstream-result.js";
@@ -286,11 +287,98 @@ describe("PR #1018 review B1: fetchUnavailable converts a bare errno Error", () 
   });
 
   it("targetUnavailable words an errno failure as the target's and keeps it breaker-exempt", () => {
-    const err = targetUnavailable("website site.test", errno("EAI_AGAIN")) as UpstreamUnavailableError;
+    const err = targetUnavailable("website site.test", errno("ECONNREFUSED")) as UpstreamUnavailableError;
     expect(err).toBeInstanceOf(UpstreamUnavailableError);
-    expect(err.message).toBe("Upstream unavailable: website site.test: URL did not answer (EAI_AGAIN); retry later.");
-    expect(err).toMatchObject({ code: "EAI_AGAIN", retryable: true, targetFault: true });
+    expect(err.message).toBe("Upstream unavailable: website site.test: URL did not answer (ECONNREFUSED); retry later.");
+    expect(err).toMatchObject({ code: "ECONNREFUSED", retryable: true, targetFault: true });
     expect(isUserInputError(err.message)).toBe(true);
+  });
+});
+
+describe("promise-audit T1 follow-up 34: a failure that is not the site's is not filed as the site's", () => {
+  // EAI_AGAIN (a resolver failing for now, most often Strale's own, #1025)
+  // and a network error with no code do not say whose failure it was. Both
+  // stay retryable and unbilled and count against the capability, under the
+  // fixed label TARGET_NETWORK, never the caller's host name.
+  const notTheSite: Array<[string, unknown, string | null, string]> = [
+    [
+      "Strale's resolver failing for now (EAI_AGAIN, bare errno)",
+      Object.assign(new Error("getaddrinfo EAI_AGAIN site.test"), { code: "EAI_AGAIN", syscall: "getaddrinfo" }),
+      "EAI_AGAIN",
+      "Upstream unavailable: the network path to the requested site: network error (EAI_AGAIN); retry shortly.",
+    ],
+    [
+      "Strale's resolver failing for now (EAI_AGAIN, wrapped by fetch)",
+      Object.assign(new TypeError("fetch failed"), { cause: { code: "EAI_AGAIN" } }),
+      "EAI_AGAIN",
+      "Upstream unavailable: the network path to the requested site: network error (EAI_AGAIN); retry shortly.",
+    ],
+    [
+      "a network error with no code",
+      Object.assign(new TypeError("fetch failed"), { cause: {} }),
+      null,
+      "Upstream unavailable: the network path to the requested site: network error; retry shortly.",
+    ],
+    [
+      "a stream cut off with no code",
+      new TypeError("terminated"),
+      null,
+      "Upstream unavailable: the network path to the requested site: network error; retry shortly.",
+    ],
+  ];
+
+  it.each(notTheSite)("targetUnavailable(%s) is fault provider, counts true, retryable", (_label, failure, code, message) => {
+    const err = targetUnavailable("website site.test", failure) as UpstreamUnavailableError;
+    expect(err).toBeInstanceOf(UpstreamUnavailableError);
+    expect(err.message).toBe(message);
+    expect(err).toMatchObject({ code, retryable: true, targetFault: false, upstream: TARGET_NETWORK });
+    expect(isUserInputError(err.message)).toBe(false);
+    expect(outcomeFromError(err)).toMatchObject({
+      success: false,
+      billable: false,
+      fault: "provider",
+      counts_against_capability: true,
+    });
+  });
+
+  // Independent review of follow-up 34: a counted failure's message reaches
+  // the breaker, which categorises it by substring before it looks for
+  // "network error". A caller's host name containing "403", "gone" or "301"
+  // in that message would read as auth_expired, endpoint_gone or
+  // permanent_move, not retryable, and suspend the capability for everyone.
+  it.each([
+    ["website x403.example", "x403.example"],
+    ["host gone.example", "gone.example"],
+    ["https://moved301.example/", "moved301.example"],
+    ["website unauthorized-404.example", "unauthorized-404.example"],
+  ])("a counted failure for %s names no host, so the breaker reads it as transient", (site, host) => {
+    for (const failure of [
+      Object.assign(new Error(`getaddrinfo EAI_AGAIN ${host}`), { code: "EAI_AGAIN", syscall: "getaddrinfo" }),
+      Object.assign(new TypeError("fetch failed"), { cause: { code: "EAI_AGAIN" } }),
+      Object.assign(new TypeError("fetch failed"), { cause: {} }),
+      new TypeError("terminated"),
+    ]) {
+      const err = targetUnavailable(site, failure) as UpstreamUnavailableError;
+      expect(outcomeFromError(err)).toMatchObject({ counts_against_capability: true });
+      expect(err.message).not.toContain(host);
+      expect(categorizeFailureReason(err.message)).toBe("transient");
+      expect(isRetryableFailure(categorizeFailureReason(err.message))).toBe(true);
+    }
+  });
+
+  it("an UpstreamUnavailableError passed in is not relabelled", () => {
+    const given = new UpstreamUnavailableError("website site.test", "network error; retry shortly.");
+    const err = targetUnavailable("website site.test", given) as UpstreamUnavailableError;
+    expect(err.upstream).not.toBe(TARGET_NETWORK);
+  });
+
+  it("a host that does not resolve (ENOTFOUND) is still the site's", () => {
+    const err = targetUnavailable(
+      "website site.test",
+      Object.assign(new Error("getaddrinfo ENOTFOUND site.test"), { code: "ENOTFOUND" }),
+    ) as UpstreamUnavailableError;
+    expect(err).toMatchObject({ code: "ENOTFOUND", retryable: false, targetFault: true });
+    expect(outcomeFromError(err)).toMatchObject({ fault: "target", counts_against_capability: false });
   });
 });
 
@@ -299,7 +387,7 @@ describe("PR #1018 review S1: a target-site failure is unbilled and does not cou
     ["a 5xx", 503],
     ["a timeout", new DOMException("The operation was aborted due to timeout", "TimeoutError")],
     ["a network error", Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNRESET" } })],
-    ["a resolver errno", Object.assign(new Error("getaddrinfo EAI_AGAIN site.test"), { code: "EAI_AGAIN" })],
+    ["a connection errno", Object.assign(new Error("connect ECONNREFUSED 192.0.2.1:443"), { code: "ECONNREFUSED" })],
     ["a redirect loop", new Error("Too many redirects (>3) — refusing to follow further.")],
     ["a body that did not parse", new SyntaxError("Unexpected token <")],
   ];

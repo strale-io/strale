@@ -1,6 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import dns from "node:dns/promises";
-import { dnsOrEmpty, fetchUnavailable, isConnectionFailure, targetUnavailable } from "../lib/upstream-result.js";
+import { dnsOrEmpty, isConnectionFailure, targetUnavailable } from "../lib/upstream-result.js";
 import { UrlValidationError, validateHost } from "../lib/url-validator.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { SiteAccessRefusedError, SourceBlockedError, isChallengeResponse, siteAccessRefusal } from "../lib/site-access.js";
@@ -91,7 +91,7 @@ registerCapability("domain-reputation", async (input: CapabilityInput) => {
   /** The issue text when the failure is the probed host's own; otherwise throws the failure, unbilled. */
   const ownFailure = (err: unknown, url: string): string => {
     if (err instanceof SiteAccessRefusedError || err instanceof SourceBlockedError) throw err;
-    if (isResolverRetry(err)) throw fetchUnavailable(url, err);
+    if (isResolverRetry(err)) throw targetUnavailable(url, err);
     if ((err as { name?: unknown } | null)?.name === "TimeoutError") return "HTTPS did not answer within 8 seconds";
     if (isConnectionFailure(err)) return "HTTPS connection failed";
     throw targetUnavailable(url, err);

@@ -53,7 +53,9 @@ describe("page-exists, real safeFetch and robots pre-check, resolver mocked (rev
     expect(dns.lookup).toHaveBeenCalled();
   });
 
-  it("fails unbilled, as the target's fault, when the resolver only fails for now", async () => {
+  // promise-audit T1 follow-up 34: EAI_AGAIN is Strale's own resolver failing
+  // for now, not the caller's site, so it counts against page-exists.
+  it("fails unbilled, as its own failure, when Strale's resolver only fails for now", async () => {
     resolverFails("EAI_AGAIN");
     const err = await run().then(
       () => { throw new Error("expected page-exists to throw"); },
@@ -61,13 +63,13 @@ describe("page-exists, real safeFetch and robots pre-check, resolver mocked (rev
     );
     expect(err).toBeInstanceOf(UpstreamUnavailableError);
     const upstream = err as UpstreamUnavailableError;
-    expect(upstream.message).toContain("URL did not answer (EAI_AGAIN)");
+    expect(upstream.message).toContain("network error (EAI_AGAIN); retry shortly.");
     expect(upstream.retryable).toBe(true);
-    expect(isUserInputError(upstream.message)).toBe(true);
+    expect(isUserInputError(upstream.message)).toBe(false);
     expect(outcomeFromError(upstream)).toMatchObject({
       billable: false,
-      fault: "target",
-      counts_against_capability: false,
+      fault: "provider",
+      counts_against_capability: true,
     });
   });
 });
