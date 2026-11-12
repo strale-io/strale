@@ -231,3 +231,42 @@ export function asSourceBlocked(refusal: SiteAccessRefusedError, targetUrl: stri
     refusal.block,
   );
 }
+
+const SOURCE_BLOCK_PREFIX = "Source unavailable to Strale:";
+
+/**
+ * Recovery advice for a {@link SourceBlockedError}, from the error itself or
+ * from its message, which is all that survives on most failure rails (after
+ * sanitizeFailureReason, which redacts the host and even "robots.txt"). A
+ * source's block repeats on retry, so only a rate limit, an explicit retry
+ * time, or an unreadable robots.txt (a transient read failure) is retryable;
+ * every other block tells the caller to choose another tool.
+ */
+export function sourceBlockDetails(error: unknown): Record<string, unknown> | undefined {
+  const message = typeof error === "string" ? error : error instanceof Error ? error.message : "";
+  const block = error instanceof SourceBlockedError ? error.block : undefined;
+  if (!block && !message.startsWith(SOURCE_BLOCK_PREFIX)) return undefined;
+  const retryAfter = /Retry after (\d+) seconds/i.exec(message);
+  if (retryAfter) {
+    const seconds = Number(retryAfter[1]);
+    return { retryable: true, retry_after_seconds: seconds, next_step: `Wait ${seconds} seconds, then retry.` };
+  }
+  if (block?.kind === "robots_unavailable" || (!block && /could not be read \(.*\(RFC 9309\)/.test(message))) {
+    return {
+      retryable: true,
+      retry_after_seconds: 300,
+      next_step: "This tool's source could not serve its robots.txt; wait at least 5 minutes, then retry.",
+    };
+  }
+  if ((block?.kind === "http" && block.status === 429) || (!block && message.includes("(HTTP 429)"))) {
+    return {
+      retryable: true,
+      retry_after_seconds: 60,
+      next_step: "This tool's source is rate-limiting Strale; wait at least 60 seconds, then retry with exponential backoff.",
+    };
+  }
+  return {
+    retryable: false,
+    next_step: "This tool's source refuses Strale's requests, so a retry will not succeed until the source allows access. Choose another tool from GET /v1/capabilities.",
+  };
+}

@@ -407,6 +407,15 @@ tracks:
       (safeFetch already replaced them), and each manifest gains a limitation
       saying a page that refuses or fails the request is not read and the
       call is unbilled; manifest-text-sync publishes it at boot.
+      (51) fixed on branch fix/source-block-retry-advice: a failure from a
+      source Strale chose that blocks Strale (SourceBlockedError) no longer
+      gets the generic retry-with-backoff advice on any rail.
+      sourceBlockDetails (site-access.ts) reads the block from the error or
+      from its sanitised message: a rate limit, an explicit retry time or an
+      unreadable robots.txt stays retryable with a wait; every other block is
+      retryable false, telling the caller to choose another tool. recoveryDetails consults it
+      after refusalDetails, and the x402 and batch rails that spread details
+      from the thrown object use it too.
       Next: (41), (42); then measuring past billed calls from
       the affected paths since their earliest releases, deciding refunds per
       policy with a DEC-20260504-B drain plan, and the wallet-debit sweep against
