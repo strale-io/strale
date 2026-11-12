@@ -2,33 +2,22 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { createPublicClient, http, type Address } from "viem";
 import { mainnet } from "viem/chains";
 import { normalize } from "viem/ens";
-import { getEthRpcEndpoints, NO_LICENSED_ETH_RPC, rpcEndpointHost } from "../lib/eth-rpc-endpoints.js";
-import { fetchUnavailable, httpUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
+import { ethRpcFailure, getEthRpcEndpoints, NO_LICENSED_ETH_RPC, rpcEndpointHost } from "../lib/eth-rpc-endpoints.js";
 
 const RPC = "Ethereum RPC";
 
-/**
- * The error for an RPC call that threw. viem wraps the transport failure
- * (an HTTP status, a timeout, a network error) several causes deep
- * (ContractFunctionExecutionError > CallExecutionError > HttpRequestError),
- * so the chain is walked for it. Anything else keeps the message it had.
- */
+/** Classified and key-redacted; see ethRpcFailure in lib/eth-rpc-endpoints.ts. */
 function rpcFailure(err: unknown): Error {
-  for (let e: unknown = err, depth = 0; e && depth < 8; e = (e as { cause?: unknown }).cause, depth++) {
-    const status = (e as { status?: unknown }).status;
-    if (typeof status === "number") return httpUnavailable(RPC, status);
-    const typed = fetchUnavailable(RPC, e);
-    if (typed instanceof UpstreamUnavailableError) return typed;
-  }
-  return new Error(`ENS reverse lookup failed on all RPC endpoints: ${err instanceof Error ? err.message : String(err)}`);
+  return ethRpcFailure(RPC, "ENS reverse lookup failed on all RPC endpoints", err);
 }
 
 function makeClient(rpcUrl: string) {
   return createPublicClient({
     chain: mainnet,
     // No transport retry: viem would wait out a provider's Retry-After up
-    // to three times per endpoint, hanging a 429 for minutes. The caller
-    // moves on to the next endpoint itself (promise-audit T1 wave 6).
+    // to three times, hanging a 429 for minutes. The call fails unbilled
+    // instead, and the next endpoint, if any, is tried (promise-audit T1
+    // wave 6; today Alchemy is the only one).
     transport: http(rpcUrl, { retryCount: 0, timeout: 10_000 }),
   });
 }

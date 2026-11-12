@@ -143,10 +143,12 @@ async function checkRegistry(registry: Registry, name: string): Promise<Registry
     // Only the status is used; the metadata body (megabytes for a popular
     // npm package) is never read.
     await discardBody(resp, `${registry.platform} name check`);
-    // All three registries answer JSON. A 200 in any other type is a block
-    // or maintenance page, not the record, so it is no evidence of a taken name.
-    if (resp.status === 200 && !/json/i.test(resp.headers.get("content-type") ?? "")) {
-      return unchecked(registry, url, 200, `${registry.platform} did not answer with its API; not checked.`,
+    // All three registries answer JSON, their 404 included (npm and PyPI
+    // checked live 2026-11-12). A 200 or 404 in any other type is a block,
+    // CDN or maintenance page, not the record, so it is no evidence that the
+    // name is taken or free.
+    if ((resp.status === 200 || resp.status === 404) && !/json/i.test(resp.headers.get("content-type") ?? "")) {
+      return unchecked(registry, url, resp.status, `${registry.platform} did not answer with its API; not checked.`,
         new UpstreamUnavailableError(`${registry.platform} API`, "the reply was not JSON; retry shortly.", { code: "unparseable" }));
     }
     if (resp.status === 200) {

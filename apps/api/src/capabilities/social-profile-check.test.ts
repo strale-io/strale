@@ -123,6 +123,18 @@ describe("answers", () => {
     expect(profiles.find((p) => p.platform === "npm")?.exists).toBeNull();
     expect(r.output.found_count).toBe(0);
   });
+
+  it("REGRESSION (promise-audit T1 wave 6 review): a 404 HTML page is unknown, not 'available'", async () => {
+    safeFetchMock.mockImplementation(async (url: string) =>
+      String(url).includes("pypi.org")
+        ? new Response("<html><title>Maintenance</title></html>", { status: 404, headers: { "content-type": "text/html" } })
+        : new Response("{}", { status: 404, headers: { "content-type": "application/json" } }),
+    );
+    const r = await check("acme");
+    const profiles = r.output.profiles as Profile[];
+    expect(profiles.find((p) => p.platform === "PyPI")?.exists).toBeNull();
+    expect(profiles.find((p) => p.platform === "npm")?.exists).toBe(false);
+  });
 });
 
 describe("names", () => {

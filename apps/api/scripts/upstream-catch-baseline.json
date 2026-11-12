@@ -230,12 +230,6 @@
       "line": 115
     },
     {
-      "file": "apps/api/src/capabilities/ens-resolve.ts",
-      "fingerprint": "92957333f0bd22625f7b79d798d70616cc74def7348416ade933f45a9720c4c3",
-      "count": 1,
-      "line": 129
-    },
-    {
       "file": "apps/api/src/capabilities/estonian-company-data.ts",
       "fingerprint": "d748023648afadbdf127084c8bce2ffa1d4cbef588259b986e91dd00f5fa6c48",
       "count": 1,

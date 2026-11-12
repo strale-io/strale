@@ -2,7 +2,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { createPublicClient, http, namehash, type Hex } from "viem";
 import { mainnet } from "viem/chains";
 import { normalize } from "viem/ens";
-import { getEthRpcEndpoints, NO_LICENSED_ETH_RPC, rpcEndpointHost } from "../lib/eth-rpc-endpoints.js";
+import { ethRpcFailure, getEthRpcEndpoints, NO_LICENSED_ETH_RPC, rpcEndpointHost } from "../lib/eth-rpc-endpoints.js";
 
 // F-0-006 Bucket D: ENS resolution uses viem's RPC against the hardcoded
 // Ethereum mainnet endpoint pool in lib/eth-rpc-endpoints.ts. User input
@@ -31,8 +31,9 @@ function makeClient(rpcUrl: string) {
   return createPublicClient({
     chain: mainnet,
     // No transport retry: viem would wait out a provider's Retry-After up
-    // to three times per endpoint, hanging a 429 for minutes. The caller
-    // moves on to the next endpoint itself (promise-audit T1 wave 6).
+    // to three times, hanging a 429 for minutes. The call fails unbilled
+    // instead, and the next endpoint, if any, is tried (promise-audit T1
+    // wave 6; today Alchemy is the only one).
     transport: http(rpcUrl, { retryCount: 0, timeout: 10_000 }),
   });
 }
@@ -130,13 +131,13 @@ registerCapability("ens-resolve", async (input: CapabilityInput) => {
         provenance: { source: "ens.domains (via eth RPC)", fetched_at: now },
       };
     } catch (err) {
+      // degraded-ok: the failure is kept in lastError and the next endpoint is tried; the last endpoint's failure throws through ethRpcFailure, unbilled and with the key redacted.
       lastError = err;
       if (isLast) {
-        throw new Error(`ENS resolution failed on all RPC endpoints: ${err instanceof Error ? err.message : String(err)}`);
+        throw ethRpcFailure("Ethereum RPC", "ENS resolution failed on all RPC endpoints", err);
       }
-      // Try next endpoint
     }
   }
 
-  throw new Error(`ENS resolution failed on all RPC endpoints: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
+  throw ethRpcFailure("Ethereum RPC", "ENS resolution failed on all RPC endpoints", lastError);
 });

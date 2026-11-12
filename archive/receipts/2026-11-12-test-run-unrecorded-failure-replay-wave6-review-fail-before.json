@@ -1,0 +1,145 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "24d6071e61faca328c944ec909ec3084d2acadf0"
+  },
+  "at": "2026-11-12T07:26:12.635Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/fb-ens.json"
+  },
+  "summary": {
+    "numTotalTestSuites": 3,
+    "numPassedTestSuites": 0,
+    "numFailedTestSuites": 3,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 6,
+    "numPassedTests": 2,
+    "numFailedTests": 4,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "startTime": 1794467991705,
+    "success": false
+  },
+  "topic": "unrecorded-failure-replay-wave6-review-fail-before",
+  "raw": {
+    "numTotalTestSuites": 3,
+    "numPassedTestSuites": 0,
+    "numFailedTestSuites": 3,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 6,
+    "numPassedTests": 2,
+    "numFailedTests": 4,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794467991705,
+    "success": false,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "ens-resolve"
+            ],
+            "fullName": "ens-resolve a http_503 failure throws without the key or the URL path",
+            "status": "failed",
+            "title": "a http_503 failure throws without the key or the URL path",
+            "duration": 157.86544100000003,
+            "failureMessages": [
+              "AssertionError: expected 'ENS resolution failed on all RPC endp…' not to contain 'abcDEF123456ghiJKL'\n    at /home/user/strale-wt-pa-replay/apps/api/src/capabilities/ens-key-redaction.test.ts:63:29\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-pa-replay/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "ens-resolve"
+            ],
+            "fullName": "ens-resolve a transport failure throws without the key or the URL path",
+            "status": "failed",
+            "title": "a transport failure throws without the key or the URL path",
+            "duration": 3.7982749999999896,
+            "failureMessages": [
+              "AssertionError: expected 'ENS resolution failed on all RPC endp…' not to contain 'abcDEF123456ghiJKL'\n    at /home/user/strale-wt-pa-replay/apps/api/src/capabilities/ens-key-redaction.test.ts:63:29\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-pa-replay/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "ens-resolve"
+            ],
+            "fullName": "ens-resolve a other failure throws without the key or the URL path",
+            "status": "failed",
+            "title": "a other failure throws without the key or the URL path",
+            "duration": 1.928083000000015,
+            "failureMessages": [
+              "AssertionError: expected 'ENS resolution failed on all RPC endp…' not to contain 'abcDEF123456ghiJKL'\n    at /home/user/strale-wt-pa-replay/apps/api/src/capabilities/ens-key-redaction.test.ts:63:29\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-pa-replay/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "ens-reverse-lookup"
+            ],
+            "fullName": "ens-reverse-lookup a http_503 failure throws without the key or the URL path",
+            "status": "passed",
+            "title": "a http_503 failure throws without the key or the URL path",
+            "duration": 0.6662039999999934,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "ens-reverse-lookup"
+            ],
+            "fullName": "ens-reverse-lookup a transport failure throws without the key or the URL path",
+            "status": "passed",
+            "title": "a transport failure throws without the key or the URL path",
+            "duration": 0.35011900000006335,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "ens-reverse-lookup"
+            ],
+            "fullName": "ens-reverse-lookup a other failure throws without the key or the URL path",
+            "status": "failed",
+            "title": "a other failure throws without the key or the URL path",
+            "duration": 0.9584820000000036,
+            "failureMessages": [
+              "AssertionError: expected 'ENS reverse lookup failed on all RPC …' not to contain 'abcDEF123456ghiJKL'\n    at /home/user/strale-wt-pa-replay/apps/api/src/capabilities/ens-key-redaction.test.ts:63:29\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale-wt-pa-replay/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794467992308,
+        "endTime": 1794467992473.9585,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale-wt-pa-replay/apps/api/src/capabilities/ens-key-redaction.test.ts"
+      }
+    ]
+  }
+}

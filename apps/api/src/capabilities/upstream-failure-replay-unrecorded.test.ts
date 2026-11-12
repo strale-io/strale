@@ -44,6 +44,13 @@ vi.mock("dns/promises", () => {
   }
   return { default: { ...api, Resolver }, ...api, Resolver };
 });
+// host-exposure-lookup reads `promises` from node:dns, which the mock above
+// does not reach; the callback API stays real for safe-fetch's lookup.
+vi.mock("node:dns", async (importOriginal) => {
+  const real = await importOriginal<typeof import("node:dns")>();
+  const promises = await import("dns/promises");
+  return { ...real, default: { ...real, promises }, promises };
+});
 
 type Mode = "http_503" | "http_429" | "network_error" | "timeout" | "blocked_200" | "dns_etimeout";
 const MODES: Mode[] = ["http_503", "http_429", "network_error", "timeout", "blocked_200", "dns_etimeout"];
