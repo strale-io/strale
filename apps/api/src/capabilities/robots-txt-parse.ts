@@ -12,13 +12,20 @@ const NO_ROBOTS_TXT = { rules: [], sitemaps: [], user_agents: [], blocks_all_cra
 
 /**
  * A line that names a robots.txt directive: RFC 9309's, the widely honoured
- * extensions, the search-engine and publisher ones this parser does not
- * tabulate (Host, Clean-param, Content-Usage, ACAP-*), and the forms Google's
- * parser also accepts (no colon, "useragent", "disalow", "dissallow"). A body
- * with content lines and none of these is not a robots.txt.
+ * extensions, and the search-engine and publisher ones this parser does not
+ * tabulate (Host, Clean-param, Content-Usage, ACAP-*), including the
+ * misspellings Google's parser accepts ("useragent", "disalow", "dissallow").
+ * A body with content lines and none of these is not a robots.txt.
  */
 const ROBOTS_DIRECTIVE_LINE =
-  /^(?:user[-_ ]?agent|dis+al+ow|allow|sitemap|site-map|crawl[-_ ]?delay|host|clean-param|request-rate|visit-time|noindex|nofollow|noarchive|content-signal|content-usage|comment|robot-version|acap-[a-z-]+)\s*(?::|\s)/i;
+  /^(?:user[-_ ]?agent|dis+al+ow|allow|sitemap|site-map|crawl[-_ ]?delay|host|clean-param|request-rate|visit-time|noindex|nofollow|noarchive|content-signal|content-usage|comment|robot-version|acap-[a-z-]+)\s*:/i;
+/**
+ * The colon-less forms Google's parser also reads ("User-agent *",
+ * "Disallow /"), only when the value looks like one, so that a plain-text
+ * error such as "User agent not allowed" is not taken for a robots.txt.
+ */
+const ROBOTS_COLONLESS_LINE =
+  /^(?:user[-_ ]?agent\s+\S+$|(?:dis+al+ow|allow)\s+[/*]|site-?map\s+https?:\/\/)/i;
 
 registerCapability("robots-txt-parse", async (input: CapabilityInput) => {
   let url = ((input.url as string) ?? (input.domain as string) ?? (input.task as string) ?? "").trim();
@@ -102,7 +109,7 @@ registerCapability("robots-txt-parse", async (input: CapabilityInput) => {
   // one whose only directives the rules table does not hold, or that a
   // crawler would read despite a missing colon or a misspelling.
   const contentLines = lines.filter(l => l && !l.startsWith("#"));
-  const hasDirective = contentLines.some(l => ROBOTS_DIRECTIVE_LINE.test(l));
+  const hasDirective = contentLines.some(l => ROBOTS_DIRECTIVE_LINE.test(l) || ROBOTS_COLONLESS_LINE.test(l));
   if (rules.length === 0 && sitemaps.length === 0 && contentLines.length > 0 && !hasDirective) {
     return {
       output: { url: robotsUrl, exists: false, message: "No robots.txt found: the site answered with a page that is not a robots.txt.", ...NO_ROBOTS_TXT },

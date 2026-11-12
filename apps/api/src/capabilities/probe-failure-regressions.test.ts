@@ -300,6 +300,14 @@ describe("robots-txt-parse reads a non-HTML soft 404 as no robots.txt (follow-up
     expect(output.exists).toBe(false);
   });
 
+  it("returns exists:false for plain-text errors that open with a directive word", async () => {
+    for (const [host, body] of [["waf.example.com", "User agent not allowed"], ["nohost.example.com", "Host not found"], ["nositemap.example.com", "Sitemap not available"]]) {
+      serve(() => new Response(body, { status: 200, headers: { "content-type": "text/plain" } }));
+      const { output } = await run("robots-txt-parse", { url: `https://${host}` });
+      expect(output.exists, body).toBe(false);
+    }
+  });
+
   it("keeps a robots.txt of comments only as one that exists with no rules", async () => {
     serve(() => new Response("# Allow everything\n# contact: webmaster@example.com\n", { status: 200, headers: { "content-type": "text/plain" } }));
     const { output } = await run("robots-txt-parse", { url: "https://commentsonly.example.com" });

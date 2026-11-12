@@ -275,7 +275,9 @@ tracks:
       HTML soft 404 do; an empty file, comments only, or only directives the
       rules table does not hold still exist with no rules, as do lines
       without a colon or with a common misspelling, which Google's parser
-      reads. Independent review GO; its three should-fixes applied. The new
+      reads when its value looks like one (\"User agent not allowed\" stays
+      no robots.txt). Independent review GO and delta GO; their should-fixes
+      applied. The new
       manifest limitation reaches the served list with (36)'s publish.
       Next: (34) to (38) and (32), (33); then measuring past billed calls from
       the affected paths since their earliest releases, deciding refunds per
@@ -338,6 +340,8 @@ tracks:
       - archive/receipts/2026-11-12-test-run-promise-audit-t1-robots-non-html-soft-404-after.json
       - archive/receipts/2026-11-12-test-run-promise-audit-t1-robots-non-html-soft-404-review-fixes-fail-before.json
       - archive/receipts/2026-11-12-test-run-promise-audit-t1-robots-non-html-soft-404-review-fixes-after.json
+      - archive/receipts/2026-11-12-test-run-promise-audit-t1-robots-non-html-soft-404-delta-fail-before.json
+      - archive/receipts/2026-11-12-test-run-promise-audit-t1-robots-non-html-soft-404-delta-after.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-fail-before.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-after.json
       - archive/receipts/2026-11-11-check-upstream-catch-guard-wave2a.json

@@ -121,7 +121,9 @@ limitations:
     text: >-
       A site that answers /robots.txt with 200 and an HTML page, or with text that has no robots.txt
       directive (a JSON error, a plain "Not found"), is reported as exists false, the same answer a
-      404 gives. A file that is empty or holds only comments is reported as existing with no rules.
+      404 gives. A file that is empty or holds only comments is reported as existing with no rules. A
+      file whose directives lack colons or are misspelled is reported as existing, but its rules are
+      not read.
     category: accuracy
     severity: info
 
