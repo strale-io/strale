@@ -2,8 +2,8 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import dns from "node:dns/promises";
 import { dnsOrEmpty } from "../lib/upstream-result.js";
 import { validateHost } from "../lib/url-validator.js";
-import { safeFetch } from "../lib/safe-fetch.js";
-import { SiteAccessRefusedError, SourceBlockedError } from "../lib/site-access.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
+import { SiteAccessRefusedError, SourceBlockedError, isChallengeResponse, siteAccessRefusal } from "../lib/site-access.js";
 
 registerCapability("domain-reputation", async (input: CapabilityInput) => {
   let domain = ((input.domain as string) ?? (input.url as string) ?? (input.task as string) ?? "").trim().toLowerCase();
@@ -54,13 +54,35 @@ registerCapability("domain-reputation", async (input: CapabilityInput) => {
     checks.has_dmarc = false;
   }
 
-  // 4. HTTPS check
+  // 4. HTTPS check. A HEAD probe reads only the status and headers, so it is
+  // an availability probe (safe-fetch.ts, H6 round 2): robots.txt does not
+  // govern it, and a domain whose HTTPS is broken is graded as broken rather
+  // than refused because its robots.txt could not be read over that same
+  // HTTPS. An anti-bot challenge is the one answer that is refused, unbilled:
+  // its headers belong to the interstitial, not the domain's site.
+  const httpsUrl = `https://${domain}/`;
+  let resp: Response | null = null;
   try {
     // F-0-006: user-supplied domain → safeFetch validates + re-checks redirects.
-    const resp = await safeFetch(`https://${domain}/`, {
+    resp = await safeFetch(httpsUrl, {
       method: "HEAD",
+      purpose: "availability_probe",
       signal: AbortSignal.timeout(8000),
     });
+  } catch (err) {
+    // degraded-ok: a site's refusal of Strale is rethrown, unbilled; any other failure to open the domain's HTTPS endpoint is this check's finding, https_works false.
+    if (err instanceof SiteAccessRefusedError || err instanceof SourceBlockedError) throw err;
+    checks.https_works = false;
+    issues.push("HTTPS connection failed");
+    score -= 20;
+  }
+
+  if (resp) {
+    if (await isChallengeResponse(resp)) {
+      await discardBody(resp, "anti-bot challenge page");
+      throw siteAccessRefusal(resp.url || httpsUrl, { kind: "challenge" });
+    }
+    await discardBody(resp, "domain-reputation HEAD probe");
     checks.https_works = true;
     checks.https_status = resp.status;
 
@@ -77,12 +99,6 @@ registerCapability("domain-reputation", async (input: CapabilityInput) => {
 
     if (!hsts) { issues.push("No HSTS header"); score -= 5; }
     if (!xcto) { issues.push("No X-Content-Type-Options header"); score -= 3; }
-  } catch (err) {
-    // degraded-ok: a site's refusal of Strale (robots.txt, an anti-bot challenge) is rethrown, unbilled; any other failure to open the domain's HTTPS endpoint is this check's finding, https_works false. Before wave 3 a refusal was billed as "HTTPS connection failed".
-    if (err instanceof SiteAccessRefusedError || err instanceof SourceBlockedError) throw err;
-    checks.https_works = false;
-    issues.push("HTTPS connection failed");
-    score -= 20;
   }
 
   // 5. Domain age heuristic (check WHOIS-like indicators)

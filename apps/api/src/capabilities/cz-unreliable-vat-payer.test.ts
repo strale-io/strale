@@ -41,7 +41,8 @@ describe("cz-unreliable-vat-payer", () => {
     expect(output.is_registered_vat_payer).toBe(false);
     expect(output.is_unreliable_payer).toBeNull();
     expect(output.dic).toBeNull();
-    expect(output.joint_liability_risk).not.toMatch(/reliable/i);
+    expect(output.joint_liability_risk).toMatch(/not in the Czech register of VAT payers/);
+    expect(output.joint_liability_risk).not.toMatch(/reliable|treat as non-VAT-registered/i);
   });
 
   it("reports a reliable payer with its published account", async () => {

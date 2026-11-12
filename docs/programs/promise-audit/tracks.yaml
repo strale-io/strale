@@ -157,7 +157,16 @@ tracks:
       known-answer checks, which the replay's skew perturbation now proves by
       leaving the protocol status code alone); and the page-exists, og-image-check,
       api-health-check and sitemap-parse manifests did not describe the
-      challenge stop. The 32 recordings are not the whole catalogue: a
+      challenge stop. Delta reviews of those fixes: data and copy GO (its
+      notes applied: the cz manifest comment and a stronger not-registered
+      copy assertion; its third, a domain-reputation limitation, is (26)
+      below); billing NO-GO on one
+      finding, fixed: the refusal rethrow made domain-reputation refuse a
+      domain whose HTTPS is broken (its robots.txt could not be read over the
+      same HTTPS) and a robots.txt that disallows everything. Its HEAD probe
+      reads only headers, so it is now an availability probe that robots.txt
+      does not govern; only a challenge answer is refused, and regression
+      tests that fail on the old executor cover both cases. The 32 recordings are not the whole catalogue: a
       network executor with no recording is not covered yet. Fail-before and
       after receipts are in evidence. Found, not fixed: (18) robots-txt-parse
       reads an HTML soft 404 without challenge markers as an existing
@@ -172,7 +181,21 @@ tracks:
       (22) the challenge markers now guard every page read, so a real page
       carrying __cf_chl_ in its first 6,000 characters (a canonical URL) is
       refused, unbilled; (23) domain-reputation still bills a timeout of its
-      own HTTPS probe as the finding https_works false.
+      own HTTPS probe as the finding https_works false, and a ToS-blocklisted
+      domain the same way (the blocklist throws a plain error); (24)
+      capability-output-contracts.ts defines guaranteed as present and
+      non-empty, while isCheckEnforced and the guaranteed-field sentinel
+      require only the key, so a nullable field can be guaranteed (cz-
+      unreliable-vat-payer; response_generated_at and published_accounts[].
+      bank_code can also be null but are typed string); (25) youtube-
+      summarize reports a blocked watch page as \"video may not have captions
+      available\", which hides the block from the caller and health counts;
+      (26) domain-reputation and cz-unreliable-vat-payer are compliance
+      capabilities, whose manifest text the boot sync only reports
+      (isReportOnly), so their copy reaches production only through a
+      publishing block on Petter's OK: the cz not-registered limitation and
+      nullable types from this wave, and a proposed domain-reputation
+      limitation that a challenge answer fails unbilled with no score.
       Next: once wave 3 merges and deploys, the Nager.Date no-calendar path
       (a weekends-only answer for countries such as TH, still billed) as a
       follow-up candidate; recordings for the network executors that have
@@ -213,6 +236,7 @@ tracks:
       - archive/receipts/2026-11-12-test-run-upstream-failure-replay-wave3-fail-before.json
       - archive/receipts/2026-11-12-test-run-upstream-failure-replay-wave3-after.json
       - archive/receipts/2026-11-12-test-run-upstream-failure-replay-wave3-review-fixes.json
+      - archive/receipts/2026-11-12-test-run-promise-audit-t1-wave3-billing-review-fix.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-fail-before.json
       - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-after.json
       - archive/receipts/2026-11-11-check-upstream-catch-guard-wave2a.json

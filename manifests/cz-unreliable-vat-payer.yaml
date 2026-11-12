@@ -125,9 +125,13 @@ limitations:
       the flag was set/cleared) are not exposed.
     category: coverage
     severity: info
-# guaranteed means the key is always present (null allowed): a DIČ not in the
-# register returns dic, is_unreliable_payer and financial_office_code as null.
-# Marking them common would switch off their known-answer checks.
+# dic, is_unreliable_payer and financial_office_code are null for a DIČ not in
+# the register (see the limitation above), which capability-output-contracts.ts
+# would call common. They stay guaranteed because the runner's known-answer
+# gate (isCheckEnforced) skips every check on a common field, which would drop
+# the three equals checks on the registered-payer answer; the guaranteed-field
+# sentinel only requires the key, which both answers carry. Promise-audit T1
+# follow-up (24) resolves the two definitions.
 output_field_reliability:
   input_dic: guaranteed
   dic: guaranteed

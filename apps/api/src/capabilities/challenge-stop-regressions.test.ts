@@ -4,7 +4,8 @@
  * reaches only through safeFetch's own challenge stop.
  *
  * - domain-reputation: a site that challenges Strale was billed as "HTTPS
- *   connection failed", a false finding.
+ *   connection failed", a false finding; and its HEAD probe, a header-only
+ *   availability probe, must still grade a domain whose HTTPS is broken.
  * - youtube-summarize: a challenged watch page fell through to a rendered
  *   fetch of the same page, a retry after a block (DEC-20261023-A).
  * - sitemap-parse: an HTML page without challenge markers, served at the
@@ -74,6 +75,33 @@ describe("challenge stop: executors the replay does not cover", () => {
     const err = await run("domain-reputation", { domain: "example.com" }).catch((e: unknown) => e);
     expect(err, "a challenged site was graded as an HTTPS failure").toBeInstanceOf(Error);
     expect(outcomeFromError(err).failure_class).toBe("capability_refused");
+  });
+
+  it("domain-reputation grades a domain whose HTTPS is broken instead of refusing it", async () => {
+    // The HEAD probe is an availability probe: robots.txt does not govern it,
+    // so a refused connection reaches the check's own finding rather than a
+    // "robots.txt could not be read" refusal (billing delta review, finding 1).
+    // Each test uses its own host: robots.txt answers are cached per origin.
+    vi.stubGlobal("fetch", async () => {
+      throw Object.assign(new TypeError("fetch failed"), { cause: Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" }) });
+    });
+    const { output } = (await run("domain-reputation", { domain: "refused.example.com" })) as { output: Record<string, any> };
+    expect(output.checks.https_works).toBe(false);
+    expect(output.issues).toContain("HTTPS connection failed");
+  });
+
+  it("domain-reputation grades a domain whose robots.txt disallows everything", async () => {
+    const asked: string[] = [];
+    serve((url) => {
+      asked.push(url);
+      return url.endsWith("/robots.txt")
+        ? new Response("User-agent: *\nDisallow: /\n", { status: 200 })
+        : new Response(null, { status: 200, headers: { "strict-transport-security": "max-age=31536000" } });
+    });
+    const { output } = (await run("domain-reputation", { domain: "disallow.example.com" })) as { output: Record<string, any> };
+    expect(output.checks.https_works).toBe(true);
+    expect(output.checks.has_hsts).toBe(true);
+    expect(asked.some((u) => u.endsWith("/robots.txt")), "a header probe read robots.txt").toBe(false);
   });
 
   it("youtube-summarize does not render a watch page that challenged it", async () => {
