@@ -1,0 +1,65 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "6a12bb0cc3688429aaf423e60a42083bf929d8dc"
+  },
+  "at": "2026-11-12T11:19:06.216Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/smoke-crewai-015.json"
+  },
+  "summary": {
+    "warnings_count": 1,
+    "package": "crewai-strale",
+    "version": "0.1.5",
+    "release_run": "https://github.com/strale-io/strale/actions/runs/43206921599",
+    "release_commit": "6a12bb0c",
+    "published_at": "2026-11-12T11:13:04Z",
+    "install": "pip install crewai-strale==0.1.5 from PyPI into a fresh venv (python 3.13.18), crewai 1.15.40 resolved; run from a separate directory with python -I -W always",
+    "release_smoke": "post-publish-smoke job in the release run: success",
+    "contract_call": "crewai_strale.client.StraleClient(api_key='').list_capabilities()",
+    "capabilities_listed": 297,
+    "platform_facts_active_visible": 297,
+    "client_header": "crewai-strale/0.1.5",
+    "degradations_logged": 0,
+    "paid_calls_made": 0,
+    "verdict": "pass"
+  },
+  "topic": "crewai-strale-0-1-5-production-smoke",
+  "raw": {
+    "package": "crewai-strale",
+    "version": "0.1.5",
+    "release_run": "https://github.com/strale-io/strale/actions/runs/43206921599",
+    "release_commit": "6a12bb0c",
+    "published_at": "2026-11-12T11:13:04Z",
+    "files": [
+      "crewai_strale-0.1.5-py3-none-any.whl",
+      "crewai_strale-0.1.5.tar.gz"
+    ],
+    "install": "pip install crewai-strale==0.1.5 from PyPI into a fresh venv (python 3.13.18), crewai 1.15.40 resolved; run from a separate directory with python -I -W always",
+    "release_smoke": "post-publish-smoke job in the release run: success",
+    "contract_call": "crewai_strale.client.StraleClient(api_key='').list_capabilities()",
+    "capabilities_listed": 297,
+    "platform_facts_active_visible": 297,
+    "client_header": "crewai-strale/0.1.5",
+    "exports": [
+      "StraleClient",
+      "StraleToolkit",
+      "StraleTool",
+      "StraleSearchTool",
+      "StraleBalanceTool",
+      "StraleGenericInput"
+    ],
+    "project_urls": [
+      "https://strale.io",
+      "https://github.com/strale-io/strale",
+      "https://strale.io/docs"
+    ],
+    "warnings": [
+      "ImportWarning from crewai itself on import (Cannot set an attribute on 'crewai.rag' for child module 'embeddings'); upstream, not raised by crewai-strale"
+    ],
+    "degradations_logged": 0,
+    "paid_calls_made": 0,
+    "verdict": "pass"
+  }
+}

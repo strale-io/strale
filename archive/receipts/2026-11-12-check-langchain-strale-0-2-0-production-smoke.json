@@ -1,0 +1,67 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "6a12bb0cc3688429aaf423e60a42083bf929d8dc"
+  },
+  "at": "2026-11-12T11:19:06.354Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/smoke-langchain-020.json"
+  },
+  "summary": {
+    "warnings_count": 0,
+    "package": "langchain-strale",
+    "version": "0.2.0",
+    "release_run": "https://github.com/strale-io/strale/actions/runs/43207734609",
+    "dry_run": "https://github.com/strale-io/strale/actions/runs/43207473122",
+    "release_commit": "6a12bb0c",
+    "published_at": "2026-11-12T11:17:30Z",
+    "install": "pip install langchain-strale==0.2.0 from PyPI into a fresh venv (python 3.13.18), langchain-core 1.8.0 resolved; run from a separate directory with python -I -W always",
+    "release_smoke": "post-publish-smoke job in the release run: success",
+    "contract_call": "StraleClient().list_capabilities() with client_id printed (docs/release/pypi-publishing.md)",
+    "capabilities_listed": 297,
+    "platform_facts_active_visible": 297,
+    "client_header": "langchain-strale/0.2.0",
+    "degradations_logged": 0,
+    "paid_calls_made": 0,
+    "verdict": "pass"
+  },
+  "topic": "langchain-strale-0-2-0-production-smoke",
+  "raw": {
+    "package": "langchain-strale",
+    "version": "0.2.0",
+    "release_run": "https://github.com/strale-io/strale/actions/runs/43207734609",
+    "dry_run": "https://github.com/strale-io/strale/actions/runs/43207473122",
+    "release_commit": "6a12bb0c",
+    "published_at": "2026-11-12T11:17:30Z",
+    "files": [
+      "langchain_strale-0.2.0-py3-none-any.whl",
+      "langchain_strale-0.2.0.tar.gz"
+    ],
+    "install": "pip install langchain-strale==0.2.0 from PyPI into a fresh venv (python 3.13.18), langchain-core 1.8.0 resolved; run from a separate directory with python -I -W always",
+    "release_smoke": "post-publish-smoke job in the release run: success",
+    "contract_call": "StraleClient().list_capabilities() with client_id printed (docs/release/pypi-publishing.md)",
+    "capabilities_listed": 297,
+    "platform_facts_active_visible": 297,
+    "client_header": "langchain-strale/0.2.0",
+    "exports": [
+      "StraleClient",
+      "StraleToolkit",
+      "StraleTool",
+      "StraleSearchTool",
+      "StraleExecuteTool",
+      "StraleBalanceTool",
+      "StraleGenericInput"
+    ],
+    "project_urls": [
+      "https://strale.io",
+      "https://github.com/strale-io/strale",
+      "https://github.com/strale-io/strale/blob/main/packages/langchain-strale/CHANGELOG.md",
+      "https://strale.io/docs"
+    ],
+    "warnings": [],
+    "degradations_logged": 0,
+    "paid_calls_made": 0,
+    "verdict": "pass"
+  }
+}
