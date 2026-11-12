@@ -138,22 +138,22 @@ tracks:
       - T1
       - T2
     owner: session
-    next_action: "Package strale-ai-sdk 0.1.0 built in packages/ai-sdk-strale
-      (PR for branch feat/d6-ai-sdk-package) with tool() search and execute,
-      API key or x402 fetch, header strale-ai-sdk/0.1.0, offline mock-model
-      test in CI. Still unpublished on 2026-11-06 (npm answers 404); the npm
-      trusted publishers set that day cover other packages, not this one. Next,
-      Petter publishes the first version (a new package has
-      no trusted publisher yet, see docs/release/npm-publishing.md) and adds
-      the trusted publisher. Then run the smoke test on the published
-      version, open the vercel/ai Tools Registry PR and set day 30 and day 60
-      review dates. Baseline 2026-10-29 is zero calls with this header, since
-      the package is not yet on npm."
+    next_action: "strale-ai-sdk 0.1.0 and strale-cli 0.1.0 are on npm
+      (first publish by Petter from a local npm session on 2026-11-12, so
+      0.1.0 carries no provenance; trusted publishers for both added the same
+      day, so later versions go through release-npm.yml). The production
+      smoke test from a clean install passed for both, with no errors logged
+      and carried on from:
+      archive/receipts/2026-11-12-check-strale-ai-sdk-and-strale-cli-0-1-0-production-smoke.json.
+      Next: open the vercel/ai Tools Registry PR under the DEC-20260422-A
+      preflight and set day 30 and day 60 review dates from 2026-11-12.
+      Baseline 2026-10-29 is zero calls with the strale-ai-sdk header."
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - Package and registry outcome plus distinct callers are measured against
         D6 thresholds.
-    evidence: []
+    evidence:
+      - archive/receipts/2026-11-12-check-strale-ai-sdk-and-strale-cli-0-1-0-production-smoke.json
   - id: T8
     title: "D7: Narrow MCP entry points"
     status: queued
@@ -193,9 +193,11 @@ tracks:
       Not checked: client_meta.client_header of a first paid call through the
       node, which needs a funded key in n8n. Remaining, all Petter: submit on
       the n8n Creator Portal with docs/company/drafts/distribution/05-n8n-creator-portal-submission.md
-      (updated 2026-11-06; reviews take up to four weeks), then deprecate
-      0.1.0 to 0.1.4 (not deprecated yet on npm) and archive
-      strale-io/n8n-nodes-strale (steps in
+      (updated 2026-11-06; reviews take up to four weeks). Petter deprecated
+      0.1.0 to 0.1.4 on 2026-11-12
+      (archive/receipts/2026-11-12-check-n8n-nodes-strale-0-1-x-deprecated.json).
+      Archive strale-io/n8n-nodes-strale only after the portal accepts the
+      submission (steps in
       docs/research/2026-11-06-distribution-listings-audit.md). Baseline
       2026-10-29 is npm 8 downloads a week, 12 a month, 882 lifetime, 0.1.4
       failing the current n8n scanner with 7 errors, and no calls attributable
@@ -209,7 +211,8 @@ tracks:
         reported against D8 thresholds.
       - Held template and targeting remain gated unless the required release
         condition is recorded.
-    evidence: []
+    evidence:
+      - archive/receipts/2026-11-12-check-n8n-nodes-strale-0-1-x-deprecated.json
   - id: T10
     title: "D9: Clay HTTP template"
     status: founder_gated

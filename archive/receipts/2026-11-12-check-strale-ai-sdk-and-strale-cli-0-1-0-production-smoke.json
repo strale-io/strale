@@ -1,0 +1,101 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "c99e8a708fec85d27719276ff1fb2e960593568b"
+  },
+  "at": "2026-11-12T13:21:55.817Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/smoke-first-publish.json"
+  },
+  "summary": {
+    "trusted_publisher": "Petter added strale-io/strale, release-npm.yml, npm-release (publish allowed, dist-tag not) and disallowed bypass-2fa tokens on both packages, 2026-11-12"
+  },
+  "topic": "strale-ai-sdk-and-strale-cli-0-1-0-production-smoke",
+  "raw": {
+    "checks": [
+      {
+        "package": "strale-ai-sdk",
+        "version": "0.1.0",
+        "installed_from": "registry.npmjs.org (npm i strale-ai-sdk@0.1.0 ai zod, outside the repo)",
+        "resolved": {
+          "ai": "7.0.170",
+          "zod": "4.6.7"
+        },
+        "published_by": "Petter, local npm session, --provenance=false (first publish)",
+        "registry_versions": [
+          "0.0.0-stage",
+          "0.1.0"
+        ],
+        "dist_tag_latest": "0.1.0",
+        "observed": {
+          "CLIENT_ID": "strale-ai-sdk/0.1.0",
+          "tools": [
+            "strale_search",
+            "strale_execute"
+          ],
+          "strale_search('validate an IBAN')": {
+            "ok": true,
+            "total": 4,
+            "first": "iban-validate",
+            "price_cents": 5,
+            "is_free_tier": true
+          },
+          "strale_execute(iban-validate, DE89370400440532013000)": {
+            "ok": true,
+            "rail": "free",
+            "valid": true,
+            "price_cents": 0,
+            "status": "completed",
+            "provenance_source": "iban-validate:algorithmic"
+          }
+        },
+        "logged_and_continued_errors": "none observed",
+        "checked_at": "2026-11-12T13:06:47Z"
+      },
+      {
+        "package": "strale-cli",
+        "version": "0.1.0",
+        "installed_from": "registry.npmjs.org (npx -y strale-cli@0.1.0, outside the repo)",
+        "published_by": "Petter, local npm session, --provenance=false (first publish)",
+        "registry_versions": [
+          "0.0.0-stage",
+          "0.1.0"
+        ],
+        "dist_tag_latest": "0.1.0",
+        "observed": {
+          "version": {
+            "exit": 0,
+            "stdout": {
+              "name": "strale-cli",
+              "version": "0.1.0"
+            }
+          },
+          "search 'validate an IBAN' --limit 2": {
+            "exit": 0,
+            "first": "iban-validate",
+            "price_cents": null,
+            "note": "typeahead returns null capability prices by design (DEC-20260304-A)"
+          },
+          "run iban-validate --max-price-cents 0": {
+            "status": "completed",
+            "price_cents": 0,
+            "valid": true,
+            "provenance_source": "iban-validate:algorithmic"
+          },
+          "balance without STRALE_API_KEY": {
+            "exit": 3,
+            "error_code": "unauthorized"
+          },
+          "run without --max-price-cents": {
+            "exit": 2,
+            "error_code": "invalid_request"
+          }
+        },
+        "logged_and_continued_errors": "none observed",
+        "checked_at": "2026-11-12T13:16:25Z"
+      }
+    ],
+    "trusted_publisher": "Petter added strale-io/strale, release-npm.yml, npm-release (publish allowed, dist-tag not) and disallowed bypass-2fa tokens on both packages, 2026-11-12"
+  }
+}
