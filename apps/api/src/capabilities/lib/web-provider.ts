@@ -533,7 +533,7 @@ async function fetchPageOnce(
       const plainResp = await safeFetch(targetUrl, {
         headers: {
           "User-Agent": STRALE_USER_AGENT,
-          "Accept": "text/html,application/xhtml+xml",
+          "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
         },
         signal: AbortSignal.timeout(8000),
       });
@@ -612,6 +612,7 @@ async function fetchPageOnce(
         if (errText) sawFirstAnswer = true;
       }
     } catch (err) {
+      // degraded-ok: only a transport failure of the plain look falls through, to the plain preflight below and then the rendered route, whose HTML is read for a challenge; refusals, oversize, SSRF, a 4xx answer, ENOTFOUND and ECONNREFUSED throw.
       // #428: an oversized page is TERMINAL, never a reason to fall through.
       // Letting it cascade would have Browserless render the same huge
       // resource — a second transfer of a page already judged too big. A
@@ -920,7 +921,7 @@ export async function assertPlainPreflightAllowed(
   try {
     res = await safeFetch(targetUrl, {
       // Only the start of the body is read, so ask for only that.
-      headers: { "User-Agent": STRALE_USER_AGENT, "Accept": "text/html,application/xhtml+xml", "Range": PREFLIGHT_RANGE },
+      headers: { "User-Agent": STRALE_USER_AGENT, "Accept": "text/html,application/xhtml+xml,*/*;q=0.8", "Range": PREFLIGHT_RANGE },
       maxRedirects: PREFLIGHT_MAX_REDIRECTS,
       signal: AbortSignal.timeout(8000),
     });

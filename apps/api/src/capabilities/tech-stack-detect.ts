@@ -68,7 +68,7 @@ registerCapability("tech-stack-detect", async (input: CapabilityInput) => {
   const resp = await safeFetch(target, {
     headers: {
       "User-Agent": STRALE_USER_AGENT,
-      Accept: "text/html,application/xhtml+xml",
+      Accept: "text/html,application/xhtml+xml,*/*;q=0.8",
     },
     signal: AbortSignal.timeout(15000),
   });

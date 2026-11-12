@@ -66,7 +66,7 @@ async function tryPlainFetch(url: string): Promise<string | null> {
     const resp = await safeFetch(url, {
       headers: {
         "User-Agent": STRALE_USER_AGENT,
-        Accept: "text/html,application/xhtml+xml",
+        Accept: "text/html,application/xhtml+xml,*/*;q=0.8",
       },
       signal: AbortSignal.timeout(5000),
     });
@@ -141,6 +141,7 @@ async function tryPlainFetch(url: string): Promise<string | null> {
 
     return null;
   } catch (err) {
+    // degraded-ok: any other failure of this plain look (transport, 5xx, a page too thin) returns null so fetchRenderedHtml runs web-provider's full chain, which repeats robots, the plain request and the challenge checks; definitive answers, refusals, oversize and SSRF rethrow.
     if (err instanceof DefinitiveFetchError) throw err;
     // A block or a policy refusal is the answer, not a reason to try Browserless.
     if (isCapabilityRefusal(err)) throw err;

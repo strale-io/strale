@@ -19,9 +19,35 @@ import ts from "typescript";
 // direct call (an alias, .call, an element access, spread arguments). Both
 // functions are found through their import declarations, so importing under
 // another name or as a namespace is still seen.
-const dir = new URL("../capabilities/", import.meta.url);
+//
+// Follow-up 55: a tool can also file a site's 4xx as the target's in its own
+// words, without targetUnavailable. "URL returned HTTP n" is on the breaker's
+// target-site list, and the failure taxonomy files a message saying "Check
+// the URL is correct" as the caller's site failing; web-provider, url-to-markdown and
+// tech-stack-detect sent Accept text/html,application/xhtml+xml and so could
+// draw a 406 of Strale's own making under either. A tool that builds such a
+// message is checked the same way, and capabilities/lib is scanned too.
+const ROOT = new URL("../capabilities/", import.meta.url);
+const DIRS = [
+  { dir: ROOT, prefix: "", lib: "../lib/" },
+  { dir: new URL("lib/", ROOT), prefix: "lib/", lib: "../../lib/" },
+];
 
-/** Every capability that calls targetUnavailable today. A tool added or removed changes this list on purpose. */
+/**
+ * Does the file build a message that files a site's status as the target's
+ * whatever the status? Two phrasings do: "URL returned HTTP n" (the breaker's
+ * "URL returned HTTP 4" and "5" entries) and the house phrase "Check the URL
+ * is correct", which the failure taxonomy reads as the caller's address
+ * failing. "HTTP n from host" alone is excused only for 403 and 404, so a 406
+ * under it is already counted against the tool, and it is not matched here.
+ */
+function filesStatusInItsOwnWords(src: ts.SourceFile): boolean {
+  return nodes(src, (n): n is ts.StringLiteralLike | ts.TemplateLiteralLikeNode =>
+    ts.isStringLiteralLike(n) || ts.isTemplateHead(n) || ts.isTemplateMiddle(n) || ts.isTemplateTail(n),
+  ).some(n => n.text.startsWith("URL returned HTTP ") || n.text.includes("Check the URL is correct"));
+}
+
+/** Every capability that files a site's status as the target's today (targetUnavailable or its own words). A tool added or removed changes this list on purpose. */
 // How many direct safeFetch calls each file makes. Pinned so a call the
 // checker cannot see (through another module, or a pattern it does not parse)
 // shows up as a count that no longer matches; update a count only after
@@ -35,11 +61,14 @@ const EXPECTED_CALLS: Record<string, number> = {
   "link-extract.ts": 1,
   "meta-extract.ts": 1,
   "og-image-check.ts": 3,
+  "lib/web-provider.ts": 2,
   "page-exists.ts": 1,
   "port-check.ts": 0,
+  "tech-stack-detect.ts": 1,
+  "url-to-markdown.ts": 1,
   "website-carbon-estimate.ts": 1,
 };
-const EXPECTED_FILES = Object.keys(EXPECTED_CALLS);
+const EXPECTED_FILES = Object.keys(EXPECTED_CALLS).sort();
 
 function nodes<T extends ts.Node>(root: ts.Node, predicate: (n: ts.Node) => n is T): T[] {
   const found: T[] = [];
@@ -129,18 +158,21 @@ function acceptsAnything(accept: string): boolean {
   });
 }
 
-const files = readdirSync(dir).filter(f => f.endsWith(".ts") && !f.endsWith(".test.ts")).sort().flatMap(file => {
-  const src = ts.createSourceFile(file, readFileSync(new URL(file, dir), "utf8"), ts.ScriptTarget.Latest, true);
-  const target = importedAs(src, "../lib/upstream-result.js", "targetUnavailable");
-  const safeFetch = importedAs(src, "../lib/safe-fetch.js", "safeFetch");
-  const calls = nodes(src, ts.isCallExpression);
-  return calls.some(target.isCall)
-    ? [{ file, src, fetches: calls.filter(safeFetch.isCall), indirect: safeFetch.indirectUses(src) }]
-    : [];
-});
+const files = DIRS.flatMap(({ dir, prefix, lib }) =>
+  readdirSync(dir).filter(f => f.endsWith(".ts") && !f.endsWith(".test.ts")).flatMap(name => {
+    const file = prefix + name;
+    const src = ts.createSourceFile(file, readFileSync(new URL(name, dir), "utf8"), ts.ScriptTarget.Latest, true);
+    const target = importedAs(src, `${lib}upstream-result.js`, "targetUnavailable");
+    const safeFetch = importedAs(src, `${lib}safe-fetch.js`, "safeFetch");
+    const calls = nodes(src, ts.isCallExpression);
+    return calls.some(target.isCall) || filesStatusInItsOwnWords(src)
+      ? [{ file, src, fetches: calls.filter(safeFetch.isCall), indirect: safeFetch.indirectUses(src) }]
+      : [];
+  }),
+).sort((a, b) => a.file.localeCompare(b.file));
 
 describe("a tool that files a site's status as the target's sends an Accept the site cannot refuse", () => {
-  it("finds exactly the tools that call targetUnavailable", () => {
+  it("finds exactly the tools that file a site's status as the target's", () => {
     expect(files.map(f => f.file)).toEqual(EXPECTED_FILES);
   });
 
