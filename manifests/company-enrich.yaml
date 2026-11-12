@@ -171,7 +171,7 @@ limitations:
     workaround: Use the null fields as an explicit signal that the homepage or its /about page did not publish that metadata.
   - title: Sites that refuse automated requests are not read
     text: >-
-      When the site answers HTTP 401, 403, 407 or 429, shows an anti-bot challenge page instead of the content, or disallows the page in robots.txt, or its robots.txt cannot be fetched (a network or server error), the call fails with an error and is not billed. Strale does not retry through another route, so repeating the call does not change the answer. If only the /about page refuses or cannot be read, the result comes from the homepage alone and is billed.
+      When the site answers HTTP 401, 403, 407 or 429, shows an anti-bot challenge page instead of the content, or disallows the page in robots.txt, or its robots.txt cannot be fetched (a network or server error), the call fails with an error and is not billed. Strale does not try another route around the block. Repeating the call gets the same answer while the site keeps refusing; when robots.txt could not be fetched, wait at least 5 minutes before trying again. If only the /about page refuses or cannot be read, the result comes from the homepage alone and is billed when the homepage yields usable company details; when it does not, the call fails unbilled.
     category: availability
     severity: info
 

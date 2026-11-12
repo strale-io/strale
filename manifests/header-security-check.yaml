@@ -93,7 +93,7 @@ limitations:
     workaround: Combine with ssl-check for TLS assessment and use a full DAST scanner for application-level security testing
   - title: Sites that refuse automated requests are not read
     text: >-
-      When the site answers HTTP 401, 403, 407 or 429, shows an anti-bot challenge page instead of the content, or disallows the page in robots.txt, or its robots.txt cannot be fetched (a network or server error), the call fails with an error and is not billed. Strale does not retry through another route, so repeating the call does not change the answer.
+      When the site answers HTTP 401, 403, 407 or 429, shows an anti-bot challenge page instead of the content, or disallows the page in robots.txt, or its robots.txt cannot be fetched (a network or server error), the call fails with an error and is not billed. Strale does not try another route around the block. Repeating the call gets the same answer while the site keeps refusing; when robots.txt could not be fetched, wait at least 5 minutes before trying again.
     category: availability
     severity: info
 
