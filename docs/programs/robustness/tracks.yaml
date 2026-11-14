@@ -101,9 +101,10 @@ tracks:
       called it a broad rail failure while the dominant buyer (about 99 percent
       of baseline) kept settling, which itself proves the rail works. Fix
       queued for Codex: docs/lanes/codex/x402-watch-live-buyer-brief.md (a
-      warning verdict when a top buyer still settles at least 10 percent of
-      its own baseline). After it merges and deploys, a fresh clean week is
-      the exit receipt.
+      warning verdict when the top buyer, holding at least half the baseline,
+      still settles at least 20 percent of its own baseline; revised after
+      independent review found the first rule flipped six tests). After it
+      merges and deploys, a fresh clean week is the exit receipt.
       (3) production-watch: exit part met on 2026-11-11. #1002
       acknowledges #856 (ingest-ee-directors) until 2026-12-11; scheduled run
       42976490573 (08:01 Swedish time, main d3bff941) was green, and

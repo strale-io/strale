@@ -1,12 +1,14 @@
 Intent: Strale master on account gmail, started by the wow-core takeover (session_01Ms71ZkDJuDwFoVXJUt79za) on 2026-11-14 about 11:30 Swedish time. Supersedes `2026-11-11-strale-master-checkpoint-hotmail-ra.md` as the cold-start note.
 
-Session: session_01Ms71ZnJsKfZn5eCYBzr5kL (Strale master). Account gmail: seven-day usage 3% at 11:41, resets Thu 19 Nov 16:00 Swedish time. Lease: account gmail, `WOW_ACCOUNT_LABEL=gmail` is set, so every session on this account passes the check; no strale entry yet, so the check runs with `--parent session_01Ms71ZkDJuDwFoVXJUt79za`.
+Session: session_01Ms71ZnJsKfZn5eCYBzr5kL (Strale master). Account gmail: seven-day usage 3% at 11:41, resets Thu 19 Nov 16:00 Swedish time. Lease #6876159258 (account gmail, 2026-11-14 11:50 Swedish time) names this session as strale, so the check runs without `--parent`: `node .claude/scripts/bus.mjs lease --check --session session_01Ms71ZnJsKfZn5eCYBzr5kL`. Stand down if the strale entry names another session.
 
 Scheduled task: `trig_01SD6EU6Z6HNbkjQVDwxhXdH`, hourly at :51, fires into this session and starts with the lease check (hourly: merges deploy to production and x402 payers exist). The hotmail-ra task `trig_013u7Gru43sfxdCMp4rXDMbz` belongs to the old account and stands down by its own lease check.
 
 ## Codex
 
-No dispatcher entry in this account's lease period (`bus.mjs lease --authority`: codexDispatcher null) and no readiness message on strale-planning (the newest dispatcher message is from 2026-11-06). No builder lane is started until it says signed in and codexEnv `6aece1e0cc688191ab77fa08f902e589` valid. Queued for it: `docs/lanes/codex/x402-watch-live-buyer-brief.md` (branch `codex/x402-watch-live-buyer`).
+Dispatcher: session_01Ms71Zpef1CVJt8G17izV5p (gmail, lease #6876159258). It reported ready at 11:52 Swedish time: signed in, codexEnv valid. It takes a slug only; the brief must sit at `docs/lanes/codex/<slug>-brief.md` on the pushed `codex/<slug>` branch.
+
+Sent: `x402-watch-live-buyer`. The first task (task_e_6af83f44ec9883299ed23124a203565c) ran on brief revision 1, which independent review failed: the rule flipped six existing tests. That run was cancelled, with nothing to be pushed. Revision 2 (top buyer only, at least half the baseline, at least 20 percent of its own baseline; it intentionally changes two named tests) was checked against the suite locally, pushed and re-sent. Review the Codex branch in a separate session; the dispatcher runs no branch code.
 
 ## Done this session
 
