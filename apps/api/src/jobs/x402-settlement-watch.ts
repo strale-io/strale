@@ -21,6 +21,9 @@
  *
  * Since 2026-10-29 the count is split by payer, so one big buyer pausing is a
  * warning rather than a CRITICAL page (see "Buyer concentration" below).
+ * A dominant buyer that is still settling at least a fifth of its own baseline
+ * is also rail proof: that is a reduced customer-volume warning, not a rail
+ * failure, even when the smaller buyers are too quiet to prove the rail.
  *
  * Read-only on the DB; no advisory lock needed (duplicate alerts from a
  * multi-replica deploy are annoying, not harmful, and we run 1 replica).
@@ -70,6 +73,8 @@ const ALERT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const MAX_EXCLUDED_BUYERS = 2;
 const OTHERS_NEAR_BASELINE_RATIO = 0.7;
 const MIN_OTHERS_PER_DAY = 3;
+const LIVE_BUYER_MIN_SHARE = 0.5;
+const LIVE_BUYER_MIN_RATIO = 0.2;
 
 // Robust baseline (incident 2026-11-03): the baseline is the daily mean of
 // the 7 days before the last 24h (24h buckets counted back from now). One
@@ -242,7 +247,7 @@ export function bucketsFromQueryRows(rows: Array<Record<string, unknown>>) {
 export type VolumeVerdict =
   | { kind: "no_baseline" | "healthy"; last24h: number; baselinePerDay: number; cappedPayerDays: number }
   | {
-      kind: "concentrated" | "broad";
+      kind: "concentrated" | "reduced" | "broad";
       last24h: number;
       baselinePerDay: number;
       /** (payer, baseline day) pairs capped as that payer's one-off burst. */
@@ -251,7 +256,7 @@ export type VolumeVerdict =
       distinctPayers7d: number;
       /** The biggest baseline payers, largest first, with their share of baseline volume. */
       topBuyers: Array<{ payerHashPrefix: string; baselinePerDay: number; last24h: number; share: number }>;
-      /** How many of topBuyers the concentrated verdict excluded (0 when broad). */
+      /** How many of topBuyers the concentrated verdict excluded (0 when reduced or broad). */
       excluded: number;
       othersLast24h: number;
       othersBaselinePerDay: number;
@@ -305,8 +310,14 @@ export function classifyVolume(rows: PayerRow[]): VolumeVerdict {
     }
   }
 
+  const liveBuyer = top[0];
+  const reduced = excluded === 0 && liveBuyer !== undefined &&
+    liveBuyer.baseline >= LIVE_BUYER_MIN_SHARE * baselinePerDay &&
+    liveBuyer.baseline >= MIN_BASELINE_PER_DAY &&
+    liveBuyer.row.last24h >= Math.max(MIN_BASELINE_PER_DAY, LIVE_BUYER_MIN_RATIO * liveBuyer.baseline);
+
   return {
-    kind: excluded > 0 ? "concentrated" : "broad",
+    kind: excluded > 0 ? "concentrated" : reduced ? "reduced" : "broad",
     last24h,
     baselinePerDay,
     cappedPayerDays,
@@ -320,7 +331,7 @@ export function classifyVolume(rows: PayerRow[]): VolumeVerdict {
   };
 }
 
-function describeBuyers(v: Extract<VolumeVerdict, { kind: "concentrated" | "broad" }>): string {
+function describeBuyers(v: Extract<VolumeVerdict, { kind: "concentrated" | "reduced" | "broad" }>): string {
   const buyers = v.topBuyers
     .map((b, i) =>
       `#${i + 1} payer ${b.payerHashPrefix} (keyed hash): ${Math.round(b.share * 100)}% of baseline, ` +
@@ -334,7 +345,9 @@ function describeBuyers(v: Extract<VolumeVerdict, { kind: "concentrated" | "broa
   );
 }
 
-export async function checkX402SettlementVolume(opts: { db?: Database } = {}): Promise<VolumeVerdict> {
+export async function checkX402SettlementVolume(
+  opts: { db?: Database; alert?: typeof alertOnce } = {},
+): Promise<VolumeVerdict> {
   const db = opts.db ?? getDb();
   // One bucket per (payer, 24h periods back from now): 0 is the last 24h
   // (created_at >= now() - 24h, as before), 1..BASELINE_DAYS the baseline
@@ -363,7 +376,7 @@ export async function checkX402SettlementVolume(opts: { db?: Database } = {}): P
       last_24h: last24h,
       baseline_per_day: round1(baselinePerDay),
       capped_payer_days: verdict.cappedPayerDays,
-      ...(verdict.kind === "concentrated" || verdict.kind === "broad"
+      ...(verdict.kind === "concentrated" || verdict.kind === "reduced" || verdict.kind === "broad"
         ? {
             distinct_payers_24h: verdict.distinctPayers24h,
             distinct_payers_7d: verdict.distinctPayers7d,
@@ -374,7 +387,9 @@ export async function checkX402SettlementVolume(opts: { db?: Database } = {}): P
     "x402-settlement-watch",
   );
 
-  if (verdict.kind !== "concentrated" && verdict.kind !== "broad") return verdict;
+  if (verdict.kind !== "concentrated" && verdict.kind !== "reduced" && verdict.kind !== "broad") return verdict;
+
+  const sendAlertOnce = opts.alert ?? alertOnce;
 
   const totals =
     `Settled x402 transactions in the last 24h: ${last24h}. ` +
@@ -390,7 +405,7 @@ export async function checkX402SettlementVolume(opts: { db?: Database } = {}): P
     );
     // Its own key: a warning inside the cooldown must not swallow a CRITICAL
     // that follows it once the drop turns broad.
-    await alertOnce("x402-settlement-volume-drop-concentrated", ALERT_COOLDOWN_MS, {
+    await sendAlertOnce("x402-settlement-volume-drop-concentrated", ALERT_COOLDOWN_MS, {
       severity: "warning",
       db: opts.db,
       subject:
@@ -408,9 +423,25 @@ export async function checkX402SettlementVolume(opts: { db?: Database } = {}): P
     return verdict;
   }
 
+  if (verdict.kind === "reduced") {
+    await sendAlertOnce("x402-settlement-volume-drop-reduced", ALERT_COOLDOWN_MS, {
+      severity: "warning",
+      db: opts.db,
+      subject:
+        `x402 volume down to ${last24h} in 24h vs ~${Math.round(baselinePerDay)}/day; ` +
+        `the top buyer is still settling, so the rail works`,
+      body:
+        totals +
+        describeBuyers(verdict) +
+        `The top buyer kept settling, which proves the rail end to end; this is most likely a customer signal. ` +
+        `It becomes CRITICAL if that buyer falls under 20 percent of its own baseline or stops.`,
+    });
+    return verdict;
+  }
+
   // Cooldown lives in the DB, not module memory: redeploys used to reset it,
   // which sent five identical pages in 90 minutes on 2026-08-14.
-  await alertOnce("x402-settlement-volume-drop", ALERT_COOLDOWN_MS, {
+  await sendAlertOnce("x402-settlement-volume-drop", ALERT_COOLDOWN_MS, {
     severity: "critical",
     db: opts.db,
     subject: `x402 settlement volume dropped: ${last24h} in 24h vs ~${Math.round(baselinePerDay)}/day baseline`,
