@@ -3,10 +3,11 @@
  * and the alert wiring are covered against real Postgres in
  * x402-settlement-watch.integration.test.ts; these pin the edge cases.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   bucketsFromQueryRows,
   capPayerSpikes,
+  checkX402SettlementVolume,
   classifyVolume,
   rowsFromBuckets,
   SPIKE_CAP_FLOOR,
@@ -58,6 +59,66 @@ describe("classifyVolume", () => {
     if (v.kind !== "broad") throw new Error("unreachable");
     expect(v.topBuyers.map((b) => b.payerHashPrefix)).toEqual(["b"]);
     expect(v.distinctPayers24h).toBe(1);
+  });
+
+  it("treats the first-week shape as reduced while the dominant buyer keeps settling", () => {
+    expect(classifyVolume([perDay("big", 350, 140), perDay("small-1", 1, 0), perDay("small-2", 1, 0)]).kind)
+      .toBe("reduced");
+  });
+
+  it("keeps the first-week shape broad when the big buyer stops", () => {
+    expect(classifyVolume([perDay("big", 350, 0), perDay("small-1", 1, 0), perDay("small-2", 1, 0)]).kind)
+      .toBe("broad");
+  });
+
+  it("uses 20 percent of the dominant buyer baseline as the reduced boundary", () => {
+    expect(classifyVolume([perDay("big", 100, 19)]).kind).toBe("broad");
+    expect(classifyVolume([perDay("big", 100, 20)]).kind).toBe("reduced");
+    // The absolute minimum is the stricter boundary for baselines below 50/day.
+    expect(classifyVolume([perDay("big", 20, 9), perDay("other", 10, 0)]).kind).toBe("broad");
+    expect(classifyVolume([perDay("big", 20, 10), perDay("other", 10, 0)]).kind).toBe("reduced");
+  });
+
+  it("requires the still-settling buyer to hold at least half the baseline", () => {
+    const rows = [perDay("top", 40, 30), ...["a", "b", "c", "d"].map((payer) => perDay(payer, 15, 0))];
+    expect(classifyVolume(rows).kind).toBe("broad");
+  });
+
+  it("never lets a tiny second payer qualify as live-buyer rail proof", () => {
+    expect(classifyVolume([perDay("big", 150, 1), perDay("tiny", 1, 1)]).kind).toBe("broad");
+  });
+});
+
+describe("alert routing", () => {
+  const buckets = (bigLast24h: number) => [
+    { payer: "big", day_ago: 0, n: bigLast24h },
+    ...Array.from({ length: 7 }, (_, i) => ({ payer: "big", day_ago: i + 1, n: 100 })),
+  ];
+
+  it("routes a reduced verdict to its warning key without rollback text", async () => {
+    const alert = vi.fn(async () => true);
+    const db = { execute: vi.fn(async () => buckets(20)) };
+    await checkX402SettlementVolume({ db: db as never, alert });
+    expect(alert).toHaveBeenCalledOnce();
+    const [key, , options] = alert.mock.calls[0]!;
+    expect(key).toBe("x402-settlement-volume-drop-reduced");
+    expect(options.severity).toBe("warning");
+    expect(options.body).not.toContain("X402_CHALLENGE_VERSION");
+    expect(options.body).toContain("proves the rail end to end");
+    expect(options.body).toContain("most likely a customer signal");
+    expect(options.body).toContain("under 20 percent of its own baseline or stops");
+    expect(options.body).toContain("fewer than 10 in 24 hours");
+    expect(options.body).toContain("x402-payment-payload-version");
+  });
+
+  it("keeps a broad verdict on the critical key", async () => {
+    const alert = vi.fn(async () => true);
+    const db = { execute: vi.fn(async () => buckets(0)) };
+    await checkX402SettlementVolume({ db: db as never, alert });
+    expect(alert).toHaveBeenCalledOnce();
+    const [key, , options] = alert.mock.calls[0]!;
+    expect(key).toBe("x402-settlement-volume-drop");
+    expect(options.severity).toBe("critical");
   });
 });
 
@@ -242,7 +303,8 @@ describe("classifyVolume, what the plain mean already got right stays right (rev
     // Four days at 30% of normal: the healthy days stay in the baseline.
     const history = [30, 30, 30, 30, 100, 100, 100];
     expect(classifyVolume([daily("a", history, 25)]).baselinePerDay).toBe(meanBaseline([daily("a", history, 0)]));
-    expect(classifyVolume([daily("a", history, 25)]).kind).toBe("broad");
+    // x402-watch-live-buyer-2: it still pages, but as a reduced warning.
+    expect(classifyVolume([daily("a", history, 25)]).kind).toBe("reduced");
   });
 
   it("a buyer active on three of the seven days still counts, so its stop pages", () => {
@@ -297,13 +359,15 @@ describe("review round 4", () => {
     // Index 2 is a weekend lull at the old level; the ramp is days 0-1 and 3-6.
     const row = daily("a", [100, 100, 10, 100, 100, 100, 100], 25, new Array(7).fill(10));
     expect(capPayerSpikes(row)).toEqual(row.priorDaily);
-    expect(classifyVolume([row]).kind).toBe("broad");
+    // x402-watch-live-buyer-2: it still pages, but as a reduced warning.
+    expect(classifyVolume([row]).kind).toBe("reduced");
     // And on the next day, once the breaking day is itself a baseline day: the
     // two ramp days after the lull now look like a burst the payer is back
     // from (accepted cost), but the older ramp days are not, and it still pages.
     const next = daily("a", [25, 100, 100, 10, 100, 100, 100], 25, [100, 10, 10, 10, 10, 10, 10]);
     expect(capPayerSpikes(next).slice(3)).toEqual([10, 100, 100, 100]);
-    expect(classifyVolume([next]).kind).toBe("broad");
+    // x402-watch-live-buyer-2: it still pages, but as a reduced warning.
+    expect(classifyVolume([next]).kind).toBe("reduced");
   });
 
   it("a day far below the usual level is not the payer coming back", () => {
