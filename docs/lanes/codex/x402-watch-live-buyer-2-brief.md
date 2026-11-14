@@ -2,9 +2,9 @@ Intent: Codex builder brief: the x402 settlement watch stops paging CRITICAL "ra
 
 # Brief: x402 settlement watch counts the dominant buyer's own settlements as rail proof
 
-- **Requester:** the Strale master (session_01Ms71ZnJsKfZn5eCYBzr5kL), 2026-11-14. Revision 2, after independent review: the rule is narrower, and two existing tests change on purpose.
+- **Requester:** the Strale master (session_01Ms71ZnJsKfZn5eCYBzr5kL), 2026-11-14. Slug x402-watch-live-buyer-2 replaces x402-watch-live-buyer (revision 1, discarded after independent review): the rule is narrower, and two existing tests change on purpose.
   - Source: robustness T3 item (2) in `docs/programs/robustness/tracks.yaml`, and the first-week receipt `archive/receipts/2026-11-14-check-r3-x402-settlement-watch-first-week.json`.
-- **Branch:** push only `codex/x402-watch-live-buyer`. Never push `main`, and never label, approve, merge or comment.
+- **Branch:** push only `codex/x402-watch-live-buyer-2`. Never push `main`, and never label, approve, merge or comment.
 - **Data:** this brief and the repository only, with no secrets and no production data. Tests are offline vitest unit tests against `classifyVolume`, like the existing ones.
 - **Read first:**
   - `apps/api/src/jobs/x402-settlement-watch.ts`: the header comment, `classifyVolume()`, `describeBuyers()`, `checkX402SettlementVolume()`;
@@ -112,4 +112,4 @@ Each must fail against origin/main.
 
 ## Report
 
-Write `docs/lanes/codex/x402-watch-live-buyer-report.md` with: files changed, tests added (names), the verification commands and their results, and anything not done and why.
+Write `docs/lanes/codex/x402-watch-live-buyer-2-report.md` with: files changed, tests added (names), the verification commands and their results, and anything not done and why.

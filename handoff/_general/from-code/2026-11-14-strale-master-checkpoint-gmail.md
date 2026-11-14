@@ -8,7 +8,13 @@ Scheduled task: `trig_01SD6EU6Z6HNbkjQVDwxhXdH`, hourly at :51, fires into this 
 
 Dispatcher: session_01Ms71Zpef1CVJt8G17izV5p (gmail, lease #6876159258). It reported ready at 11:52 Swedish time: signed in, codexEnv valid. It takes a slug only; the brief must sit at `docs/lanes/codex/<slug>-brief.md` on the pushed `codex/<slug>` branch.
 
-Sent: `x402-watch-live-buyer`. The first task (task_e_6af83f44ec9883299ed23124a203565c) ran on brief revision 1, which independent review failed: the rule flipped six existing tests. That run was cancelled, with nothing to be pushed. Revision 2 (top buyer only, at least half the baseline, at least 20 percent of its own baseline; it intentionally changes two named tests) was checked against the suite locally, pushed and re-sent. Review the Codex branch in a separate session; the dispatcher runs no branch code.
+Slug `x402-watch-live-buyer` was discarded: its first task (task_e_6af83f44ec9883299ed23124a203565c) ran on brief revision 1, which independent review failed because its rule flipped six existing tests. The dispatcher will not push that output. The old remote branch `codex/x402-watch-live-buyer` could not be deleted from here (HTTP 403 on branch delete); remove it from GitHub, it holds only the two brief commits.
+
+Sent at 12:06 Swedish time: `x402-watch-live-buyer-2` (branch `codex/x402-watch-live-buyer-2`, brief `docs/lanes/codex/x402-watch-live-buyer-2-brief.md`). It covers the top buyer only, at least half the baseline, settling at least max(10, 20 percent of its own baseline), and it changes two named tests on purpose. A second independent review passed it with notes. Carry these into the review of Codex's branch:
+- New tests 3 (the 19 case), 4 and 5 also pass on main. They pin the boundary and are fine as they are.
+- Keep one line in the `reduced` alert body: "if a challenge-version change just deployed, check the x402-payment-payload-version counter". A wallet running both v1 and v2 clients would drop only partly on a bad challenge, so add that line on the branch if Codex followed the brief and left it out. Still no rollback instruction.
+
+Review the Codex branch in a separate session; the dispatcher runs no branch code.
 
 ## Done this session
 
