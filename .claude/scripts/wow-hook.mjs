@@ -25,7 +25,7 @@
 //                   as ONE block of at most 15 lines / 2,000 characters (health is trimmed
 //                   first, the contract never; the lane statement and the repo's handoff context,
 //                   clipped to a few lines plus a pointer, count inside the same budget).
-//                   source resume/compact: ONE short line.
+//                   source resume/compact: ONE line of at most 260 characters.
 //                   Claude Code gets it as hookSpecificOutput.additionalContext JSON, Codex
 //                   as plain stdout (its developer context). Claude also writes the
 //                   per-session presence marker .claude/sessions/<id>.lock. Codex adds its
@@ -44,6 +44,9 @@
 //                   newest account lease, `bus.mjs lease --json`, names another account, so a
 //                   session left on the old account stops itself; FAIL OPEN with one stderr
 //                   line when the label is unset or the bus cannot be read in 5 s). Deny JSON.
+//                   Bash, last of all (no deny above is overridden): ALLOW a routine read the grammar parsed completely: one
+//                   `gh api` GET of a fleet repository or search (readCommandDecision; no `node` allow: a hook allow skips the
+//                   classifier). Anything else, and any bash-policy failure: no decision (design 2026-11-06).
 //                   mcp__claude-code-remote__add_repo: ALLOW when the call is exactly {owner,
 //                   repo} or {repo: "owner/name"} naming the repository in WOW_BUS_REPO; also exactly
 //                   {owner: <WOW_BUS_REPO's owner>, repo: "wow-core"} with no other key (read-only,
@@ -106,7 +109,7 @@ const DEADLINE_TEST_MS = Number(process.env.WOW_HOOK_DEADLINE_MS) || 0;
 if (DEADLINE_TEST_MS > 0) DEADLINE_MS["pre-tool-use"] = Math.min(DEADLINE_MS["pre-tool-use"], DEADLINE_TEST_MS);
 const CHILD_MS = { sessionStart: 40_000, handoff: 120_000, health: 5_000 };
 export const BUDGET = { lines: 15, chars: 2_000 };
-export const RESUME_LINE = "wow-core: restore the working set (modified files, active ids, current task); the model check is already done.";
+export const RESUME_LINE = "wow-core: restore the working set (modified files, active ids, current task); re-read the live state resume block and the PR body's Resume here line (a master also AGENTS.md and its takeover or dispatcher state); the model check is already done.";
 export const NOPROGRESS_THRESHOLD = 3;
 
 function note(message) {
@@ -744,6 +747,85 @@ function pruneOldDays(base, today) {
   } catch { /* best effort */ }
 }
 
+// ---- child model ceiling (founder 2026-11-11, docs/reviews/2026-11-11-fleet-review.md change 5) ----
+// 7 of 47 sub-orchestrators on 1fg ran on the top model (USD 1,117 of 2,905 list price): a start that
+// names no model inherits its parent's, so a master on the top model passed it down. The routing table
+// (core/MODEL_ROUTING.md) gives a child session the `sub-orchestrator` tier, and the registry
+// (core/models.json; docs/models.json in a full consumer) owns the ids: this refuses a create_session
+// whose model is not an anthropic id of a tier at or below it, unless the prompt carries one line
+// `Top model: <reason>` outside a code fence (tier-2 final verification, and the Codex dispatcher's
+// orchestration role, whose launch line carries the line itself). Models match by family, so an alias and
+// a dated id both resolve. A comms consumer ships the hook without the registry: a fixed table stands in.
+const TIER_RANK = Object.freeze({ mechanical: 0, fast: 1, strong: 2, frontier: 3 });
+const FAMILIES = ["fable", "opus", "sonnet", "haiku"]; // top families first
+const FALLBACK_FAMILY = Object.freeze({ mechanical: "haiku", fast: "sonnet", strong: "sonnet", frontier: "opus" });
+const TOP_MODEL_LINE = /^Top model:[ \t]*.*\w.*$/m;
+export function modelFamily(model) {
+  const name = typeof model === "string" ? model.toLowerCase().replace(/\[1m\]/g, "") : "";
+  return FAMILIES.find((family) => name.includes(family)) ?? null;
+}
+const hookDir = () => path.dirname(fileURLToPath(import.meta.url));
+// Where the hook sits: wow-core (scripts/ beside core/), a full consumer (.claude/scripts/ beside docs/), or neither.
+function registryFiles(here) {
+  for (const [dir, models, routing, resolve] of [
+    [path.join(here, "..", "core"), "models.json", "MODEL_ROUTING.md", "node scripts/models.mjs"],
+    [path.join(here, "..", "..", "docs"), "models.json", "MODEL_ROUTING.md", "node .claude/scripts/models.mjs"]]) {
+    if (existsSync(path.join(dir, models))) return { models: path.join(dir, models), routing: path.join(dir, routing), resolve };
+  }
+  return null;
+}
+// The routing table's tier for a child session; `strong` when the table is not beside this copy or has no such row.
+export function childTierCeiling(routingPath) {
+  const here = hookDir();
+  for (const file of routingPath ? [routingPath] : [path.join(here, "..", "core", "MODEL_ROUTING.md"), path.join(here, "..", "..", "docs", "MODEL_ROUTING.md")]) {
+    try {
+      const row = readFileSync(file, "utf8").match(/^\|\s*sub-orchestrator\s*\|\s*(frontier|strong|fast|mechanical)\s*\|/m);
+      if (row) return row[1];
+    } catch { /* not here */ }
+  }
+  return "strong";
+}
+export function allowedModelFamilies(here = hookDir()) {
+  const files = registryFiles(here);
+  const ceiling = files ? childTierCeiling(files.routing) : "strong";
+  let ids = null;
+  if (files) {
+    try {
+      const tiers = JSON.parse(readFileSync(files.models, "utf8")).tiers ?? {};
+      ids = Object.fromEntries(Object.keys(TIER_RANK).map((tier) => [tier, tiers[tier]?.anthropic?.id]));
+    } catch { ids = null; }
+  }
+  const familyOf = (tier) => ids ? modelFamily(ids[tier]) : FALLBACK_FAMILY[tier];
+  const tiers = Object.keys(TIER_RANK);
+  const families = new Set(tiers.filter((tier) => TIER_RANK[tier] <= TIER_RANK[ceiling]).map(familyOf).filter(Boolean));
+  // The families the registry names at all; the fallback table knows every family it can tell apart.
+  const known = ids ? new Set(tiers.map(familyOf).filter(Boolean)) : new Set(FAMILIES);
+  return { ceiling, families, known, frontier: familyOf("frontier") ?? null, source: ids ? "registry" : "fallback", resolve: files?.resolve ?? null, hasRouting: Boolean(files) };
+}
+// The top model (founder 2026-11-11): a family ranked above the registry's frontier family. Masters, the
+// dispatcher and sub-orchestrators start on the frontier tier (MODEL_ROUTING); the top model is for a one-off
+// piece of heavy thinking in a child with a `Top model: <reason>` line. Claude Code's SessionStart payload
+// carries the session's own `model`, so a session started above the frontier tier gets one warning line, never a block.
+export function aboveFrontierNote(model, here = hookDir()) {
+  const family = modelFamily(model);
+  const { frontier, resolve } = allowedModelFamilies(here);
+  if (!family || !frontier || FAMILIES.indexOf(family) >= FAMILIES.indexOf(frontier)) return null;
+  const pin = resolve ? ` (\`${resolve} resolve --role orchestration\`)` : "";
+  return `MODEL NOTE: this session runs on the ${family} family, above the ${frontier} frontier tier. A master, dispatcher or sub-orchestrator starts on the frontier tier${pin}, not above it (MODEL_ROUTING, founder 2026-11-11): if that is your role, say so to the founder in your next report and keep working. A one-off heavy-thinking child started with a \`Top model: <reason>\` line needs no action.`;
+}
+export function modelCeilingDenial(input, here = hookDir()) {
+  const { ceiling, families, known, resolve, hasRouting } = allowedModelFamilies(here);
+  const model = typeof input.model === "string" ? input.model.trim() : "";
+  const family = modelFamily(model);
+  if (family && families.has(family)) return null;
+  if (TOP_MODEL_LINE.test(String(input.prompt ?? "").replace(/```[\s\S]*?```/g, ""))) return null;
+  const what = !model ? `this start names no model, so the child would inherit this session's, possibly the top one (a child gets the ${ceiling} tier)`
+    : family && known.has(family) ? `model ${model} is above the ${ceiling} tier the routing table gives a child`
+    : `model ${model} is not a model the registry knows`;
+  const pin = resolve ? ` Pin \`model\` to the ${ceiling} tier (\`${resolve} resolve --role sub-orchestrator\`)` : ` Pin \`model\` to the ${ceiling} tier (${[...families].join(" or ")})`;
+  return `wow-core: create_session ${what}${hasRouting ? " (MODEL_ROUTING, sub-orchestrator row)" : ""}.${pin}, or put one line \`Top model: <reason>\` in the prompt (tier-2 final verification and the Codex dispatcher's orchestration role only).`;
+}
+
 export function spawnDecision(payload, env = process.env, now = Date.now()) {
   try {
     const sid = safeId(payload?.session_id);
@@ -776,6 +858,8 @@ export function spawnDecision(payload, env = process.env, now = Date.now()) {
     if (childDepth > SPAWN_LIMITS.maxDepth) {
       return denyResponse(`wow-core: session depth ${depth} may not start sessions (master → lane → reviewer, no deeper; founder 2026-11-01). Use a subagent instead.`);
     }
+    const modelDenial = modelCeilingDenial(input);
+    if (modelDenial) return denyResponse(modelDenial);
     const base = env.WOW_SPAWN_DIR || path.join(os.homedir(), ".wow-core", "spawn");
     const container = safeId(env.CLAUDE_CODE_CONTAINER_ID) || safeId(os.hostname()) || "local";
     const today = new Date(now).toISOString().slice(0, 10);
@@ -1442,6 +1526,8 @@ async function sessionStart(root, payload, raw, tool, lane, cwd) {
   const required = [];
   if (tool === "codex") required.push(`${projectName(root)} session start (wow-core, Codex).`);
   required.push(...contractText.split(/\r?\n/));
+  const aboveFrontier = tool === "claude" ? aboveFrontierNote(payload.model) : null;
+  if (aboveFrontier) required.push(aboveFrontier);
   const optional = [...(tool === "codex" ? codexOrientation(root, contract.shared) : []), ...(await healthLines(root, input))];
   // Lines that must survive the budget (lane statement, project handoff context) are reserved
   // first; orientation and health then fill whatever room is left, health last.
@@ -1487,6 +1573,97 @@ async function handoffLines(root, input) {
   return clipHandoff(run.stdout);
 }
 
+// ---- routine reads approved by the hook (design docs/reviews/2026-11-06-permission-prompts-design.md, step 2) ----
+// A hook `allow` on Bash skips the auto-mode classifier (probe 2026-11-11, same cloud session: refused without it, ran
+// with it), so the exact, fully parsed read commands below pass without a prompt. Settings carry no wildcard for them
+// (a `*` in an allow entry matches spaces and slashes: review of #275/#276). Anything this grammar does not match
+// returns null: no decision, never a deny and never an allow, so the host's normal flow runs as before.
+
+// Words of a one-line command, or null when it is anything but plain words: an unquoted ; & | < > ( ) { } * ? [ ] ~ # !,
+// a backslash, `$`, a backtick, a newline or an unbalanced quote means the shell would do more than pass the words on.
+export function plainWords(command) {
+  if (typeof command !== "string" || !command.trim() || /[\\$`\r\n\u0000]/.test(command)) return null;
+  const words = [];
+  let word = null;
+  let quote = null;
+  for (const ch of command) {
+    if (quote) {
+      if (ch === quote) quote = null; else word += ch;
+    } else if (ch === "'" || ch === '"') {
+      quote = ch; word ??= "";
+    } else if (ch === " " || ch === "\t") {
+      if (word !== null) { words.push(word); word = null; }
+    } else if (/[;&|<>(){}*?\[\]~#!]/.test(ch)) {
+      return null;
+    } else word = (word ?? "") + ch;
+  }
+  if (quote) return null;
+  if (word !== null) words.push(word);
+  return words;
+}
+
+const allowResponse = (reason) => ({ hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow",
+  permissionDecisionReason: `wow-core: ${reason}` } });
+const SEARCH_PATH = /^search\/(?:code|repositories|issues|commits|users|topics|labels)(?:\?[A-Za-z0-9_.:@%=&,+\/~-]*)?$/;
+const REPO_PATH = /^repos\/([A-Za-z0-9](?:-?[A-Za-z0-9])*)\/([A-Za-z0-9_.-]+)((?:\/[A-Za-z0-9_.:@,+~-]+)*)(?:\?[A-Za-z0-9_.:@%=&,+\/~-]*)?$/;
+// Two layers for a fleet repository's endpoints (review 2026-11-11: a list of bad names keeps leaking, e.g.
+// actions/organization-variables, secret-scanning/alerts). Layer 1: the path is the repository itself or starts with one
+// of these resource families. Layer 2: no segment after the repository contains a name that returns values or unmasked output.
+const ALLOWED_RESOURCES = new Set(["pulls", "issues", "commits", "contents", "branches", "compare", "check-runs", "check-suites", "statuses",
+  "status", "actions", "labels", "releases", "git", "tags", "milestones", "rulesets", "rules"]);
+const SENSITIVE_SEGMENT = /variables|secret|logs|hooks|keys|zip|tarball/i;
+const UNSAFE_JQ = /\benv\b|\$ENV|\binputs?\b|input_filename|\$__|\bdebug\b|\bstderr\b/;
+
+// `gh api ...` that can only be a GET of a fleet repository (or search): the grammar in the design.
+export function ghApiReadDecision(words, fleet) {
+  if (words[0] !== "gh" || words[1] !== "api") return null;
+  let method = null;
+  let endpoint = null;
+  for (let i = 2; i < words.length; i++) {
+    const w = words[i];
+    if (w === "-X" || w === "--method") {
+      if (method !== null || words[++i] !== "GET") return null;
+      method = "GET";
+    } else if (w === "--paginate") {
+      continue;
+    } else if (w === "--jq") {
+      const expr = words[++i];
+      if (typeof expr !== "string" || UNSAFE_JQ.test(expr)) return null;
+    } else if (w === "-H") {
+      if (!/^Accept: [A-Za-z0-9.+\/;=_ -]+$/.test(words[++i] ?? "")) return null;
+    } else if (w === "--cache") {
+      if (!/^\d{1,4}[smh]$/.test(words[++i] ?? "")) return null;
+    } else if (w.startsWith("-") || endpoint !== null) {
+      return null;
+    } else endpoint = w;
+  }
+  if (endpoint === null || endpoint.split("?")[0].split("/").some((part) => part === ".." || part === ".")) return null;
+  if (SEARCH_PATH.test(endpoint)) return allowResponse("`gh api` GET of search/... is allowed (routine read, design 2026-11-06)");
+  const m = endpoint.match(REPO_PATH);
+  if (!m || !fleet.has(`${m[1]}/${m[2]}`.toLowerCase())) return null;
+  const rest = m[3].split("/").filter(Boolean);
+  if (rest.length && !ALLOWED_RESOURCES.has(rest[0])) return null;
+  if (rest.some((part) => SENSITIVE_SEGMENT.test(part))) return null;
+  return allowResponse(`\`gh api\` GET of ${m[1]}/${m[2]} is allowed (fleet repository, routine read, design 2026-11-06)`);
+}
+
+export function readCommandDecision(command, { fleet = new Set() } = {}) {
+  const words = plainWords(command);
+  if (!words) return null;
+  return ghApiReadDecision(words, fleet);
+}
+
+// The repositories whose GET reads are allowed: wow-core and the bus repository (WOW_BUS_REPO's owner), plus the Active
+// masters of wow-core's roster as committed on origin/main (readable only in wow-core's own checkout; elsewhere, and on
+// any error, the roster adds nothing and a read of a roster repository gets no decision).
+function fleetForReads(env = process.env) {
+  const fleet = new Set();
+  const bus = trustedBusRepo(env);
+  if (bus) { fleet.add(bus.toLowerCase()); fleet.add(`${bus.split("/")[0]}/${WOW_CORE_REPO_NAME}`.toLowerCase()); }
+  try { for (const repo of rosterRepos(committedRoster())) fleet.add(repo); } catch { /* no roster here */ }
+  return fleet;
+}
+
 // ---- dispatch ----
 
 // root is null when the payload cwd is outside any wow-core consumer: the shell policy and marker
@@ -1521,6 +1698,7 @@ async function preToolUse(root, payload, cwd, workDir = cwd, stops = {}) {
   const authorityWrite = await leaseAuthorityGuard({ command, cwd: workDir });
   if (authorityWrite) return `${JSON.stringify(denyResponse(authorityWrite))}\n`;
   if (root) touchMarker(root, payload.session_id);
+  let policyFailed = false;
   const policy = root ? firstExisting(root, [".claude/hooks/guard-bash-policy.mjs", "hooks/guard-bash-policy.mjs"]) : null;
   if (policy) {
     try {
@@ -1528,14 +1706,19 @@ async function preToolUse(root, payload, cwd, workDir = cwd, stops = {}) {
       const reason = evaluate(command, workDir);
       if (reason) return `${JSON.stringify(response(reason))}\n`;
     } catch (error) {
-      note(`bash policy failed, allowing: ${error?.message ?? error}`);
+      policyFailed = true;
+      note(`bash policy failed, no read allow: ${error?.message ?? error}`);
     }
   }
   const guard = guardSharedTree({ command, sid: payload.session_id, cwd });
   for (const warning of guard.warnings) note(warning);
   if (guard.reason) return `${JSON.stringify(denyResponse(guard.reason))}\n`;
   const pushReason = await pushCheck({ command, cwd: workDir, fresh: fence.fresh, transcriptPath: payload?.transcript_path, leaseAccount: fence.account });
-  return pushReason ? `${JSON.stringify(denyResponse(pushReason))}\n` : "";
+  if (pushReason) return `${JSON.stringify(denyResponse(pushReason))}\n`;
+  // Last, so no deny above is ever overridden: a routine read the grammar fully parsed is allowed (no decision otherwise).
+  // A failed bash policy must never end in this hook's allow.
+  const read = policyFailed ? null : readCommandDecision(command, { fleet: fleetForReads() });
+  return read ? `${JSON.stringify(read)}\n` : "";
 }
 
 export async function dispatch(mode, raw, tool, { viaParent = false, env = process.env } = {}) {

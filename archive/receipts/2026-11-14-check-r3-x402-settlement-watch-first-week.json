@@ -1,0 +1,637 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "5b05ccc672d658344ca6fbcf79b4e76f768ad997"
+  },
+  "at": "2026-11-14T10:48:46.536Z",
+  "inputs": {
+    "source": "Railway deploy logs, project Strale, service strale, production; filters \"x402-settlement-watch\" and \"alerting-sent\"",
+    "window": "2026-11-07T00:00Z..2026-11-14T10:45Z",
+    "watch_file": "apps/api/src/jobs/x402-settlement-watch.ts"
+  },
+  "summary": {
+    "ticks": 176,
+    "healthy_ticks": 107,
+    "concentrated_ticks": 3,
+    "broad_ticks": 66,
+    "pages_sent": 5,
+    "warning_pages": 1,
+    "critical_pages": 4,
+    "min_ratio_24h_to_baseline": 0.26,
+    "max_distinct_payers_24h_on_broad_ticks": 3,
+    "exit_no_false_page_met": false,
+    "finding": "the 24h volume really fell below half the baseline. Every CRITICAL took the broad path because one buyer holds at least 99 percent of the baseline, so the others are below the floor that can prove the rail works (a deliberate, tested rule). But at least one payer settled in every alerting window, and the dominant buyer's own continuing settlements already prove the rail works; the rule ignores them. So the CRITICAL rail-failure framing and its challenge-version rollback advice were false for this week, the right signal was a customer-volume warning, and a sustained drop re-pages CRITICAL every 24h (4 pages in 4 days)",
+    "broad_ticks_with_top_buyer_baseline_share_at_least_99_pct": 66,
+    "volume_drop_real": true,
+    "min_distinct_payers_24h_on_broad_ticks": 1
+  },
+  "topic": "r3-x402-settlement-watch-first-week",
+  "raw": {
+    "ok": false,
+    "inputs": {
+      "source": "Railway deploy logs, project Strale, service strale, production; filters \"x402-settlement-watch\" and \"alerting-sent\"",
+      "window": "2026-11-07T00:00Z..2026-11-14T10:45Z",
+      "watch_file": "apps/api/src/jobs/x402-settlement-watch.ts"
+    },
+    "summary": {
+      "ticks": 176,
+      "healthy_ticks": 107,
+      "concentrated_ticks": 3,
+      "broad_ticks": 66,
+      "pages_sent": 5,
+      "warning_pages": 1,
+      "critical_pages": 4,
+      "min_ratio_24h_to_baseline": 0.26,
+      "max_distinct_payers_24h_on_broad_ticks": 3,
+      "exit_no_false_page_met": false,
+      "finding": "the 24h volume really fell below half the baseline. Every CRITICAL took the broad path because one buyer holds at least 99 percent of the baseline, so the others are below the floor that can prove the rail works (a deliberate, tested rule). But at least one payer settled in every alerting window, and the dominant buyer's own continuing settlements already prove the rail works; the rule ignores them. So the CRITICAL rail-failure framing and its challenge-version rollback advice were false for this week, the right signal was a customer-volume warning, and a sustained drop re-pages CRITICAL every 24h (4 pages in 4 days)",
+      "broad_ticks_with_top_buyer_baseline_share_at_least_99_pct": 66,
+      "volume_drop_real": true,
+      "min_distinct_payers_24h_on_broad_ticks": 1
+    },
+    "raw": {
+      "pages": [
+        {
+          "at": "2026-11-08T01:56Z",
+          "severity": "warning",
+          "key": "x402-settlement-volume-drop-concentrated"
+        },
+        {
+          "at": "2026-11-09T07:23Z",
+          "severity": "critical",
+          "key": "x402-settlement-volume-drop"
+        },
+        {
+          "at": "2026-11-10T07:47Z",
+          "severity": "critical",
+          "key": "x402-settlement-volume-drop"
+        },
+        {
+          "at": "2026-11-11T08:02Z",
+          "severity": "critical",
+          "key": "x402-settlement-volume-drop"
+        },
+        {
+          "at": "2026-11-12T09:19Z",
+          "severity": "critical",
+          "key": "x402-settlement-volume-drop"
+        }
+      ],
+      "alerting_ticks": [
+        {
+          "t": "2026-11-08T01:56Z",
+          "verdict": "concentrated",
+          "ratio": 0.49,
+          "payers_24h": 2,
+          "payers_7d": 8,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-08T02:57Z",
+          "verdict": "concentrated",
+          "ratio": 0.47,
+          "payers_24h": 2,
+          "payers_7d": 8,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-08T03:58Z",
+          "verdict": "concentrated",
+          "ratio": 0.47,
+          "payers_24h": 2,
+          "payers_7d": 8,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-09T07:23Z",
+          "verdict": "broad",
+          "ratio": 0.47,
+          "payers_24h": 3,
+          "payers_7d": 8,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-09T08:24Z",
+          "verdict": "broad",
+          "ratio": 0.43,
+          "payers_24h": 3,
+          "payers_7d": 8,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-09T09:25Z",
+          "verdict": "broad",
+          "ratio": 0.43,
+          "payers_24h": 3,
+          "payers_7d": 8,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-09T10:26Z",
+          "verdict": "broad",
+          "ratio": 0.42,
+          "payers_24h": 3,
+          "payers_7d": 8,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-09T11:27Z",
+          "verdict": "broad",
+          "ratio": 0.41,
+          "payers_24h": 2,
+          "payers_7d": 9,
+          "top_share_pct": 99.1
+        },
+        {
+          "t": "2026-11-09T12:28Z",
+          "verdict": "broad",
+          "ratio": 0.42,
+          "payers_24h": 2,
+          "payers_7d": 9,
+          "top_share_pct": 99.1
+        },
+        {
+          "t": "2026-11-09T13:29Z",
+          "verdict": "broad",
+          "ratio": 0.44,
+          "payers_24h": 2,
+          "payers_7d": 9,
+          "top_share_pct": 99.1
+        },
+        {
+          "t": "2026-11-09T14:30Z",
+          "verdict": "broad",
+          "ratio": 0.43,
+          "payers_24h": 2,
+          "payers_7d": 9,
+          "top_share_pct": 99.1
+        },
+        {
+          "t": "2026-11-09T15:31Z",
+          "verdict": "broad",
+          "ratio": 0.42,
+          "payers_24h": 2,
+          "payers_7d": 9,
+          "top_share_pct": 99.1
+        },
+        {
+          "t": "2026-11-09T16:32Z",
+          "verdict": "broad",
+          "ratio": 0.42,
+          "payers_24h": 2,
+          "payers_7d": 9,
+          "top_share_pct": 99.1
+        },
+        {
+          "t": "2026-11-09T17:33Z",
+          "verdict": "broad",
+          "ratio": 0.4,
+          "payers_24h": 2,
+          "payers_7d": 9,
+          "top_share_pct": 99.1
+        },
+        {
+          "t": "2026-11-09T18:34Z",
+          "verdict": "broad",
+          "ratio": 0.41,
+          "payers_24h": 2,
+          "payers_7d": 9,
+          "top_share_pct": 99.1
+        },
+        {
+          "t": "2026-11-09T19:35Z",
+          "verdict": "broad",
+          "ratio": 0.4,
+          "payers_24h": 2,
+          "payers_7d": 9,
+          "top_share_pct": 99.1
+        },
+        {
+          "t": "2026-11-09T20:36Z",
+          "verdict": "broad",
+          "ratio": 0.4,
+          "payers_24h": 2,
+          "payers_7d": 9,
+          "top_share_pct": 99.1
+        },
+        {
+          "t": "2026-11-09T21:37Z",
+          "verdict": "broad",
+          "ratio": 0.41,
+          "payers_24h": 2,
+          "payers_7d": 9,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-09T22:38Z",
+          "verdict": "broad",
+          "ratio": 0.41,
+          "payers_24h": 2,
+          "payers_7d": 9,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-09T23:39Z",
+          "verdict": "broad",
+          "ratio": 0.41,
+          "payers_24h": 2,
+          "payers_7d": 9,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-10T00:40Z",
+          "verdict": "broad",
+          "ratio": 0.42,
+          "payers_24h": 2,
+          "payers_7d": 9,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-10T01:41Z",
+          "verdict": "broad",
+          "ratio": 0.37,
+          "payers_24h": 2,
+          "payers_7d": 9,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-10T02:42Z",
+          "verdict": "broad",
+          "ratio": 0.31,
+          "payers_24h": 2,
+          "payers_7d": 9,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-10T03:43Z",
+          "verdict": "broad",
+          "ratio": 0.26,
+          "payers_24h": 2,
+          "payers_7d": 9,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-10T04:44Z",
+          "verdict": "broad",
+          "ratio": 0.27,
+          "payers_24h": 2,
+          "payers_7d": 8,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-10T05:45Z",
+          "verdict": "broad",
+          "ratio": 0.26,
+          "payers_24h": 2,
+          "payers_7d": 8,
+          "top_share_pct": 99.4
+        },
+        {
+          "t": "2026-11-10T06:46Z",
+          "verdict": "broad",
+          "ratio": 0.28,
+          "payers_24h": 1,
+          "payers_7d": 8,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-10T07:47Z",
+          "verdict": "broad",
+          "ratio": 0.29,
+          "payers_24h": 1,
+          "payers_7d": 8,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-10T08:47Z",
+          "verdict": "broad",
+          "ratio": 0.3,
+          "payers_24h": 1,
+          "payers_7d": 8,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-10T09:48Z",
+          "verdict": "broad",
+          "ratio": 0.32,
+          "payers_24h": 1,
+          "payers_7d": 8,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-10T10:49Z",
+          "verdict": "broad",
+          "ratio": 0.32,
+          "payers_24h": 1,
+          "payers_7d": 8,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-10T11:50Z",
+          "verdict": "broad",
+          "ratio": 0.34,
+          "payers_24h": 1,
+          "payers_7d": 8,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-10T12:51Z",
+          "verdict": "broad",
+          "ratio": 0.31,
+          "payers_24h": 1,
+          "payers_7d": 7,
+          "top_share_pct": 99.4
+        },
+        {
+          "t": "2026-11-10T13:51Z",
+          "verdict": "broad",
+          "ratio": 0.28,
+          "payers_24h": 1,
+          "payers_7d": 7,
+          "top_share_pct": 99.4
+        },
+        {
+          "t": "2026-11-10T14:52Z",
+          "verdict": "broad",
+          "ratio": 0.29,
+          "payers_24h": 1,
+          "payers_7d": 7,
+          "top_share_pct": 99.4
+        },
+        {
+          "t": "2026-11-10T15:53Z",
+          "verdict": "broad",
+          "ratio": 0.29,
+          "payers_24h": 1,
+          "payers_7d": 7,
+          "top_share_pct": 99.4
+        },
+        {
+          "t": "2026-11-10T16:53Z",
+          "verdict": "broad",
+          "ratio": 0.32,
+          "payers_24h": 1,
+          "payers_7d": 7,
+          "top_share_pct": 99.4
+        },
+        {
+          "t": "2026-11-10T17:53Z",
+          "verdict": "broad",
+          "ratio": 0.34,
+          "payers_24h": 1,
+          "payers_7d": 7,
+          "top_share_pct": 99.4
+        },
+        {
+          "t": "2026-11-10T18:54Z",
+          "verdict": "broad",
+          "ratio": 0.34,
+          "payers_24h": 1,
+          "payers_7d": 7,
+          "top_share_pct": 99.4
+        },
+        {
+          "t": "2026-11-10T19:55Z",
+          "verdict": "broad",
+          "ratio": 0.35,
+          "payers_24h": 1,
+          "payers_7d": 7,
+          "top_share_pct": 99.4
+        },
+        {
+          "t": "2026-11-10T20:55Z",
+          "verdict": "broad",
+          "ratio": 0.35,
+          "payers_24h": 1,
+          "payers_7d": 7,
+          "top_share_pct": 99.4
+        },
+        {
+          "t": "2026-11-10T21:56Z",
+          "verdict": "broad",
+          "ratio": 0.35,
+          "payers_24h": 1,
+          "payers_7d": 7,
+          "top_share_pct": 99.4
+        },
+        {
+          "t": "2026-11-10T22:57Z",
+          "verdict": "broad",
+          "ratio": 0.36,
+          "payers_24h": 1,
+          "payers_7d": 7,
+          "top_share_pct": 99.4
+        },
+        {
+          "t": "2026-11-10T23:57Z",
+          "verdict": "broad",
+          "ratio": 0.36,
+          "payers_24h": 1,
+          "payers_7d": 7,
+          "top_share_pct": 99.4
+        },
+        {
+          "t": "2026-11-11T00:57Z",
+          "verdict": "broad",
+          "ratio": 0.38,
+          "payers_24h": 1,
+          "payers_7d": 7,
+          "top_share_pct": 99.4
+        },
+        {
+          "t": "2026-11-11T01:58Z",
+          "verdict": "broad",
+          "ratio": 0.39,
+          "payers_24h": 1,
+          "payers_7d": 7,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-11T02:59Z",
+          "verdict": "broad",
+          "ratio": 0.41,
+          "payers_24h": 2,
+          "payers_7d": 7,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-11T04:00Z",
+          "verdict": "broad",
+          "ratio": 0.43,
+          "payers_24h": 2,
+          "payers_7d": 7,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-11T05:00Z",
+          "verdict": "broad",
+          "ratio": 0.43,
+          "payers_24h": 2,
+          "payers_7d": 7,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-11T06:01Z",
+          "verdict": "broad",
+          "ratio": 0.45,
+          "payers_24h": 2,
+          "payers_7d": 7,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-11T07:02Z",
+          "verdict": "broad",
+          "ratio": 0.49,
+          "payers_24h": 2,
+          "payers_7d": 7,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-11T08:02Z",
+          "verdict": "broad",
+          "ratio": 0.5,
+          "payers_24h": 2,
+          "payers_7d": 7,
+          "top_share_pct": 99.3
+        },
+        {
+          "t": "2026-11-12T09:19Z",
+          "verdict": "broad",
+          "ratio": 0.49,
+          "payers_24h": 1,
+          "payers_7d": 7,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-12T10:20Z",
+          "verdict": "broad",
+          "ratio": 0.5,
+          "payers_24h": 1,
+          "payers_7d": 6,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-12T11:20Z",
+          "verdict": "broad",
+          "ratio": 0.49,
+          "payers_24h": 1,
+          "payers_7d": 6,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-12T12:21Z",
+          "verdict": "broad",
+          "ratio": 0.39,
+          "payers_24h": 1,
+          "payers_7d": 6,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-12T13:21Z",
+          "verdict": "broad",
+          "ratio": 0.38,
+          "payers_24h": 1,
+          "payers_7d": 6,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-12T14:21Z",
+          "verdict": "broad",
+          "ratio": 0.38,
+          "payers_24h": 1,
+          "payers_7d": 6,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-12T15:22Z",
+          "verdict": "broad",
+          "ratio": 0.38,
+          "payers_24h": 1,
+          "payers_7d": 6,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-12T16:23Z",
+          "verdict": "broad",
+          "ratio": 0.39,
+          "payers_24h": 1,
+          "payers_7d": 6,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-12T17:23Z",
+          "verdict": "broad",
+          "ratio": 0.38,
+          "payers_24h": 1,
+          "payers_7d": 6,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-12T18:23Z",
+          "verdict": "broad",
+          "ratio": 0.38,
+          "payers_24h": 1,
+          "payers_7d": 6,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-12T19:24Z",
+          "verdict": "broad",
+          "ratio": 0.45,
+          "payers_24h": 1,
+          "payers_7d": 6,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-12T20:25Z",
+          "verdict": "broad",
+          "ratio": 0.44,
+          "payers_24h": 1,
+          "payers_7d": 6,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-12T21:26Z",
+          "verdict": "broad",
+          "ratio": 0.44,
+          "payers_24h": 1,
+          "payers_7d": 6,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-12T22:26Z",
+          "verdict": "broad",
+          "ratio": 0.45,
+          "payers_24h": 1,
+          "payers_7d": 6,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-12T23:27Z",
+          "verdict": "broad",
+          "ratio": 0.46,
+          "payers_24h": 1,
+          "payers_7d": 6,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-13T00:28Z",
+          "verdict": "broad",
+          "ratio": 0.47,
+          "payers_24h": 1,
+          "payers_7d": 6,
+          "top_share_pct": 99.2
+        },
+        {
+          "t": "2026-11-13T03:31Z",
+          "verdict": "broad",
+          "ratio": 0.49,
+          "payers_24h": 2,
+          "payers_7d": 6,
+          "top_share_pct": 99.2
+        }
+      ]
+    }
+  }
+}

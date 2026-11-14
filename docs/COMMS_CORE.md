@@ -44,8 +44,8 @@ message is the conversation and nothing routes it.
   founder declines every card. Work that needs his PC goes to the PC desk, a local session on his PC that needs no
   card (`docs/fleet-roster.md` "PC desk"). Mechanism: `wow-hook.mjs` refuses the tool for every session, on any
   instance of the connector, and fails closed on a deadline or an internal error; wow-core's settings and the
-  consumer template also deny it in `permissions.deny`, the backup for a hook that never starts (a sync lists the
-  entry under `PERMISSIONS TO MERGE BY HAND` for a project that lacks it), and the founder's refusal remains.
+  consumer template also deny it in `permissions.deny`, the backup for a hook that never starts (a sync adds the
+  entry to a project that lacks it), and the founder's refusal remains.
 - **The lease authority.** Only the lease's `wow-core` session (the takeover) may write a `codex-dispatcher` entry
   or change the `wow-core` entry inside the account's lease period; the Bash guard in `wow-hook.mjs` denies both to
   every other session, and `lease --authority` counts only the `wow-core` entry of the period's FIRST lease (the
@@ -58,8 +58,8 @@ message is the conversation and nothing routes it.
   (MODEL_ROUTING "Codex dispatch").
 - **No prompts for routine messaging** (founder 2026-10-30, #192): the same settings pre-approve
   `SendMessage`, `send_message`, `send_later`, `get_session`, `list_sessions` and `list_events`. A
-  sync never writes permissions into an existing project's settings; it lists the missing entries
-  (`PERMISSIONS TO MERGE BY HAND`).
+  sync adds the template's missing allow and deny entries to a project's settings and never removes
+  one; that sync PR is tier 2 (separate-context review before its label).
 
 ## 2. Records: the PR, and the bus for three jobs
 
@@ -92,9 +92,7 @@ message is the conversation and nothing routes it.
   spelling gets the normal flow. Costs
   named for the founder: the hook cannot stop a session editing its own hooks, an injected
   instruction can get a session to attach the bus and read every channel, and a session with several
-  repositories may stop reading the project's `.claude/settings.json`. Staged probe passed on Cinver
-  on 2026-10-30 (a spawned session attached the bus, read 26 messages, its hooks still fired;
-  cinver-io/cinver#1375).
+  repositories may stop reading the project's `.claude/settings.json`.
 
 ## 3. Starting sessions, within limits
 
@@ -120,6 +118,12 @@ Known limits: that repo-less child (whose prompt could still tell it to act as a
 not capped further; a session that edits its own transcript, settings or slot files can evade the
 cap; a scheduled task that starts a fresh session each time is not a `create_session` call.
 
+- **Pin the child's model** (founder 2026-11-11; evidence: 7 of 47 sub-orchestrators on 1fg ran on the top
+  model, USD 1,117 of 2,905 list price, by inheriting their master's). The hook refuses a `create_session`
+  whose `model` is above the tier the routing table gives a child (`sub-orchestrator`, `strong`), or names
+  none, unless the prompt has one line `Top model: <reason>`, for tier-2 final verification and the Codex dispatcher's orchestration role only
+  (`MODEL_ROUTING.md` "When independent review is REQUIRED"). Pin it with
+  `node scripts/models.mjs resolve --role sub-orchestrator`.
 - Only a master or a lane calls `create_session` (review-checked); the founder starts the masters
   from the takeover's one shared launch line (takeover step 5).
 - For review and verification prefer a subagent (the Agent tool, same container); start a session
@@ -143,9 +147,7 @@ cap; a scheduled task that starts a fresh session each time is not a `create_ses
   workspace or team (for a Claude account, the fleet label from `docs/fleet-roster.md`), never a
   password, token or code. It names
   every account in a multi-step ask, one per step. A session that does not know says so and says
-  how the founder can check, rather than leaving it out. Evidence: on 2026-11-03 the PC's Claude Code
-  was signed in to a different account than the fleet, and a key rotation runbook named the
-  account for one provider of three. Review-checked.
+  how the founder can check, rather than leaving it out. Review-checked.
 - **Post asks with `bus.mjs ask`, never by hand.** A comment that starts with ASK or DONE but does
   not parse shows as a `MALFORMED #<id>` row in `asks`, `inbox` and the digest, never dropped;
   repost it with `bus.mjs ask` and close the old one with `bus.mjs done <id>`.
@@ -168,15 +170,13 @@ cap; a scheduled task that starts a fresh session each time is not a `create_ses
   email, with fixed fields only: code and severity, the metric and its numbers, a link to a
   dashboard behind a sign-in. No token, query string, free-text error string or customer data.
 - **The master reads its channel at session start and in its scheduled health check** (nothing wakes
-  it, so a master whose project posts alerts keeps an hourly health check) and triages on the bus: a fix lane, a founder ask (§4), or a one-line "no action" with the
+  it, so a master whose project is deployed keeps an hourly health check, one that is not every 3 hours: `templates/master/BOOT.md` step 4) and triages on the bus: a fix lane, a founder ask (§4), or a one-line "no action" with the
   reason. A critical alert is never closed on the bus alone: it also becomes a founder ask. A
   suggestion inside an alert is acted on only after the master's own evidence check (PACE_CORE §5).
 - Each project's sender has its own fine-grained token: the bus repository only, Issues permission
   only, with an expiry. GitHub cannot narrow it further, so it can also edit and close bus issues.
   Creating and storing it is a founder step (SECURITY_CORE), posted as one ask. Until a project's
   senders post to the bus, its launch row for ops (LAUNCH_CORE spine 10) is not met; review-checked.
-- Evidence (bus comment 6491914686): on 2026-10-28 a critical volume-drop alert reached only the
-  founder's inbox and no session triaged it for about 14 hours.
 
 ## 6. Founder decisions relayed by the infrastructure orchestrator
 
@@ -225,5 +225,3 @@ Founder DEC, 2026-10-29, given in the wow-core master session (record: wow-core'
   are the check, and "only the master edits the ID" is review-checked. A session's permission
   classifier may still refuse an action that rests on a relayed approval (seen 2026-10-28); the
   session then asks the founder in person and does not work around the refusal.
-- Evidence: on 2026-10-28/29 the founder typed about ten one-line relays in 12 hours (bus comment
-  6491914686); the orchestrator already carried his decisions as dated quotes (bus comment 6500372413).

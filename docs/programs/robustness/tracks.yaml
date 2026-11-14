@@ -95,9 +95,16 @@ tracks:
       review rounds, with fail-before and after receipts
       (archive/receipts/2026-11-07-test-run-x402-per-payer-cap-*.json and
       2026-11-07-test-run-x402-round4-fixes-*.json). This line called it a
-      draft until 2026-11-11 (state drift, F7). Remaining for the exit: a
-      receipt from its first production week with no false page, due from
-      2026-11-14 (Railway logs for the settlement watch, and any alert sent).
+      draft until 2026-11-11 (state drift, F7). First-week receipt taken
+      2026-11-14 (archive/receipts/2026-11-14-check-r3-x402-settlement-watch-first-week.json):
+      exit NOT met. The volume drop was real, but 4 CRITICAL pages in 4 days
+      called it a broad rail failure while the dominant buyer (about 99 percent
+      of baseline) kept settling, which itself proves the rail works. Fix
+      queued for Codex: docs/lanes/codex/x402-watch-live-buyer-2-brief.md (a
+      warning verdict when the top buyer, holding at least half the baseline,
+      still settles at least 20 percent of its own baseline; revised after
+      independent review found the first rule flipped six tests). After it
+      merges and deploys, a fresh clean week is the exit receipt.
       (3) production-watch: exit part met on 2026-11-11. #1002
       acknowledges #856 (ingest-ee-directors) until 2026-12-11; scheduled run
       42976490573 (08:01 Swedish time, main d3bff941) was green, and

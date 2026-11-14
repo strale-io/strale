@@ -6,7 +6,7 @@ Moved from `docs/plan/BASELINE-2026-11-11.md`, which keeps the full evidence, th
 
 Outcome: the first revenue bar in `docs/company/GOALS.md` (named M1 there; it is not this plan's milestone M1): two weeks in a row with at least 5 distinct external payers and no single payer above 60%, the target of the 2026-11-06 revenue plan; confidence is low.
 Outcome date: 2026-12-06
-As of: 2026-11-12   Last checked against code and production: 2026-11-12
+As of: 2026-11-14   Last checked against code and production: 2026-11-12 (B-1 re-checked 2026-11-14)
 Moat: not found yet; the candidate is the flagship of DEC-20261023-B, official-source company and compliance data where every call carries its provenance and an audit record. Nothing yet shows it is hard to copy.
 Distribution: agent-tool listings (MCP registries, framework packages, directories) plus pay-per-call over x402 with no signup; which of them brings payers is unmeasured until M3.
 
@@ -37,7 +37,7 @@ Ids follow the baseline's section 4 (A launch blocker, B soon after, C nice to h
 | A-9 | launch-blocker | M2 | founder | npm: strale-cli and strale-ai-sdk first published by the founder on 2026-11-12 with trusted publishers added, and both passed the production smoke from a clean install (`archive/receipts/2026-11-12-check-strale-ai-sdk-and-strale-cli-0-1-0-production-smoke.json`); straleio and straleio-langchain already had trusted publishers, and publishing access is tightened on both; n8n-nodes-strale 0.1.x deprecated (`archive/receipts/2026-11-12-check-n8n-nodes-strale-0-1-x-deprecated.json`). The old n8n repository is archived only after the Creator Portal accepts the submission (B-16) | both on npm with smoke receipts; trusted publishers set | done |
 | A-10 | launch-blocker | M2 | founder | Smithery listings say "270+ quality-scored" and "verified data" and link strale.dev | registry.smithery.ai shows current text | open |
 | A-11 | launch-blocker | M2 | founder | Directory submissions awesome-remote, Docker #2202, Cline, Cursor are prepared, not submitted (bus 6503454276) | PR or form URLs recorded | open |
-| B-1 | soon-after | M3 | fleet | x402 settlement-drop alert's first production week (#950) | receipt from Sat 14 Nov: Railway logs, no false page | open |
+| B-1 | soon-after | M3 | fleet | x402 settlement-drop alert's first production week (#950). Receipt taken 2026-11-14 (`archive/receipts/2026-11-14-check-r3-x402-settlement-watch-first-week.json`): the drop was real, but 4 CRITICAL rail-failure pages went out while the dominant buyer kept settling; fix briefed for Codex (`docs/lanes/codex/x402-watch-live-buyer-2-brief.md`) | fix merged and deployed, then a clean week's receipt | open, fix queued for Codex |
 | B-2 | soon-after | M3 | fleet | weekly-drift scheduled run green again (#1008 re-captured three recordings) | green scheduled run, next on Mon 16 Nov | open |
 | B-3 | soon-after | M3 | founder | Six fixture manifests still on strale.dev (database at the PC) | `onboard --backfill` and re-capture | open |
 | B-4 | soon-after | M3 | fleet | ingest-ee-directors failing with no last success (#856); RIK email is a draft | RIK reply, then the job goes green | open |
