@@ -107,6 +107,8 @@ describe("alert routing", () => {
     expect(options.body).toContain("proves the rail end to end");
     expect(options.body).toContain("most likely a customer signal");
     expect(options.body).toContain("under 20 percent of its own baseline or stops");
+    expect(options.body).toContain("fewer than 10 in 24 hours");
+    expect(options.body).toContain("x402-payment-payload-version");
   });
 
   it("keeps a broad verdict on the critical key", async () => {

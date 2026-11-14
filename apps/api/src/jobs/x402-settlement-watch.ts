@@ -434,7 +434,10 @@ export async function checkX402SettlementVolume(
         totals +
         describeBuyers(verdict) +
         `The top buyer kept settling, which proves the rail end to end; this is most likely a customer signal. ` +
-        `It becomes CRITICAL if that buyer falls under 20 percent of its own baseline or stops.`,
+        `It becomes CRITICAL if that buyer falls under 20 percent of its own baseline or stops, ` +
+        `or settles fewer than 10 in 24 hours. ` +
+        `If a challenge-version change deployed just before the drop, check the x402-payment-payload-version ` +
+        `log counter: a wallet running both v1 and v2 clients drops only partly.`,
     });
     return verdict;
   }
