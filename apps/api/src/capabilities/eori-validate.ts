@@ -145,7 +145,7 @@ registerCapability("eori-validate", async (input: CapabilityInput) => {
     throw inputRefusal(
       "'eori' must be verifiable by the EU EORI service. GB EORI numbers are held by HMRC, not the EU service, so this capability cannot verify them.",
       "eori",
-      "Use HMRC's 'Check an EORI number' service: https://www.gov.uk/check-eori-number",
+      "Send 'eori' with an EU member-state or XI prefix; check GB numbers with HMRC's 'Check an EORI number' service at https://www.gov.uk/check-eori-number.",
     );
   }
 

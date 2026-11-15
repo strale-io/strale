@@ -130,9 +130,10 @@ const NPM = "npm registry";
 const PYPI = "PyPI";
 
 /**
- * True only on NXDOMAIN (ENOTFOUND): no such name exists. A name that exists
- * without an A record (ENODATA) is registered, so it is taken. Any other
- * resolver failure is not an answer and throws UpstreamUnavailableError.
+ * NXDOMAIN counts as available only when RDAP answers `not_found`. RDAP
+ * `found` or `no_registration_event` means registered, with no DNS. A missing
+ * RDAP base or a failed lookup throws `RdapUnavailableError`, and the caller
+ * reports that domain as `null`.
  *
  * The error names the extension, never the caller's name: the breaker reads
  * the message, so a name like "studio403" would file a resolver outage as
