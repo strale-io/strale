@@ -2,6 +2,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { UpstreamUnavailableError } from "../lib/upstream-result.js";
 import { inputRefusal } from "../lib/capability-refusal.js";
 import { osvSeverity, type OsvSeverity } from "../lib/osv-severity.js";
+import { MAX_FETCHED_API_RESPONSE_BYTES, readJsonWithLimit, ResourceLimitError } from "../lib/resource-limits.js";
 
 /**
  * Dependency audit — checks packages for known CVEs (via OSV.dev),
@@ -140,14 +141,18 @@ async function batchCveCheck(
           detailsUnavailable = true;
           return;
         }
-        const detail = (await response.json()) as OsvVuln;
+        const detail = await readJsonWithLimit<OsvVuln>(response, MAX_FETCHED_API_RESPONSE_BYTES);
         if (!detail || typeof detail !== "object" || typeof detail.id !== "string") {
           detailsUnavailable = true;
           return;
         }
         details.set(id, detail);
       } catch (err) {
-        // degraded-ok: an OSV detail fetch that times out, fails on the network or returns a body that does not parse leaves that vulnerability listed with severity "unknown" and names "OSV vulnerability details" in unavailable_sources, never as rated or absent; any other error (our own defect) is rethrown, unbilled.
+        // degraded-ok: an OSV detail fetch that times out, fails on the network, returns a body that does not parse or returns an oversized body leaves that vulnerability listed with severity "unknown" and names "OSV vulnerability details" in unavailable_sources, never as rated or absent; any other error (our own defect) is rethrown, unbilled.
+        if (err instanceof ResourceLimitError) {
+          detailsUnavailable = true;
+          return;
+        }
         const failure = transportFailure(OSV_DETAILS, err);
         if (!(failure instanceof UpstreamUnavailableError)) throw failure;
         detailsUnavailable = true;
@@ -179,7 +184,7 @@ function isQueryable(q: { version: string }): boolean {
  * Every registry lookup failed and OSV has nothing to check: no leg answered,
  * so there is no audit to sell.
  */
-function requireCheckedDependency(registry: string, results: object[], osvQueries: Array<{ version: string }>, field: string): void {
+function requireCheckedDependency(registry: string, results: object[], osvQueries: Array<{ version: string }>, field: "package_json" | "requirements_txt"): void {
   if (!osvQueries.some(isQueryable) && results.some(isUnavailable)) {
     throw new UpstreamUnavailableError(
       registry,
@@ -187,11 +192,17 @@ function requireCheckedDependency(registry: string, results: object[], osvQuerie
     );
   }
   if (!osvQueries.some(isQueryable)) {
-    throw inputRefusal(
-      `'${field}' must contain at least one dependency that can be checked; none had a declared version or a registry answer.`,
-      field,
-      "Declare a dependency version or use a package available from the registry.",
-    );
+    throw field === "package_json"
+      ? inputRefusal(
+          "'package_json' must contain at least one dependency that can be checked; none had a declared version or a registry answer.",
+          "package_json",
+          "Send 'package_json' with at least one dependency that declares a version or is published on npm.",
+        )
+      : inputRefusal(
+          "'requirements_txt' must contain at least one requirement that can be checked; none was pinned or had a PyPI answer.",
+          "requirements_txt",
+          "Send 'requirements_txt' with at least one requirement that is pinned or is published on PyPI.",
+        );
   }
 }
 

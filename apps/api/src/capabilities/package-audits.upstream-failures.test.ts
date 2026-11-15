@@ -360,6 +360,35 @@ describe("security-audit-severity brief regressions", () => {
     });
   });
 
+  it("rethrows a defect from an advisory detail fetch", async () => {
+    route([
+      [NPM, () => npmDoc("1.3.0")],
+      [OSV_BATCH, () => json({ results: [{ vulns: [{ id: "GHSA-test" }] }] })],
+      [/\/v1\/vulns\/GHSA-test$/, async () => { throw new RangeError("defect"); }],
+    ]);
+    const exec = await load("dependency-audit", "./dependency-audit.js");
+    await expect(exec({ package_json: JSON.stringify({ dependencies: { "left-pad": "1.3.0" } }) })).rejects.toThrow(RangeError);
+  });
+
+  it("keeps an advisory with an oversized detail body as unknown and names the degraded source", async () => {
+    const { MAX_FETCHED_API_RESPONSE_BYTES } = await import("../lib/resource-limits.js");
+    route([
+      [NPM, () => npmDoc("1.3.0")],
+      [OSV_BATCH, () => json({ results: [{ vulns: [{ id: "GHSA-test" }] }] })],
+      [/\/v1\/vulns\/GHSA-test$/, () => json({
+        id: "GHSA-test",
+        database_specific: { severity: "HIGH" },
+        padding: "x".repeat(MAX_FETCHED_API_RESPONSE_BYTES),
+      })],
+    ]);
+    const exec = await load("dependency-audit", "./dependency-audit.js");
+    const r = await exec({ package_json: JSON.stringify({ dependencies: { "left-pad": "1.3.0" } }) });
+    expect(r.output.unavailable_sources).toContain("OSV vulnerability details");
+    expect((r.output.dependencies as Array<Record<string, unknown>>)[0]).toMatchObject({
+      vulnerabilities: [{ id: "GHSA-test", severity: "unknown" }],
+    });
+  });
+
   it("queries a removed npm package and prioritises its malicious advisory", async () => {
     route([
       [NPM, () => status(404)],

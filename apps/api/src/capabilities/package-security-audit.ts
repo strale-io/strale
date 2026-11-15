@@ -38,7 +38,7 @@ registerCapability("package-security-audit", async (input: CapabilityInput) => {
     throw inputRefusal(
       `'version' must be a published version of ${name}; '${explicitVersion}' is not published.`,
       "version",
-      `Use one of the versions published for ${name}, or omit version to audit the latest release.`,
+      "Send 'version' as a version published for this package, or omit it to audit the latest release.",
     );
   }
 
