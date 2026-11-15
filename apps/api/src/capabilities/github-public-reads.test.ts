@@ -141,6 +141,25 @@ describe("failure: github-user-profile never bills an invented empty repository 
   });
 });
 
+describe("failure: github-user-profile's repository list fails as the caller's or GitHub's error, never a format break", () => {
+  it("a 404 on the list (account gone between requests) is the caller's 'not found'", async () => {
+    fetchMock.mockImplementation(async (url: string) =>
+      String(url).includes("/repos?") ? json({ message: "Not Found" }, 404) : json(USER),
+    );
+    const err = await rejection(exec("github-user-profile")({ username: "octo" }));
+    expect(err.message).toMatch(/not found/);
+    expect(isUserInputError(err.message)).toBe(true);
+  });
+
+  it("a list that is not JSON is an upstream outage, not a raw SyntaxError", async () => {
+    fetchMock.mockImplementation(async (url: string) =>
+      String(url).includes("/repos?") ? new Response("<html>", { status: 200 }) : json(USER),
+    );
+    const err = await rejection(exec("github-user-profile")({ username: "octo" }));
+    expect(err.message).toMatch(/^Upstream unavailable: GitHub API/);
+  });
+});
+
 describe("failure: a non-text name is the caller's error, not a crash", () => {
   it("github-repo-compare refuses a number for repo_a", async () => {
     const err = await rejection(exec("github-repo-compare")({ repo_a: 42, repo_b: "o/r" }));

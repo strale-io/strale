@@ -635,7 +635,7 @@
   set_in:
     - workflow
 - name: GITHUB_TOKEN
-  purpose: Optional GitHub token that raises the unauthenticated GitHub API rate limit for social-profile-check (status of /orgs/{name} only) and for the daily digest's fixed strale-io/* reads (lib/daily-digest). Tools that read a caller-chosen repository or user (github-repo-analyze, github-repo-compare, github-user-profile) never send it, so a caller cannot use it to read anything the public cannot.
+  purpose: Optional GitHub token that raises the unauthenticated GitHub API rate limit for social-profile-check (status of /orgs/{name} only) and for the daily digest's fixed strale-io/* reads (lib/daily-digest); lib/github-issues.ts also uses it to file and sync stuck-validating issues on strale-io/strale, so it needs issues:write. Tools that read a caller-chosen repository or user (github-repo-analyze, github-repo-compare, github-user-profile) never send it, so a caller cannot use it to read anything the public cannot.
   provider: GitHub
   holder: railway
   cost_class: free

@@ -32,8 +32,18 @@ registerCapability("github-user-profile", async (input: CapabilityInput) => {
   // would read as "this user owns no repositories" (the anonymous rate limit
   // makes a second-request failure common).
   const reposResp = await githubPublicGet(`https://api.github.com/users/${encodeURIComponent(username)}/repos?sort=updated&per_page=10&type=owner`);
+  if (reposResp.status === 404) {
+    // Deleted or renamed between the two requests: the caller's "not found".
+    await reposResp.body?.cancel();
+    throw new Error(`GitHub user "${username}" not found.`);
+  }
   if (!reposResp.ok) throw await githubFailure(reposResp);
-  const repos = (await reposResp.json()) as any[];
+  let repos: any[];
+  try {
+    repos = (await reposResp.json()) as any[];
+  } catch {
+    throw new UpstreamUnavailableError(GITHUB_API, "the repository list was not in the expected shape.", { code: "unparseable", retryable: false });
+  }
   if (!Array.isArray(repos)) {
     throw new UpstreamUnavailableError(GITHUB_API, "the repository list was not in the expected shape.", { code: "unparseable", retryable: false });
   }
