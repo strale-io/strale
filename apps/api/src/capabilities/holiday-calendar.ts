@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 // Nager.Date API — free, no key needed
 const NAGER_API = "https://date.nager.at/api/v3";
@@ -56,7 +57,11 @@ export async function getHolidays(countryCode: string, year: number): Promise<an
   try {
     data = JSON.parse(text);
   } catch {
-    throw new Error(`Nager.Date API returned an unparseable response for '${countryCode}'/${year}.`);
+    throw new UpstreamUnavailableError("Nager.Date", `the response for '${countryCode}'/${year} did not parse.`, { code: "unparseable" });
+  }
+  if (!Array.isArray(data) || !data.every((holiday) =>
+    typeof holiday === "object" && holiday !== null && typeof holiday.date === "string")) {
+    throw new UpstreamUnavailableError("Nager.Date", `the response for '${countryCode}'/${year} was not a holiday list.`, { code: "unparseable" });
   }
   holidayCache.set(key, { data, cachedAt: Date.now() });
   return data;

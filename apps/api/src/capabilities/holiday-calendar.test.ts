@@ -72,18 +72,35 @@ describe("holiday-calendar", () => {
   it("a 200 with an unparseable body yields a structured error", async () => {
     fetchMock.mockResolvedValue(response(200, "<html>maintenance</html>"));
     await expect(calendar({ country_code: "MY", year: 2026 })).rejects.toThrow(
-      /unparseable response for 'MY'\/2026/
+      /response for 'MY'\/2026 did not parse/
     );
   });
 
   it("an empty 200 body is a transient error, NOT negative-cached as 'not covered'", async () => {
     fetchMock.mockResolvedValue(response(200, ""));
     await expect(calendar({ country_code: "VN", year: 2026 })).rejects.toThrow(
-      /unparseable response for 'VN'\/2026/
+      /response for 'VN'\/2026 did not parse/
     );
     // Uncached: the next call must retry upstream.
     await expect(calendar({ country_code: "VN", year: 2026 })).rejects.toThrow();
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("a 200 object is an upstream shape failure and is not cached", async () => {
+    fetchMock.mockImplementation(async () => response(200, '{"message":"error"}'));
+    await expect(calendar({ country_code: "PH", year: 2026 })).rejects.toMatchObject({
+      name: "UpstreamUnavailableError",
+      code: "unparseable",
+    });
+    await expect(calendar({ country_code: "PH", year: 2026 })).rejects.toThrow(/not a holiday list/);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("an empty holiday list is a real answer and is cached", async () => {
+    fetchMock.mockResolvedValue(response(200, "[]"));
+    await expect(calendar({ country_code: "AQ", year: 2026 })).resolves.toMatchObject({ output: { holidays: [], total_holidays: 0 } });
+    await expect(calendar({ country_code: "AQ", year: 2026 })).resolves.toMatchObject({ output: { holidays: [], total_holidays: 0 } });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("404 still yields the 'not supported' error", async () => {
@@ -130,6 +147,14 @@ describe("public-holiday-lookup (shares getHolidays)", () => {
     await expect(lookup({ country_code: "LA", year: 2026 })).rejects.toThrow(
       /Country 'LA' is not covered/
     );
+  });
+
+  it("a non-list 200 throws instead of answering with no holidays", async () => {
+    fetchMock.mockResolvedValue(response(200, '{"message":"error"}'));
+    await expect(lookup({ country_code: "ID", year: 2026 })).rejects.toMatchObject({
+      name: "UpstreamUnavailableError",
+      code: "unparseable",
+    });
   });
 
   it("a 200 with holiday data still returns the documented output shape", async () => {

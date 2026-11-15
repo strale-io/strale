@@ -6,7 +6,7 @@ import { MAX_REPO_FILE_BYTES, readErrorTextTruncated, readJsonWithLimit, readTex
 import { fetchUnavailable, httpUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 // F-0-006 Bucket D: user input is an owner/repo pair; requests go to
-// hardcoded api.github.com and raw.githubusercontent.com. The user
+// hardcoded api.github.com and raw.githubusercontent.com (package files only). The user
 // value is embedded in the path, never the hostname.
 //
 // Every request answers one of three ways: the data, "there is none" (a 404,
@@ -19,6 +19,7 @@ import { fetchUnavailable, httpUnavailable, UpstreamUnavailableError } from "../
 
 const GITHUB_API = "GitHub API";
 const GITHUB_RAW = "GitHub raw file host";
+const GITHUB_README = "GitHub README API endpoint";
 /** Named in unavailable_sources when GitHub will not list the contributors. */
 const CONTRIBUTORS = "GitHub contributors list";
 
@@ -37,6 +38,7 @@ registerCapability("github-repo-analyze", async (input: CapabilityInput) => {
     Accept: "application/vnd.github.v3+json",
     "User-Agent": "Strale/1.0",
   };
+  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
   const raw = (file: string) => `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${file}`;
 
   // Fetch repo data in parallel. Settled, so the repo record is judged first
@@ -50,7 +52,9 @@ registerCapability("github-repo-analyze", async (input: CapabilityInput) => {
     // without them.
     ghJson(`${apiBase}/repos/${owner}/${repo}/contributors?per_page=20`, headers, [404], true),
     ghJson(`${apiBase}/repos/${owner}/${repo}/languages`, headers),
-    ghFetchText(raw("README.md")),
+    // Unlike the old raw README.md URL, this preferred-README endpoint finds
+    // alternate names and folders. It adds one request to the GitHub API rate limit.
+    ghFetchReadme(`${apiBase}/repos/${owner}/${repo}/readme`, headers),
     ghFetchText(raw("package.json")),
   ]);
   const [repoData, commits, contributorsReply, languages, readme, packageJson] = settled.map((s) => {
@@ -261,5 +265,26 @@ async function ghFetchText(url: string): Promise<string | null> {
     return await readTextTruncated(res, MAX_REPO_FILE_BYTES);
   } catch (err) {
     throw fetchUnavailable(GITHUB_RAW, err);
+  }
+}
+
+/** The repository's preferred README from GitHub's API, returned as raw text. */
+async function ghFetchReadme(url: string, headers: Record<string, string>): Promise<string | null> {
+  const res = await ghRequest(url, GITHUB_README, { ...headers, Accept: "application/vnd.github.raw" });
+  if (res.status === 404) {
+    await res.body?.cancel();
+    return null;
+  }
+  if (res.status === 403) {
+    throw ghDeclined(GITHUB_README, 403, await readErrorTextTruncated(res));
+  }
+  if (!res.ok) {
+    await res.body?.cancel();
+    throw httpUnavailable(GITHUB_README, res.status);
+  }
+  try {
+    return await readTextTruncated(res, MAX_REPO_FILE_BYTES);
+  } catch (err) {
+    throw fetchUnavailable(GITHUB_README, err);
   }
 }

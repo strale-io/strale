@@ -327,6 +327,18 @@ const soap = (result: string) =>
 const EORI = { eori: "DE123456789012345" };
 
 describe("eori-validate: service failures throw (row 19)", () => {
+  it("refuses a GB EORI before the EU service, while XI still reaches it", async () => {
+    const exec = await load("eori-validate", "./eori-validate.js");
+    const gb = await exec({ eori: "GB123456789000" }).catch((error: unknown) => error) as Error & { details?: Record<string, unknown> };
+    expect(gb.name).toBe("CapabilityRefusalError");
+    expect(gb.details).toMatchObject({ field: "eori", fix: expect.stringContaining("HMRC") });
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    fetchMock.mockResolvedValue(soap("<result><eori>XI123456789000</eori><status>0</status><statusDescr>Valid</statusDescr></result>"));
+    await expect(exec({ eori: "XI123456789000" })).resolves.toMatchObject({ output: { valid: true } });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it.each([...failures, ["HTTP 500 SOAP fault", async () => status(500, "<S:Fault>server</S:Fault>"), true] as const])(
     "throws, unbilled, when the EORI service fails with %s",
     async (_label, answer, retryable) => {
