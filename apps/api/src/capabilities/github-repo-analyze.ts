@@ -38,7 +38,6 @@ registerCapability("github-repo-analyze", async (input: CapabilityInput) => {
     Accept: "application/vnd.github.v3+json",
     "User-Agent": "Strale/1.0",
   };
-  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
   const raw = (file: string) => `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${file}`;
 
   // Fetch repo data in parallel. Settled, so the repo record is judged first

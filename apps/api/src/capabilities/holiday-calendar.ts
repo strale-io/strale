@@ -57,11 +57,11 @@ export async function getHolidays(countryCode: string, year: number): Promise<an
   try {
     data = JSON.parse(text);
   } catch {
-    throw new UpstreamUnavailableError("Nager.Date", `the response for '${countryCode}'/${year} did not parse.`, { code: "unparseable" });
+    throw new UpstreamUnavailableError("Nager.Date", `the response for '${countryCode}'/${year} did not parse.`, { code: "unparseable", retryable: false });
   }
   if (!Array.isArray(data) || !data.every((holiday) =>
     typeof holiday === "object" && holiday !== null && typeof holiday.date === "string")) {
-    throw new UpstreamUnavailableError("Nager.Date", `the response for '${countryCode}'/${year} was not a holiday list.`, { code: "unparseable" });
+    throw new UpstreamUnavailableError("Nager.Date", `the response for '${countryCode}'/${year} was not a holiday list.`, { code: "unparseable", retryable: false });
   }
   holidayCache.set(key, { data, cachedAt: Date.now() });
   return data;

@@ -71,9 +71,10 @@ describe("holiday-calendar", () => {
 
   it("a 200 with an unparseable body yields a structured error", async () => {
     fetchMock.mockResolvedValue(response(200, "<html>maintenance</html>"));
-    await expect(calendar({ country_code: "MY", year: 2026 })).rejects.toThrow(
-      /response for 'MY'\/2026 did not parse/
-    );
+    await expect(calendar({ country_code: "MY", year: 2026 })).rejects.toMatchObject({
+      message: expect.stringMatching(/response for 'MY'\/2026 did not parse/),
+      retryable: false,
+    });
   });
 
   it("an empty 200 body is a transient error, NOT negative-cached as 'not covered'", async () => {
@@ -91,6 +92,7 @@ describe("holiday-calendar", () => {
     await expect(calendar({ country_code: "PH", year: 2026 })).rejects.toMatchObject({
       name: "UpstreamUnavailableError",
       code: "unparseable",
+      retryable: false,
     });
     await expect(calendar({ country_code: "PH", year: 2026 })).rejects.toThrow(/not a holiday list/);
     expect(fetchMock).toHaveBeenCalledTimes(2);

@@ -85,6 +85,7 @@ describe("business-day-check: Nager.Date failures throw (row 17)", () => {
     const exec = await load("business-day-check", "./business-day-check.js");
     const err = await expectUnbilledUpstreamFailure(exec(CHRISTMAS));
     expect(err.message).toContain("did not parse");
+    expect(err.retryable).toBe(false);
   });
 
   it("throws, unbilled, when Nager.Date answers 200 with JSON that is not a holiday list", async () => {
@@ -93,6 +94,7 @@ describe("business-day-check: Nager.Date failures throw (row 17)", () => {
     const err = await expectUnbilledUpstreamFailure(exec(CHRISTMAS));
     expect(err.message).toContain("not a holiday list");
     expect((err as { code?: unknown }).code).toBe("unparseable");
+    expect(err.retryable).toBe(false);
   });
 
   // Derived from the clock so the cases stay outside Nager.Date's window of

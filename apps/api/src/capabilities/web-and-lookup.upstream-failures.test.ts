@@ -466,6 +466,19 @@ describe("github-repo-analyze negative: what GitHub says is absent keeps its out
     );
   });
 
+  it("never sends a configured GitHub token to caller-selected repositories", async () => {
+    process.env.GITHUB_TOKEN = "production-token-must-not-leave";
+    try {
+      github();
+      await billed("github-repo-analyze", exec("github-repo-analyze")({ url: "https://github.com/o/r" }));
+      for (const [, init] of fetchMock.mock.calls) {
+        expect(new Headers(init?.headers).has("Authorization")).toBe(false);
+      }
+    } finally {
+      delete process.env.GITHUB_TOKEN;
+    }
+  });
+
   it("a repository without a README, package.json or requirements.txt is analysed as such, billed", async () => {
     github((u) => (u.endsWith("/readme") ? () => status(404) : undefined));
     const out = await billed("github-repo-analyze", exec("github-repo-analyze")({ url: "https://github.com/o/r" }));
