@@ -1,45 +1,61 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { GITHUB_API, githubFailure, githubPublicGet, isGithubLogin } from "./lib/github-public.js";
+import { UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 // GitHub REST API — free, no token required (60 req/hr unauthenticated)
 registerCapability("github-user-profile", async (input: CapabilityInput) => {
-  const username = ((input.username as string) ?? (input.user as string) ?? (input.task as string) ?? "").trim();
+  const raw = input.username ?? input.user ?? input.task ?? "";
+  if (typeof raw !== "string") {
+    throw new Error("'username' must be a GitHub username: letters, digits and hyphens, at most 39 characters.");
+  }
+  const username = raw.trim();
   if (!username) throw new Error("'username' (GitHub username) is required.");
 
-  const headers: Record<string, string> = { Accept: "application/vnd.github+json" };
-  const ghToken = process.env.GITHUB_TOKEN;
-  if (ghToken) headers["Authorization"] = `Bearer ${ghToken}`;
+  // Checked against GitHub's login shape before any request, and no GitHub
+  // token is sent (lib/github-public.ts).
+  if (!isGithubLogin(username)) {
+    throw new Error("'username' must be a GitHub username: letters, digits and hyphens, at most 39 characters.");
+  }
 
   // Fetch user profile
-  const userResp = await fetch(`https://api.github.com/users/${encodeURIComponent(username)}`, {
-    headers,
-    signal: AbortSignal.timeout(10000),
-  });
+  const userResp = await githubPublicGet(`https://api.github.com/users/${encodeURIComponent(username)}`);
 
-  if (userResp.status === 404) throw new Error(`GitHub user "${username}" not found.`);
-  if (!userResp.ok) throw new Error(`GitHub API returned HTTP ${userResp.status}`);
+  if (userResp.status === 404) {
+    await userResp.body?.cancel();
+    throw new Error(`GitHub user "${username}" not found.`);
+  }
+  if (!userResp.ok) throw await githubFailure(userResp);
 
   const user = (await userResp.json()) as any;
 
-  // Fetch recent public repos
-  let topRepos: any[] = [];
+  // Recent public repos. A failed list throws, unbilled: an empty list here
+  // would read as "this user owns no repositories" (the anonymous rate limit
+  // makes a second-request failure common).
+  const reposResp = await githubPublicGet(`https://api.github.com/users/${encodeURIComponent(username)}/repos?sort=updated&per_page=10&type=owner`);
+  if (reposResp.status === 404) {
+    // Deleted or renamed between the two requests: the caller's "not found".
+    await reposResp.body?.cancel();
+    throw new Error(`GitHub user "${username}" not found.`);
+  }
+  if (!reposResp.ok) throw await githubFailure(reposResp);
+  let repos: any[];
   try {
-    const reposResp = await fetch(`https://api.github.com/users/${encodeURIComponent(username)}/repos?sort=updated&per_page=10&type=owner`, {
-      headers,
-      signal: AbortSignal.timeout(10000),
-    });
-    if (reposResp.ok) {
-      const repos = (await reposResp.json()) as any[];
-      topRepos = repos.map(r => ({
-        name: r.name,
-        description: r.description,
-        language: r.language,
-        stars: r.stargazers_count,
-        forks: r.forks_count,
-        updated_at: r.updated_at,
-        is_fork: r.fork,
-      }));
-    }
-  } catch { /* non-critical */ }
+    repos = (await reposResp.json()) as any[];
+  } catch {
+    throw new UpstreamUnavailableError(GITHUB_API, "the repository list was not in the expected shape.", { code: "unparseable", retryable: false });
+  }
+  if (!Array.isArray(repos)) {
+    throw new UpstreamUnavailableError(GITHUB_API, "the repository list was not in the expected shape.", { code: "unparseable", retryable: false });
+  }
+  const topRepos = repos.map(r => ({
+    name: r.name,
+    description: r.description,
+    language: r.language,
+    stars: r.stargazers_count,
+    forks: r.forks_count,
+    updated_at: r.updated_at,
+    is_fork: r.fork,
+  }));
 
   return {
     output: {

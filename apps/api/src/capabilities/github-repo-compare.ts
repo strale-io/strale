@@ -1,27 +1,29 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { githubFailure, githubPublicGet, parseGithubRepo } from "./lib/github-public.js";
 
 // GitHub REST API comparison of two repositories
 registerCapability("github-repo-compare", async (input: CapabilityInput) => {
-  const repoA = ((input.repo_a as string) ?? (input.repo1 as string) ?? "").trim();
-  const repoB = ((input.repo_b as string) ?? (input.repo2 as string) ?? "").trim();
+  const rawA = input.repo_a ?? input.repo1 ?? "";
+  const rawB = input.repo_b ?? input.repo2 ?? "";
+  const repoA = typeof rawA === "string" ? rawA.trim() : rawA;
+  const repoB = typeof rawB === "string" ? rawB.trim() : rawB;
   if (!repoA || !repoB) throw new Error("'repo_a' and 'repo_b' (owner/repo format) are required.");
 
-  const headers: Record<string, string> = { Accept: "application/vnd.github+json" };
-  const ghToken = process.env.GITHUB_TOKEN;
-  if (ghToken) headers["Authorization"] = `Bearer ${ghToken}`;
+  // Both names are checked before either request: no caller text reaches the
+  // path unencoded, and no GitHub token is sent (lib/github-public.ts).
+  const pathA = typeof repoA === "string" ? parseGithubRepo(repoA) : null;
+  if (!pathA) throw new Error("'repo_a' must be a GitHub repository as owner/repo or a github.com URL.");
+  const pathB = typeof repoB === "string" ? parseGithubRepo(repoB) : null;
+  if (!pathB) throw new Error("'repo_b' must be a GitHub repository as owner/repo or a github.com URL.");
 
-  async function fetchRepo(fullName: string) {
-    // Extract owner/repo from various formats
-    const match = fullName.match(/(?:github\.com\/)?([^/]+\/[^/]+)/);
-    const ownerRepo = match ? match[1].replace(/\.git$/, "") : fullName;
+  async function fetchRepo(ownerRepo: string) {
+    const resp = await githubPublicGet(`https://api.github.com/repos/${ownerRepo}`);
 
-    const resp = await fetch(`https://api.github.com/repos/${ownerRepo}`, {
-      headers,
-      signal: AbortSignal.timeout(10000),
-    });
-
-    if (resp.status === 404) throw new Error(`Repository "${ownerRepo}" not found.`);
-    if (!resp.ok) throw new Error(`GitHub API returned HTTP ${resp.status} for "${ownerRepo}"`);
+    if (resp.status === 404) {
+      await resp.body?.cancel();
+      throw new Error(`Repository "${ownerRepo}" not found.`);
+    }
+    if (!resp.ok) throw await githubFailure(resp);
 
     const r = (await resp.json()) as any;
     return {
@@ -46,7 +48,7 @@ registerCapability("github-repo-compare", async (input: CapabilityInput) => {
     };
   }
 
-  const [a, b] = await Promise.all([fetchRepo(repoA), fetchRepo(repoB)]);
+  const [a, b] = await Promise.all([fetchRepo(pathA), fetchRepo(pathB)]);
 
   // Build comparison
   const comparison: Record<string, { repo_a: unknown; repo_b: unknown; winner: string }> = {};

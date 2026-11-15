@@ -87,7 +87,10 @@ const REGISTRIES: Registry[] = [
         Accept: "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
       };
-      // Optional: raises the anonymous 60-requests-an-hour limit.
+      // Optional: raises the anonymous 60-requests-an-hour limit. Safe to send
+      // here, unlike in the tools of lib/github-public.ts: the name is a
+      // checked login on a fixed /orgs/ path, organisations are public, and
+      // only the status is read, never the body.
       if (process.env.GITHUB_TOKEN) h.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
       return h;
     },

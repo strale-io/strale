@@ -272,12 +272,6 @@
       "line": 155
     },
     {
-      "file": "apps/api/src/capabilities/github-user-profile.ts",
-      "fingerprint": "25bb6890f750d84fc8bc3fc65fd82ff7c62257cabc3c8f6eb3ad0ffda5375744",
-      "count": 1,
-      "line": 42
-    },
-    {
       "file": "apps/api/src/capabilities/google-news-search.ts",
       "fingerprint": "7c1dd2b359c0d1590d85349450c3133eec9153475a5803e8246d199968a2b579",
       "count": 1,
