@@ -346,6 +346,20 @@ describe("security-audit-severity brief regressions", () => {
     expect((r.output.dependencies as Array<Record<string, unknown>>)[0]).toMatchObject({ highest_severity: "unknown", vulnerabilities: [{ severity: "unknown" }] });
   });
 
+  it("keeps an advisory with an unparsable detail body as unknown and names the degraded source", async () => {
+    route([
+      [NPM, () => npmDoc("1.3.0")],
+      [OSV_BATCH, () => json({ results: [{ vulns: [{ id: "GHSA-test" }] }] })],
+      [/\/v1\/vulns\/GHSA-test$/, () => new Response("<html>maintenance</html>", { status: 200 })],
+    ]);
+    const exec = await load("dependency-audit", "./dependency-audit.js");
+    const r = await exec({ package_json: JSON.stringify({ dependencies: { "left-pad": "1.3.0" } }) });
+    expect(r.output.unavailable_sources).toContain("OSV vulnerability details");
+    expect((r.output.dependencies as Array<Record<string, unknown>>)[0]).toMatchObject({
+      vulnerabilities: [{ id: "GHSA-test", severity: "unknown" }],
+    });
+  });
+
   it("queries a removed npm package and prioritises its malicious advisory", async () => {
     route([
       [NPM, () => status(404)],
@@ -390,6 +404,29 @@ describe("security-audit-severity brief regressions", () => {
       upstream: "npm registry",
     });
     expect(fetchMock.mock.calls.some(([url]) => OSV_BATCH.test(String(url)))).toBe(false);
+  });
+
+  it("throws upstream-unavailable when an unchecked list has both missing and unavailable registry answers", async () => {
+    route([[NPM, (url) => (url.endsWith("missing") ? status(404) : status(503))]]);
+    const exec = await load("dependency-audit", "./dependency-audit.js");
+    await expect(exec({ package_json: JSON.stringify({ dependencies: { missing: "", unavailable: "" } }) })).rejects.toMatchObject({
+      name: "UpstreamUnavailableError",
+      upstream: "npm registry",
+    });
+    expect(fetchMock.mock.calls.some(([url]) => OSV_BATCH.test(String(url)))).toBe(false);
+  });
+
+  it("marks an unpinned PyPI dependency without a latest version as unchecked in a mixed list", async () => {
+    route([
+      [/pypi\.org\/pypi\/requests\/json$/, () => json({ info: {} })],
+      [/pypi\.org\/pypi\/flask\/json$/, () => json({ info: { version: "3.0.0" } })],
+      [OSV_BATCH, () => osvAnswers(1)],
+    ]);
+    const exec = await load("dependency-audit", "./dependency-audit.js");
+    const r = await exec({ requirements_txt: "requests\nflask==3.0.0" });
+    const requests = (r.output.dependencies as Array<Record<string, unknown>>).find((dependency) => dependency.name === "requests");
+    expect(requests).toMatchObject({ checked: false });
+    expect((r.output.summary as Record<string, unknown>).unchecked).toBe(1);
   });
 
   it("counts GHSA MODERATE as medium and unrated advisories as unknown with equal penalties", async () => {

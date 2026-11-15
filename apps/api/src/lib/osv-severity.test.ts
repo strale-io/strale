@@ -17,6 +17,15 @@ describe("OSV severity", () => {
     expect(osvSeverity({ severity: [{ type: "CVSS_V4", score: "CVSS:4.0/AV:N" }] })).toBe("unknown");
   });
 
+  it.each([
+    "CVSS:3.1/AV:constructor/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    "CVSS:3.1/AV:toString/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    "CVSS:3.1/AV:N/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+  ])("rejects unsafe or duplicated metrics in %s", (vector) => {
+    expect(cvssV3BaseScore(vector)).toBeNull();
+    expect(osvSeverity({ severity: [{ type: "CVSS_V3", score: vector }] })).toBe("unknown");
+  });
+
   it("prefers the advisory's case-insensitive named rating", () => {
     expect(osvSeverity({ database_specific: { severity: "Moderate" } })).toBe("medium");
   });

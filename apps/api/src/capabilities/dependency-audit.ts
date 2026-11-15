@@ -22,6 +22,7 @@ import { osvSeverity, type OsvSeverity } from "../lib/osv-severity.js";
  */
 
 const OSV = "OSV vulnerability database";
+const OSV_DETAILS = "OSV vulnerability details";
 
 /** 429 and 5xx: the upstream is unavailable, worth a retry. */
 function isUnavailableStatus(status: number): boolean {
@@ -145,7 +146,10 @@ async function batchCveCheck(
           return;
         }
         details.set(id, detail);
-      } catch {
+      } catch (err) {
+        // degraded-ok: an OSV detail fetch that times out, fails on the network or returns a body that does not parse leaves that vulnerability listed with severity "unknown" and names "OSV vulnerability details" in unavailable_sources, never as rated or absent; any other error (our own defect) is rethrown, unbilled.
+        const failure = transportFailure(OSV_DETAILS, err);
+        if (!(failure instanceof UpstreamUnavailableError)) throw failure;
         detailsUnavailable = true;
       }
     }));
@@ -256,7 +260,7 @@ async function auditNpm(packageJsonStr: string) {
   // Merge CVE results
   const dependencies = registryResults.map((r) => {
     const vulns = cveResult.vulnerabilities.get(r.name) ?? [];
-    const checked = osvQueries.some((q) => q.name === r.name);
+    const checked = osvQueries.some((q) => q.name === r.name && isQueryable(q));
     const malicious = vulns.some((v) => v.id.startsWith("MAL-"));
     return {
       ...r,
@@ -291,7 +295,7 @@ async function auditNpm(packageJsonStr: string) {
       dependencies,
       summary: {
         total: depNames.length,
-        up_to_date: dependencies.filter((r) => !(r as Record<string, unknown>).is_outdated && !(r as Record<string, unknown>).error).length,
+        up_to_date: dependencies.filter((r) => r.checked !== false && !(r as Record<string, unknown>).is_outdated && !(r as Record<string, unknown>).error).length,
         outdated: outdated.length,
         deprecated: deprecated.length,
         vulnerable: vulnerable.length,
@@ -303,9 +307,9 @@ async function auditNpm(packageJsonStr: string) {
         ...deprecated.map((d) => `${d.name} (deprecated)`),
         ...vulnerable.filter((v) => !v.malicious).map((v) => `${v.name} (${v.vulnerability_count} vulns)`),
       ],
-      // Present only when a registry lookup failed, so a complete answer is unchanged.
+      // Present when a registry lookup or some OSV advisory-detail reads failed.
       ...(registryResults.some(isUnavailable) || cveResult.detailsUnavailable
-        ? { unavailable_sources: [...(registryResults.some(isUnavailable) ? ["npm registry"] : []), ...(cveResult.detailsUnavailable ? ["OSV vulnerability details"] : [])] }
+        ? { unavailable_sources: [...(registryResults.some(isUnavailable) ? ["npm registry"] : []), ...(cveResult.detailsUnavailable ? [OSV_DETAILS] : [])] }
         : {}),
     },
     provenance: { source: "npm-registry + osv.dev", fetched_at: new Date().toISOString() },
@@ -369,7 +373,7 @@ async function auditPypi(requirementsStr: string) {
 
   const dependencies = registryResults.map((r) => {
     const vulns = cveResult.vulnerabilities.get(r.name) ?? [];
-    const checked = osvQueries.some((q) => q.name === r.name);
+    const checked = osvQueries.some((q) => q.name === r.name && isQueryable(q));
     return {
       ...r,
       ...(checked ? {} : { checked: false }),
@@ -399,16 +403,16 @@ async function auditPypi(requirementsStr: string) {
       dependencies,
       summary: {
         total: deps.length,
-        up_to_date: dependencies.filter((r) => !(r as Record<string, unknown>).is_outdated && !(r as Record<string, unknown>).error).length,
+        up_to_date: dependencies.filter((r) => r.checked !== false && !(r as Record<string, unknown>).is_outdated && !(r as Record<string, unknown>).error).length,
         outdated: outdated.length,
         vulnerable: vulnerable.length,
         unchecked,
         errors: dependencies.filter((r) => (r as Record<string, unknown>).error).length,
       },
       critical_updates: vulnerable.map((v) => `${v.name} (${v.vulnerability_count} vulns)`),
-      // Present only when a registry lookup failed, so a complete answer is unchanged.
+      // Present when a registry lookup or some OSV advisory-detail reads failed.
       ...(registryResults.some(isUnavailable) || cveResult.detailsUnavailable
-        ? { unavailable_sources: [...(registryResults.some(isUnavailable) ? ["PyPI"] : []), ...(cveResult.detailsUnavailable ? ["OSV vulnerability details"] : [])] }
+        ? { unavailable_sources: [...(registryResults.some(isUnavailable) ? ["PyPI"] : []), ...(cveResult.detailsUnavailable ? [OSV_DETAILS] : [])] }
         : {}),
     },
     provenance: { source: "pypi-registry + osv.dev", fetched_at: new Date().toISOString() },
