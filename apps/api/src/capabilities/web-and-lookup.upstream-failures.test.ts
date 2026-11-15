@@ -16,12 +16,14 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { safeFetchMock, fetchRenderedHtml, meteredFetchMock, resolve4, llmCreate, extractJsonWithLlm, logWarnMock } = vi.hoisted(() => ({
+const { safeFetchMock, fetchRenderedHtml, meteredFetchMock, resolve4, getRdapBase, lookupRdapDomain, llmCreate, extractJsonWithLlm, logWarnMock } = vi.hoisted(() => ({
   logWarnMock: vi.fn(),
   safeFetchMock: vi.fn(),
   fetchRenderedHtml: vi.fn(),
   meteredFetchMock: vi.fn(),
   resolve4: vi.fn(),
+  getRdapBase: vi.fn(),
+  lookupRdapDomain: vi.fn(),
   llmCreate: vi.fn(),
   extractJsonWithLlm: vi.fn(),
 }));
@@ -50,6 +52,7 @@ vi.mock("../lib/log.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   logWarn: logWarnMock,
 }));
+vi.mock("../lib/rdap/domain.js", () => ({ getRdapBase, lookupRdapDomain }));
 vi.mock("node:dns/promises", async (importOriginal) => {
   const original = await importOriginal<typeof import("node:dns/promises")>();
   return { ...original, resolve4, default: { ...original, resolve4 } };
@@ -118,6 +121,10 @@ let fetchMock: ReturnType<typeof vi.fn>;
 const savedSerperKey = process.env.SERPER_API_KEY;
 
 beforeEach(() => {
+  getRdapBase.mockReset();
+  lookupRdapDomain.mockReset();
+  getRdapBase.mockResolvedValue("https://rdap.test/");
+  lookupRdapDomain.mockResolvedValue({ status: "not_found" });
   fetchMock = vi.fn();
   vi.stubGlobal("fetch", fetchMock);
   safeFetchMock.mockReset();
@@ -406,7 +413,7 @@ function github(override: (url: string) => (() => Promise<Response> | Response) 
     const u = String(url);
     const answer = override(u);
     if (answer) return answer();
-    if (u.endsWith("/README.md")) return status(200, "# Widget\nA widget.");
+    if (u.endsWith("/readme")) return status(200, "# Widget\nA widget.");
     if (u.startsWith("https://raw.githubusercontent.com/")) return status(404);
     if (u.endsWith("/languages")) return json({ TypeScript: 100 });
     if (u.includes("/commits")) return json([{ commit: { message: "fix", author: { date: "2026-11-01T00:00:00Z" } } }]);
@@ -421,7 +428,7 @@ const rateLimited = () => status(403, '{"message":"API rate limit exceeded"}', {
 describe("github-repo-analyze failure: GitHub that does not answer fails the call (row 21)", () => {
   it.each([
     ["the commit list is rate limited", (u: string) => (u.includes("/commits") ? rateLimited : undefined)],
-    ["the README host answers 429", (u: string) => (u.endsWith("/README.md") ? () => status(429) : undefined)],
+    ["the README host answers 429", (u: string) => (u.endsWith("/readme") ? () => status(429) : undefined)],
     ["the repo record answers 503", (u: string) => (u.endsWith("/repos/o/r") ? () => status(503) : undefined)],
     ["the language breakdown times out", (u: string) => (u.endsWith("/languages") ? () => { throw timeout(); } : undefined)],
     ["package.json hits a network error", (u: string) => (u.endsWith("/package.json") ? () => { throw networkError(); } : undefined)],
@@ -449,8 +456,31 @@ describe("github-repo-analyze failure: GitHub that does not answer fails the cal
 });
 
 describe("github-repo-analyze negative: what GitHub says is absent keeps its output", () => {
+  it("uses GitHub's preferred README endpoint with the raw media type", async () => {
+    github();
+    await billed("github-repo-analyze", exec("github-repo-analyze")({ url: "https://github.com/o/r" }));
+    expect(promptSent()).toContain("README excerpt:\n# Widget\nA widget.");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.github.com/repos/o/r/readme",
+      expect.objectContaining({ headers: expect.objectContaining({ Accept: "application/vnd.github.raw" }) }),
+    );
+  });
+
+  it("never sends a configured GitHub token to caller-selected repositories", async () => {
+    process.env.GITHUB_TOKEN = "production-token-must-not-leave";
+    try {
+      github();
+      await billed("github-repo-analyze", exec("github-repo-analyze")({ url: "https://github.com/o/r" }));
+      for (const [, init] of fetchMock.mock.calls) {
+        expect(new Headers(init?.headers).has("Authorization")).toBe(false);
+      }
+    } finally {
+      delete process.env.GITHUB_TOKEN;
+    }
+  });
+
   it("a repository without a README, package.json or requirements.txt is analysed as such, billed", async () => {
-    github((u) => (u.endsWith("/README.md") ? () => status(404) : undefined));
+    github((u) => (u.endsWith("/readme") ? () => status(404) : undefined));
     const out = await billed("github-repo-analyze", exec("github-repo-analyze")({ url: "https://github.com/o/r" }));
     expect(promptSent()).toContain("README excerpt:\nNo README");
     expect(out).toEqual({
@@ -580,7 +610,8 @@ describe("startup-domain-check failure: a resolver that does not answer is never
 });
 
 describe("startup-domain-check negative: answers that were given keep their output", () => {
-  it("NXDOMAIN everywhere and 404 on every platform is all available, billed", async () => {
+  // Changed for billed-wrong-answers-four-tools: NXDOMAIN now requires RDAP confirmation.
+  it("NXDOMAIN plus RDAP not_found and 404 on every platform is all available, billed", async () => {
     domains(() => Promise.reject(dnsError("ENOTFOUND")));
     const out = await billed("startup-domain-check", exec("startup-domain-check")({ company_name: "Acme" }));
     expect(out.best_available_domain).toBe("acme.com");
@@ -595,6 +626,31 @@ describe("startup-domain-check negative: answers that were given keep their outp
     const out = await billed("startup-domain-check", exec("startup-domain-check")({ company_name: "Acme" }));
     expect(out.domains.every((d: Out) => d.available === false)).toBe(true);
     expect(out.taken.map((t: Out) => t.type)).toEqual(expect.arrayContaining(["github", "npm", "pypi"]));
+    expect(lookupRdapDomain).not.toHaveBeenCalled();
+  });
+
+  it("NXDOMAIN plus RDAP found is taken without a website probe", async () => {
+    domains(() => Promise.reject(dnsError("ENOTFOUND")));
+    lookupRdapDomain.mockResolvedValue({ status: "found" });
+    const out = await billed("startup-domain-check", exec("startup-domain-check")({ company_name: "Acme" }));
+    expect(out.domains.every((d: Out) => d.available === false && d.current_owner === "Registered (no DNS)")).toBe(true);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith("https://acme."))).toBe(false);
+  });
+
+  it("NXDOMAIN plus an RDAP failure is unchecked and names RDAP", async () => {
+    domains(() => Promise.reject(dnsError("ENOTFOUND")));
+    lookupRdapDomain.mockRejectedValueOnce(new Error("registry down"));
+    const out = await billed("startup-domain-check", exec("startup-domain-check")({ company_name: "Acme" }));
+    expect(out.domains.find((d: Out) => d.domain === "acme.com")).toMatchObject({ available: null, current_owner: null });
+    expect(out.unavailable_sources).toEqual(["RDAP for acme.com"]);
+  });
+
+  it("NXDOMAIN with no RDAP base is unchecked and names RDAP", async () => {
+    domains(() => Promise.reject(dnsError("ENOTFOUND")));
+    getRdapBase.mockResolvedValueOnce(null);
+    const out = await billed("startup-domain-check", exec("startup-domain-check")({ company_name: "Acme" }));
+    expect(out.domains.find((d: Out) => d.domain === "acme.com")).toMatchObject({ available: null, current_owner: null });
+    expect(out.unavailable_sources).toEqual(["RDAP for acme.com"]);
   });
 });
 
@@ -810,7 +866,7 @@ describe("tail: github-repo-analyze names a 403 only as what its body says", () 
   it.each([
     ["the repository record", (u: string) => u.endsWith("/repos/o/r")],
     ["the contributor list", (u: string) => u.includes("/contributors")],
-    ["the README host", (u: string) => u.endsWith("/README.md")],
+    ["the README host", (u: string) => u.endsWith("/readme")],
   ])("a 403 on %s with no rate-limit or abuse wording reads 'declined the request', retryable", async (_l, match) => {
     github((u) => (match(u) ? () => status(403, '{"message":"Resource not accessible by integration"}') : undefined));
     const err = await expectUnbilledUpstreamFailure(exec("github-repo-analyze")({ url: "https://github.com/o/r" }));

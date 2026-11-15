@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { UpstreamUnavailableError } from "../lib/upstream-result.js";
+import { inputRefusal } from "../lib/capability-refusal.js";
 
 // EORI (Economic Operators Registration and Identification) validation
 // Uses the EU EORI validation service SOAP/REST endpoint
@@ -138,6 +139,14 @@ registerCapability("eori-validate", async (input: CapabilityInput) => {
         fetched_at: new Date().toISOString(),
       },
     };
+  }
+
+  if (cleaned.startsWith("GB")) {
+    throw inputRefusal(
+      "'eori' must be verifiable by the EU EORI service. GB EORI numbers are held by HMRC, not the EU service, so this capability cannot verify them.",
+      "eori",
+      "Send 'eori' with an EU member-state or XI prefix; check GB numbers with HMRC's 'Check an EORI number' service at https://www.gov.uk/check-eori-number.",
+    );
   }
 
   const result = await validateEori(cleaned);

@@ -117,7 +117,7 @@ output_schema:
               - "null"
     available:
       type: array
-data_source: DNS protocol + WHOIS + HTTP fetch (domain availability analysis)
+data_source: DNS protocol + registry RDAP + HTTP fetch (domain availability analysis)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
@@ -172,9 +172,9 @@ limitations:
     category: coverage
     severity: info
     workaround: Supplement with whois-lookup for specific TLDs and social-profile-check for additional platform availability
-  - title: Available means DNS said the name does not exist
+  - title: Availability requires DNS and registry confirmation
     text: >-
-      A domain is reported available only when DNS answers that the name does not exist (NXDOMAIN). A name that exists without an address record is reported taken. If the resolver does not answer for one extension, that domain's available is null, it is listed neither as available nor as taken, and it is named in unavailable_sources; if it answers for none, the call fails unbilled. If GitHub, npm or PyPI does not answer, that handle's available is null, it is listed neither as available nor as taken, and the platform is named in unavailable_sources. DNS is not a registry: a registered domain with no DNS records can still read as available.
+      A domain is reported available only when DNS has no such name and the registry's RDAP service confirms it is not registered; when RDAP cannot answer, the domain reads unchecked (null). A name that exists without an address record is reported taken. If the resolver does not answer for one extension, that domain's available is null, it is listed neither as available nor as taken, and it is named in unavailable_sources; if it answers for none, the call fails unbilled. If GitHub, npm or PyPI does not answer, that handle's available is null, it is listed neither as available nor as taken, and the platform is named in unavailable_sources.
     category: availability
     severity: info
 

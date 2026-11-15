@@ -98,7 +98,7 @@ describe("github-repo-analyze reads repository files as a bounded prefix", () =>
   it("README, package.json and requirements.txt are cut at the cap; the analysis still runs", async () => {
     fetchMock.mockImplementation(async (url: string) => {
       const u = String(url);
-      if (u.startsWith("https://raw.githubusercontent.com/")) return huge("text/plain");
+      if (u.startsWith("https://raw.githubusercontent.com/") || u.endsWith("/readme")) return huge("text/plain");
       if (u.endsWith("/languages")) return json({ TypeScript: 1 });
       if (u.includes("/commits") || u.includes("/contributors")) return json([]);
       return json({ stargazers_count: 1, forks_count: 0, open_issues_count: 0, license: null });
@@ -106,8 +106,7 @@ describe("github-repo-analyze reads repository files as a bounded prefix", () =>
     const r = (await getExecutor("github-repo-analyze")!({ url: "https://github.com/o/r" })) as {
       output: Record<string, unknown>;
     };
-    // Three raw files are requested (README, package.json, requirements.txt
-    // because package.json is "missing"); each is cut at 256 KiB.
+    // The API README plus raw package.json are requested; each is cut at 256 KiB.
     expect(totalPulls(), "a repository file was read past the cap").toBeLessThanOrEqual(3 * pullsFor(256 * 1024));
     expect(r.output.repo).toBe("o/r");
     expect(extractJsonWithLlm).toHaveBeenCalled();

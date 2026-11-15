@@ -2,9 +2,11 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import * as dns from "node:dns/promises";
 import { inputRefusal } from "../lib/capability-refusal.js";
 import { dnsUnavailable, fetchUnavailable, httpUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
+import { getRdapBase, lookupRdapDomain } from "../lib/rdap/domain.js";
 
 // A wrong "available" is the worst answer this tool can give: a founder may
-// act on it. So a domain is "available" only on a definitive NXDOMAIN; a
+// act on it. So a domain is "available" only when NXDOMAIN is confirmed as
+// unregistered by the registry's RDAP service; a
 // domain or handle whose check could not answer reads null rather than
 // "available" or "taken" and is named in unavailable_sources; and when no
 // domain lookup answered at all the call fails (2026-11-06
@@ -39,12 +41,14 @@ registerCapability("startup-domain-check", async (input: CapabilityInput) => {
       const lookup = lookups[i];
       if (lookup.status === "rejected") {
         if (!(lookup.reason instanceof UpstreamUnavailableError)) throw lookup.reason;
-        unavailableSources.push(`DNS for ${domain}`);
+        unavailableSources.push(lookup.reason instanceof RdapUnavailableError ? `RDAP for ${domain}` : `DNS for ${domain}`);
         return { domain, extension: ext, available: null as boolean | null, current_owner: null as string | null };
       }
-      const available: boolean | null = lookup.value;
+      const { available, registeredWithoutDns } = lookup.value;
       let currentOwner: string | null = null;
-      if (!available) {
+      if (registeredWithoutDns) {
+        currentOwner = "Registered (no DNS)";
+      } else if (!available) {
         // Try to detect what's there
         try {
           const res = await fetch(`https://${domain}`, {
@@ -117,7 +121,7 @@ registerCapability("startup-domain-check", async (input: CapabilityInput) => {
       best_available_domain: domainChecks.find((d) => d.available === true)?.domain ?? null,
       ...(unavailableSources.length > 0 ? { unavailable_sources: unavailableSources } : {}),
     },
-    provenance: { source: "dns-http", fetched_at: new Date().toISOString() },
+    provenance: { source: "dns-rdap-http", fetched_at: new Date().toISOString() },
   };
 });
 
@@ -126,9 +130,10 @@ const NPM = "npm registry";
 const PYPI = "PyPI";
 
 /**
- * True only on NXDOMAIN (ENOTFOUND): no such name exists. A name that exists
- * without an A record (ENODATA) is registered, so it is taken. Any other
- * resolver failure is not an answer and throws UpstreamUnavailableError.
+ * NXDOMAIN counts as available only when RDAP answers `not_found`. RDAP
+ * `found` or `no_registration_event` means registered, with no DNS. A missing
+ * RDAP base or a failed lookup throws `RdapUnavailableError`, and the caller
+ * reports that domain as `null`.
  *
  * The error names the extension, never the caller's name: the breaker reads
  * the message, so a name like "studio403" would file a resolver outage as
@@ -136,12 +141,27 @@ const PYPI = "PyPI";
  * unavailable_sources when other lookups answered, and the caller knows its
  * own name when none did.
  */
-async function isDomainAvailable(domain: string, ext: string): Promise<boolean> {
+interface DomainAvailability { available: boolean; registeredWithoutDns: boolean }
+
+class RdapUnavailableError extends UpstreamUnavailableError {}
+
+async function isDomainAvailable(domain: string, ext: string): Promise<DomainAvailability> {
   const [lookup] = await Promise.allSettled([dns.resolve4(domain)]);
-  if (lookup.status === "fulfilled") return false; // Has DNS records = taken
+  if (lookup.status === "fulfilled") return { available: false, registeredWithoutDns: false }; // Has DNS records = taken
   const code = (lookup.reason as NodeJS.ErrnoException | null)?.code;
-  if (code === "ENOTFOUND") return true;
-  if (code === "ENODATA") return false;
+  if (code === "ENOTFOUND") {
+    try {
+      const base = await getRdapBase(ext.slice(1));
+      if (!base) throw new Error(`no RDAP base for ${ext}`);
+      const result = await lookupRdapDomain(base, domain);
+      return result.status === "not_found"
+        ? { available: true, registeredWithoutDns: false }
+        : { available: false, registeredWithoutDns: true };
+    } catch (error) {
+      throw new RdapUnavailableError(`RDAP for the ${ext} name`, "did not answer; availability is unchecked.", { cause: error });
+    }
+  }
+  if (code === "ENODATA") return { available: false, registeredWithoutDns: false };
   throw dnsUnavailable(lookup.reason, `DNS A-record query for the ${ext} name`);
 }
 

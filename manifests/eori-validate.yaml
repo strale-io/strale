@@ -87,6 +87,11 @@ output_field_reliability:
   trader_name: guaranteed
   country_code: guaranteed
 limitations:
+  - title: Great Britain EORI numbers are refused
+    text: Great Britain (GB) EORI numbers are not in the EU EORI service and are refused, not checked. Northern Ireland (XI) numbers are checked.
+    category: coverage
+    severity: warning
+    workaround: Use HMRC's Check an EORI number service for GB numbers.
   - title: EU EORI checks can be slow or unavailable
     text: >-
       Validates against the EU EORI service, which has periodic downtime and may be slow during peak hours. When it
