@@ -117,8 +117,8 @@ output_field_reliability:
   risk_level: guaranteed
   risk_score_complete: guaranteed
   vulnerabilities: common
-  vulnerabilities.unknown: guaranteed
-  vulnerabilities.details.severity: guaranteed
+  vulnerabilities.unknown: common
+  vulnerabilities.details.severity: common
   license: common
   freshness: guaranteed
   scorecard: rare

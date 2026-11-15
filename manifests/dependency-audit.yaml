@@ -116,10 +116,10 @@ test_fixtures:
 output_field_reliability:
   unavailable_sources: rare
   summary: guaranteed
-  summary.unchecked: guaranteed
+  summary.unchecked: common
   ecosystem: guaranteed
   dependencies: guaranteed
-  dependencies.vulnerabilities.severity: guaranteed
+  dependencies.vulnerabilities.severity: common
   dependencies.malicious: rare
   dependencies.checked: rare
   dependencies.checked_version: rare
