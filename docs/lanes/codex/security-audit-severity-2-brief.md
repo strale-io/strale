@@ -18,7 +18,20 @@ Intent: Codex builder brief: review and CI fixes for security-audit-severity (ro
 1. **CI is red: the new detail-fetch catch is unexplained.**
    - **What fails:** `npm --workspace=apps/api run lint:upstream-catches` fails with `NEW_SILENT_CATCH apps/api/src/capabilities/dependency-audit.ts`. The cause is the bare `catch { detailsUnavailable = true; }` in the OSV advisory-detail loop.
    - **Why the behaviour is right:** that catch is a genuine degraded marker. The flag puts "OSV vulnerability details" into `unavailable_sources`, and each vulnerability whose detail did not arrive reads `severity: "unknown"`, never low or clean. Keep the behaviour.
-   - **The fix:** add a reviewed reason as the first line inside the catch block, in the form the guard reads: `// degraded-ok: <reason>`. Model it on the one in `startup-domain-check.ts`. The reason must say that a failed detail fetch leaves that advisory `unknown` and names OSV vulnerability details in `unavailable_sources`, so the result is never read as low or clean.
+   - **What else is wrong:** the bare catch also swallows errors that are not upstream failures, such as our own defects. The rest of this file avoids that with `transportFailure()`.
+   - **The fix:** in `apps/api/src/capabilities/dependency-audit.ts` only.
+     - Directly below `const OSV = "OSV vulnerability database";` add `const OSV_DETAILS = "OSV vulnerability details";`. Use it in place of the literal `"OSV vulnerability details"` strings in the `unavailable_sources` spreads of `auditNpm` and `auditPypi`.
+     - Replace the detail-loop handler `} catch { detailsUnavailable = true; }` with:
+       ```ts
+       } catch (err) {
+         // degraded-ok: an OSV detail fetch that times out, fails on the network or returns a body that does not parse leaves that vulnerability listed with severity "unknown" and names "OSV vulnerability details" in unavailable_sources, never as rated or absent; any other error (our own defect) is rethrown, unbilled.
+         const failure = transportFailure(OSV_DETAILS, err);
+         if (!(failure instanceof UpstreamUnavailableError)) throw failure;
+         detailsUnavailable = true;
+       }
+       ```
+     - The `// degraded-ok:` line must be the first line inside the catch block, because that is where the guard reads it.
+   - **Test:** stub `/v1/vulns/<id>` to answer 200 with a body that does not parse. Expect that vulnerability's `severity: "unknown"` and `unavailable_sources` to contain "OSV vulnerability details". It must fail on `origin/main`'s `dependency-audit.ts`.
    - **Do not** add anything to the guard's baseline.
    - **Check:** run the lint command above with `--base $(git merge-base origin/main HEAD)` as CI does, and show it passing in the report.
 2. **One new test does not fail on main.**
