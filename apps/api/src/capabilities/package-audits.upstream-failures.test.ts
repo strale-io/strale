@@ -199,7 +199,8 @@ describe("package-security-audit: secondary legs are marked, never clean (row 7)
     const r = await exec(PSA_INPUT);
     expect(r.output).not.toHaveProperty("unavailable_sources");
     expect(r.output.risk_score_complete).toBe(true);
-    expect(r.output.vulnerabilities).toEqual({ total: 0, critical: 0, high: 0, medium: 0, low: 0, details: [] });
+    // security-audit-severity brief: the count now distinguishes unrated advisories from low.
+    expect(r.output.vulnerabilities).toEqual({ total: 0, critical: 0, high: 0, medium: 0, low: 0, unknown: 0, details: [] });
     expect(r.output.dependency_count).toBe(0);
     expect(r.output.license).toBeNull();
     expect(r.output.scorecard).toBeNull();
@@ -294,7 +295,7 @@ describe("dependency-audit: registry failures are marked, never clean (row 8)", 
   it("keeps the real negative: a registry 404 and an OSV answer of no vulnerabilities, with no unavailable_sources", async () => {
     route([
       [NPM, (url) => (url.endsWith("lodash") ? status(404) : npmDoc("1.3.0"))],
-      [OSV_BATCH, () => osvAnswers(1)],
+      [OSV_BATCH, () => osvAnswers(2)],
     ]);
     const exec = await load("dependency-audit", "./dependency-audit.js");
     const r = await exec({ package_json: PACKAGE_JSON });
@@ -309,7 +310,173 @@ describe("dependency-audit: registry failures are marked, never clean (row 8)", 
       vulnerability_count: 0,
       highest_severity: null,
     });
-    expect(sentQueries()).toBe(1);
+    // security-audit-severity brief: a removed package with a declared version still reaches OSV.
+    expect(sentQueries()).toBe(2);
     await expectBillable("dependency-audit", r.output);
+  });
+});
+
+describe("security-audit-severity brief regressions", () => {
+  it.each([
+    ["named severity", { database_specific: { severity: "CRITICAL" } }],
+    ["CVSS vector", { severity: [{ type: "CVSS_V3", score: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H" }] }],
+  ])("hydrates dependency advisories with %s", async (_label, rating) => {
+    route([
+      [NPM, () => npmDoc("1.3.0")],
+      [OSV_BATCH, () => json({ results: [{ vulns: [{ id: "GHSA-test" }] }] })],
+      [/\/v1\/vulns\/GHSA-test$/, () => json({ id: "GHSA-test", summary: "full summary", aliases: ["CVE-2026-1"], ...rating })],
+    ]);
+    const exec = await load("dependency-audit", "./dependency-audit.js");
+    const r = await exec({ package_json: JSON.stringify({ dependencies: { "left-pad": "1.3.0" } }) });
+    expect((r.output.dependencies as Array<Record<string, unknown>>)[0]).toMatchObject({
+      highest_severity: "critical",
+      vulnerabilities: [{ id: "GHSA-test", severity: "critical", summary: "full summary", aliases: ["CVE-2026-1"] }],
+    });
+  });
+
+  it("keeps a failed advisory detail fetch as unknown and names the degraded source", async () => {
+    route([
+      [NPM, () => npmDoc("1.3.0")],
+      [OSV_BATCH, () => json({ results: [{ vulns: [{ id: "GHSA-test" }] }] })],
+      [/\/v1\/vulns\/GHSA-test$/, () => status(503)],
+    ]);
+    const exec = await load("dependency-audit", "./dependency-audit.js");
+    const r = await exec({ package_json: JSON.stringify({ dependencies: { "left-pad": "1.3.0" } }) });
+    expect(r.output.unavailable_sources).toEqual(["OSV vulnerability details"]);
+    expect((r.output.dependencies as Array<Record<string, unknown>>)[0]).toMatchObject({ highest_severity: "unknown", vulnerabilities: [{ severity: "unknown" }] });
+  });
+
+  it("keeps an advisory with an unparsable detail body as unknown and names the degraded source", async () => {
+    route([
+      [NPM, () => npmDoc("1.3.0")],
+      [OSV_BATCH, () => json({ results: [{ vulns: [{ id: "GHSA-test" }] }] })],
+      [/\/v1\/vulns\/GHSA-test$/, () => new Response("<html>maintenance</html>", { status: 200 })],
+    ]);
+    const exec = await load("dependency-audit", "./dependency-audit.js");
+    const r = await exec({ package_json: JSON.stringify({ dependencies: { "left-pad": "1.3.0" } }) });
+    expect(r.output.unavailable_sources).toContain("OSV vulnerability details");
+    expect((r.output.dependencies as Array<Record<string, unknown>>)[0]).toMatchObject({
+      vulnerabilities: [{ id: "GHSA-test", severity: "unknown" }],
+    });
+  });
+
+  it("rethrows a defect from an advisory detail fetch", async () => {
+    route([
+      [NPM, () => npmDoc("1.3.0")],
+      [OSV_BATCH, () => json({ results: [{ vulns: [{ id: "GHSA-test" }] }] })],
+      [/\/v1\/vulns\/GHSA-test$/, async () => { throw new RangeError("defect"); }],
+    ]);
+    const exec = await load("dependency-audit", "./dependency-audit.js");
+    await expect(exec({ package_json: JSON.stringify({ dependencies: { "left-pad": "1.3.0" } }) })).rejects.toThrow(RangeError);
+  });
+
+  it("keeps an advisory with an oversized detail body as unknown and names the degraded source", async () => {
+    const { MAX_FETCHED_API_RESPONSE_BYTES } = await import("../lib/resource-limits.js");
+    route([
+      [NPM, () => npmDoc("1.3.0")],
+      [OSV_BATCH, () => json({ results: [{ vulns: [{ id: "GHSA-test" }] }] })],
+      [/\/v1\/vulns\/GHSA-test$/, () => json({
+        id: "GHSA-test",
+        database_specific: { severity: "HIGH" },
+        padding: "x".repeat(MAX_FETCHED_API_RESPONSE_BYTES),
+      })],
+    ]);
+    const exec = await load("dependency-audit", "./dependency-audit.js");
+    const r = await exec({ package_json: JSON.stringify({ dependencies: { "left-pad": "1.3.0" } }) });
+    expect(r.output.unavailable_sources).toContain("OSV vulnerability details");
+    expect((r.output.dependencies as Array<Record<string, unknown>>)[0]).toMatchObject({
+      vulnerabilities: [{ id: "GHSA-test", severity: "unknown" }],
+    });
+  });
+
+  it("queries a removed npm package and prioritises its malicious advisory", async () => {
+    route([
+      [NPM, () => status(404)],
+      [OSV_BATCH, () => json({ results: [{ vulns: [{ id: "MAL-2026-test" }] }] })],
+      [/\/v1\/vulns\/MAL-2026-test$/, () => json({ id: "MAL-2026-test", summary: "malware", database_specific: { severity: "HIGH" } })],
+    ]);
+    const exec = await load("dependency-audit", "./dependency-audit.js");
+    const r = await exec({ package_json: JSON.stringify({ dependencies: { poisoned: "1.0.0" } }) });
+    expect((r.output.dependencies as Array<Record<string, unknown>>)[0]).toMatchObject({ malicious: true });
+    expect(r.output.critical_updates).toEqual(["poisoned (malicious package advisory)"]);
+  });
+
+  it("checks an unpinned PyPI requirement at the registry latest version", async () => {
+    route([
+      [/pypi\.org\/pypi\/requests\/json$/, () => json({ info: { version: "2.32.0" } })],
+      [OSV_BATCH, (_url, init) => {
+        expect(JSON.parse(String(init?.body)).queries[0].version).toBe("2.32.0");
+        return osvAnswers(1);
+      }],
+    ]);
+    const exec = await load("dependency-audit", "./dependency-audit.js");
+    const r = await exec({ requirements_txt: "requests" });
+    expect((r.output.dependencies as Array<Record<string, unknown>>)[0]).toMatchObject({ checked_version: "2.32.0", version_source: "latest" });
+    expect((r.output.summary as Record<string, unknown>).unchecked).toBe(0);
+  });
+
+  it("refuses an entirely unchecked dependency list", async () => {
+    route([[NPM, () => status(404)]]);
+    const exec = await load("dependency-audit", "./dependency-audit.js");
+    await expect(exec({ package_json: JSON.stringify({ dependencies: { missing: "" } }) })).rejects.toMatchObject({
+      name: "CapabilityRefusalError",
+      details: { field: "package_json" },
+    });
+    expect(fetchMock.mock.calls.some(([url]) => OSV_BATCH.test(String(url)))).toBe(false);
+  });
+
+  it("throws upstream-unavailable when an entirely unchecked list lost its registry answer", async () => {
+    route([[NPM, () => status(503)]]);
+    const exec = await load("dependency-audit", "./dependency-audit.js");
+    await expect(exec({ package_json: JSON.stringify({ dependencies: { unavailable: "" } }) })).rejects.toMatchObject({
+      name: "UpstreamUnavailableError",
+      upstream: "npm registry",
+    });
+    expect(fetchMock.mock.calls.some(([url]) => OSV_BATCH.test(String(url)))).toBe(false);
+  });
+
+  it("throws upstream-unavailable when an unchecked list has both missing and unavailable registry answers", async () => {
+    route([[NPM, (url) => (url.endsWith("missing") ? status(404) : status(503))]]);
+    const exec = await load("dependency-audit", "./dependency-audit.js");
+    await expect(exec({ package_json: JSON.stringify({ dependencies: { missing: "", unavailable: "" } }) })).rejects.toMatchObject({
+      name: "UpstreamUnavailableError",
+      upstream: "npm registry",
+    });
+    expect(fetchMock.mock.calls.some(([url]) => OSV_BATCH.test(String(url)))).toBe(false);
+  });
+
+  it("marks an unpinned PyPI dependency without a latest version as unchecked in a mixed list", async () => {
+    route([
+      [/pypi\.org\/pypi\/requests\/json$/, () => json({ info: {} })],
+      [/pypi\.org\/pypi\/flask\/json$/, () => json({ info: { version: "3.0.0" } })],
+      [OSV_BATCH, () => osvAnswers(1)],
+    ]);
+    const exec = await load("dependency-audit", "./dependency-audit.js");
+    const r = await exec({ requirements_txt: "requests\nflask==3.0.0" });
+    const requests = (r.output.dependencies as Array<Record<string, unknown>>).find((dependency) => dependency.name === "requests");
+    expect(requests).toMatchObject({ checked: false });
+    expect((r.output.summary as Record<string, unknown>).unchecked).toBe(1);
+  });
+
+  it("counts GHSA MODERATE as medium and unrated advisories as unknown with equal penalties", async () => {
+    psaRoutes({ osv: () => json({ vulns: [
+      { id: "GHSA-moderate", database_specific: { severity: "MODERATE" } },
+      { id: "GHSA-unknown" },
+    ] }) });
+    const exec = await load("package-security-audit", "./package-security-audit.js");
+    const r = await exec(PSA_INPUT);
+    expect(r.output.vulnerabilities).toMatchObject({ medium: 1, low: 0, unknown: 1 });
+    // 100 - 10 stale-release penalty - 8 moderate - 8 unknown.
+    expect(r.output.risk_score).toBe(74);
+  });
+
+  it("refuses an unpublished explicit version before calling OSV", async () => {
+    route([[NPM, () => json(PACKUMENT)]]);
+    const exec = await load("package-security-audit", "./package-security-audit.js");
+    await expect(exec({ ...PSA_INPUT, version: "9.9.9" })).rejects.toMatchObject({
+      name: "CapabilityRefusalError",
+      details: { field: "version" },
+    });
+    expect(fetchMock.mock.calls.some(([url]) => OSV_QUERY.test(String(url)))).toBe(false);
   });
 });

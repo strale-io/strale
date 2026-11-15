@@ -2,6 +2,8 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, MAX_PACKUMENT_BYTES, readJsonPickWithLimit, readJsonWithLimit } from "../lib/resource-limits.js";
 import type { Pick } from "../lib/json-pick.js";
 import { UpstreamUnavailableError } from "../lib/upstream-result.js";
+import { inputRefusal } from "../lib/capability-refusal.js";
+import { osvSeverity } from "../lib/osv-severity.js";
 
 const NPM_AUDIT_PICK: Pick = {
   "dist-tags": true, time: true, maintainers: true,
@@ -16,6 +18,7 @@ registerCapability("package-security-audit", async (input: CapabilityInput) => {
   if (!name) throw new Error("'name' is required. Provide an npm or PyPI package name.");
 
   let version = ((input.version as string) ?? "").trim() || null;
+  const explicitVersion = version;
   let ecosystem = ((input.ecosystem as string) ?? "").trim().toLowerCase() || null;
 
   // ── Detect ecosystem ────────────────────────────────────────────────
@@ -29,7 +32,15 @@ registerCapability("package-security-audit", async (input: CapabilityInput) => {
   // ── Resolve version + registry data ─────────────────────────────────
   const registry = ecosystem === "npm"
     ? await fetchNpmRegistry(name)
-    : await fetchPypiRegistry(name, version);
+    : await fetchPypiRegistry(name, null);
+
+  if (explicitVersion && !registry.publishedVersions.includes(explicitVersion)) {
+    throw inputRefusal(
+      `'version' must be a published version of ${name}; '${explicitVersion}' is not published.`,
+      "version",
+      "Send 'version' as a version published for this package, or omit it to audit the latest release.",
+    );
+  }
 
   if (!version) {
     version = registry.latestVersion;
@@ -100,7 +111,9 @@ registerCapability("package-security-audit", async (input: CapabilityInput) => {
   if (vulns) {
     riskScore -= Math.min(vulns.critical * 25, 50);
     riskScore -= Math.min(vulns.high * 15, 30);
-    riskScore -= Math.min(vulns.medium * 8, 16);
+    // An advisory exists and nobody has said it is minor, so unknown carries
+    // the same bounded penalty as medium rather than being sold as low risk.
+    riskScore -= Math.min((vulns.medium + vulns.unknown) * 8, 16);
     riskScore -= Math.min(vulns.low * 3, 6);
   }
 
@@ -153,6 +166,7 @@ registerCapability("package-security-audit", async (input: CapabilityInput) => {
             high: vulns.high,
             medium: vulns.medium,
             low: vulns.low,
+            unknown: vulns.unknown,
             details: vulns.details.slice(0, 10),
           }
         : null,
@@ -266,6 +280,7 @@ interface VulnResult {
   high: number;
   medium: number;
   low: number;
+  unknown: number;
   details: Array<{ id: string; severity: string; summary: string; fixed_in: string | null }>;
 }
 
@@ -294,6 +309,7 @@ interface RegistryResult {
   versionTimestamps: Record<string, string>;
   versionPublishers: Record<string, { name: string; email: string } | null>;
   versionScripts: Record<string, Record<string, string> | null>;
+  publishedVersions: string[];
 }
 
 // ── Supply chain helpers ─────────────────────────────────────────────────────
@@ -391,42 +407,26 @@ async function fetchOsv(name: string, version: string, ecosystem: string): Promi
   }
   const vulns = (data.vulns ?? []) as Array<Record<string, unknown>>;
 
-  let critical = 0, high = 0, medium = 0, low = 0;
+  let critical = 0, high = 0, medium = 0, low = 0, unknown = 0;
   const details: VulnResult["details"] = [];
 
   for (const v of vulns) {
-    const severity = extractSeverity(v);
-    if (severity === "CRITICAL") critical++;
-    else if (severity === "HIGH") high++;
-    else if (severity === "MEDIUM") medium++;
-    else low++;
+    const severity = osvSeverity(v);
+    if (severity === "critical") critical++;
+    else if (severity === "high") high++;
+    else if (severity === "medium") medium++;
+    else if (severity === "low") low++;
+    else unknown++;
 
     details.push({
       id: (v.id as string) ?? "unknown",
-      severity: severity.toLowerCase(),
+      severity,
       summary: ((v.summary as string) ?? "").slice(0, 200),
       fixed_in: extractFixedVersion(v),
     });
   }
 
-  return { total: vulns.length, critical, high, medium, low, details };
-}
-
-function extractSeverity(vuln: Record<string, unknown>): string {
-  const severity = vuln.database_specific as Record<string, unknown> | undefined;
-  if (severity?.severity) return String(severity.severity).toUpperCase();
-
-  const cvss = (vuln.severity as Array<{ type: string; score: string }>) ?? [];
-  for (const s of cvss) {
-    if (s.type === "CVSS_V3") {
-      const score = parseFloat(s.score?.split("/")[0] ?? "0");
-      if (score >= 9) return "CRITICAL";
-      if (score >= 7) return "HIGH";
-      if (score >= 4) return "MEDIUM";
-      return "LOW";
-    }
-  }
-  return "UNKNOWN";
+  return { total: vulns.length, critical, high, medium, low, unknown, details };
 }
 
 function extractFixedVersion(vuln: Record<string, unknown>): string | null {
@@ -591,6 +591,7 @@ async function fetchNpmRegistry(name: string): Promise<RegistryResult> {
     versionTimestamps: times,
     versionPublishers,
     versionScripts,
+    publishedVersions: Object.keys(versions),
   };
 }
 
@@ -644,5 +645,6 @@ async function fetchPypiRegistry(name: string, version: string | null): Promise<
     versionTimestamps,
     versionPublishers: {},  // PyPI doesn't expose per-version publisher
     versionScripts: {},      // Not applicable for PyPI
+    publishedVersions: Object.keys(releases),
   };
 }

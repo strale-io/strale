@@ -61,10 +61,11 @@ output_schema:
       items:
         type: string
       description: >-
-        Present only when a registry lookup failed; the affected dependencies carry unavailable true. Those that
-        declare a version were still checked against OSV.dev at that version as written; one that declares none
-        (an unpinned PyPI requirement, an empty npm range) was not checked at all, and its vulnerability_count of 0
-        means unchecked, not clean.
+        Present when a registry lookup failed or when some OSV vulnerability details could not be fetched. Affected
+        registry dependencies carry unavailable true; an advisory without fetched details retains severity unknown,
+        and "OSV vulnerability details" is named here. Dependencies that declare a version are still checked against
+        OSV.dev at that version as written. An unpinned PyPI requirement is checked at the registry's latest version;
+        a dependency that reaches no OSV query is marked checked false and is not counted as up to date.
 data_source: npm and PyPI registries, plus OSV.dev for known vulnerabilities (declared dependencies only)
 data_source_type: api
 transparency_tag: algorithmic
@@ -115,10 +116,20 @@ test_fixtures:
 output_field_reliability:
   unavailable_sources: rare
   summary: guaranteed
+  summary.unchecked: common
   ecosystem: guaranteed
   dependencies: guaranteed
+  dependencies.vulnerabilities.severity: common
+  dependencies.malicious: rare
+  dependencies.checked: rare
+  dependencies.checked_version: rare
+  dependencies.version_source: rare
   outdated_count: guaranteed
 limitations:
+  - title: Advisory severity may be unknown
+    text: Severity is read from the advisory's own rating or its CVSS 3.x vector; an advisory with neither (including CVSS 4.0-only advisories) is reported as unknown.
+    category: accuracy
+    severity: info
   - title: >-
       Transitive and runtime dependencies are not checked
     text: >-
@@ -131,9 +142,9 @@ limitations:
     text: >-
       If OSV.dev is down, rate-limited or returns an unreadable answer, the call fails and is not charged. If a
       registry lookup fails for a dependency, that dependency is marked unavailable and the registry is named in
-      unavailable_sources. It is still checked against OSV.dev when it declares a version (the version as written);
-      a dependency that declares none, such as an unpinned PyPI requirement, is not checked, and its zero
-      vulnerability count means unchecked, not clean.
+      unavailable_sources. It is still checked against OSV.dev when it declares a version (the version as written).
+      An unpinned PyPI requirement is checked at the latest version reported by the registry; anything that cannot
+      reach OSV is explicitly marked unchecked and is never counted as up to date.
     category: availability
     severity: info
 

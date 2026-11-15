@@ -1,0 +1,71 @@
+export type OsvSeverity = "critical" | "high" | "medium" | "low" | "unknown";
+
+type OsvRecord = {
+  database_specific?: { severity?: unknown };
+  severity?: Array<{ type?: unknown; score?: unknown }>;
+};
+
+const NAMED_SEVERITIES = new Map<string, Exclude<OsvSeverity, "unknown">>([
+  ["CRITICAL", "critical"],
+  ["HIGH", "high"],
+  ["MODERATE", "medium"],
+  ["MEDIUM", "medium"],
+  ["LOW", "low"],
+]);
+
+/** Return the rating carried by a full OSV advisory, without guessing low. */
+export function osvSeverity(record: OsvRecord): OsvSeverity {
+  const named = record.database_specific?.severity;
+  if (typeof named === "string") {
+    const result = NAMED_SEVERITIES.get(named.toUpperCase());
+    if (result) return result;
+  }
+
+  for (const entry of record.severity ?? []) {
+    if (entry.type !== "CVSS_V3" || typeof entry.score !== "string") continue;
+    const score = cvssV3BaseScore(entry.score);
+    if (score === null) continue;
+    if (score >= 9) return "critical";
+    if (score >= 7) return "high";
+    if (score >= 4) return "medium";
+    return "low";
+  }
+  return "unknown";
+}
+
+/** FIRST CVSS v3.1 base-score formula (also valid for v3.0 base metrics). */
+export function cvssV3BaseScore(vector: string): number | null {
+  const parts = vector.split("/");
+  if (parts[0] !== "CVSS:3.0" && parts[0] !== "CVSS:3.1") return null;
+  const metrics = new Map<string, string>();
+  for (const part of parts.slice(1)) {
+    const fields = part.split(":");
+    if (fields.length !== 2 || metrics.has(fields[0])) return null;
+    metrics.set(fields[0], fields[1]);
+  }
+  const weight = (values: ReadonlyMap<string, number>, metric: string) => values.get(metrics.get(metric) ?? "");
+  const av = weight(new Map([["N", 0.85], ["A", 0.62], ["L", 0.55], ["P", 0.2]]), "AV");
+  const ac = weight(new Map([["L", 0.77], ["H", 0.44]]), "AC");
+  const ui = weight(new Map([["N", 0.85], ["R", 0.62]]), "UI");
+  const scope = metrics.get("S");
+  const cia = new Map([["H", 0.56], ["L", 0.22], ["N", 0]]);
+  const c = weight(cia, "C");
+  const i = weight(cia, "I");
+  const a = weight(cia, "A");
+  const pr = scope === "U"
+    ? weight(new Map([["N", 0.85], ["L", 0.62], ["H", 0.27]]), "PR")
+    : scope === "C" ? weight(new Map([["N", 0.85], ["L", 0.68], ["H", 0.5]]), "PR") : undefined;
+  if ([av, ac, ui, c, i, a, pr].some((value) => value === undefined)) return null;
+
+  const impactSubscore = 1 - (1 - c!) * (1 - i!) * (1 - a!);
+  const impact = scope === "U"
+    ? 6.42 * impactSubscore
+    : 7.52 * (impactSubscore - 0.029) - 3.25 * Math.pow(impactSubscore - 0.02, 15);
+  if (impact <= 0) return 0;
+  const exploitability = 8.22 * av! * ac! * pr! * ui!;
+  const raw = scope === "U"
+    ? Math.min(impact + exploitability, 10)
+    : Math.min(1.08 * (impact + exploitability), 10);
+  const score = Math.ceil(raw * 10) / 10;
+  return Number.isFinite(score) ? score : null;
+}

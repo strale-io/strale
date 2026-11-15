@@ -117,6 +117,8 @@ output_field_reliability:
   risk_level: guaranteed
   risk_score_complete: guaranteed
   vulnerabilities: common
+  vulnerabilities.unknown: common
+  vulnerabilities.details.severity: common
   license: common
   freshness: guaranteed
   scorecard: rare
@@ -124,6 +126,10 @@ output_field_reliability:
   maintainers: common
   dependency_count: common
 limitations:
+  - title: Advisory severity may be unknown
+    text: Severity is read from the advisory's own rating or its CVSS 3.x vector; an advisory with neither (including CVSS 4.0-only advisories) is reported as unknown.
+    category: accuracy
+    severity: info
   - title: Vulnerability data depends on OSV.dev availability
     text: >-
       OSV.dev decides the vulnerability verdict. If it is down, rate-limited or returns an unreadable answer, the
