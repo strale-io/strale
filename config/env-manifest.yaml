@@ -635,7 +635,7 @@
   set_in:
     - workflow
 - name: GITHUB_TOKEN
-  purpose: Optional GitHub token used only by social-profile-check, which reads just the status of /orgs/{name}, to raise the unauthenticated GitHub API rate limit. It works without it, at the lower anonymous rate limit. Tools that read a caller-chosen repository or user (github-repo-analyze, github-repo-compare, github-user-profile) never send it, so it cannot read anything the public cannot.
+  purpose: Optional GitHub token that raises the unauthenticated GitHub API rate limit for social-profile-check (status of /orgs/{name} only) and for the daily digest's fixed strale-io/* reads (lib/daily-digest). Tools that read a caller-chosen repository or user (github-repo-analyze, github-repo-compare, github-user-profile) never send it, so a caller cannot use it to read anything the public cannot.
   provider: GitHub
   holder: railway
   cost_class: free

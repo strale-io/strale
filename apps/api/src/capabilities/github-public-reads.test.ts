@@ -128,6 +128,35 @@ describe("failure: GitHub's anonymous rate limit is a retry-shortly outage, not 
   });
 });
 
+describe("failure: github-user-profile never bills an invented empty repository list", () => {
+  it("a failed second request (rate limit) fails the call instead of answering recent_repos: []", async () => {
+    fetchMock.mockImplementation(async (url: string) =>
+      String(url).includes("/repos?")
+        ? json({ message: "API rate limit exceeded" }, 403, { "x-ratelimit-remaining": "0" })
+        : json(USER),
+    );
+    const err = await rejection(exec("github-user-profile")({ username: "octo" }));
+    expect(err.message).toMatch(/rate limited/);
+    expect(isRetryableFailure(categorizeFailureReason(err.message))).toBe(true);
+  });
+});
+
+describe("failure: a non-text name is the caller's error, not a crash", () => {
+  it("github-repo-compare refuses a number for repo_a", async () => {
+    const err = await rejection(exec("github-repo-compare")({ repo_a: 42, repo_b: "o/r" }));
+    expect(err.message).toMatch(/^'repo_a' must be a GitHub repository/);
+    expect(isUserInputError(err.message)).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("github-user-profile refuses an object for username", async () => {
+    const err = await rejection(exec("github-user-profile")({ username: { login: "octo" } }));
+    expect(err.message).toMatch(/^'username' must be a GitHub username/);
+    expect(isUserInputError(err.message)).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("passthrough: the forms callers already use still work", () => {
   it.each([
     ["o/r", "o/r"],

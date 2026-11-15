@@ -3,15 +3,17 @@ import { githubFailure, githubPublicGet, parseGithubRepo } from "./lib/github-pu
 
 // GitHub REST API comparison of two repositories
 registerCapability("github-repo-compare", async (input: CapabilityInput) => {
-  const repoA = ((input.repo_a as string) ?? (input.repo1 as string) ?? "").trim();
-  const repoB = ((input.repo_b as string) ?? (input.repo2 as string) ?? "").trim();
+  const rawA = input.repo_a ?? input.repo1 ?? "";
+  const rawB = input.repo_b ?? input.repo2 ?? "";
+  const repoA = typeof rawA === "string" ? rawA.trim() : rawA;
+  const repoB = typeof rawB === "string" ? rawB.trim() : rawB;
   if (!repoA || !repoB) throw new Error("'repo_a' and 'repo_b' (owner/repo format) are required.");
 
   // Both names are checked before either request: no caller text reaches the
   // path unencoded, and no GitHub token is sent (lib/github-public.ts).
-  const pathA = parseGithubRepo(repoA);
+  const pathA = typeof repoA === "string" ? parseGithubRepo(repoA) : null;
   if (!pathA) throw new Error("'repo_a' must be a GitHub repository as owner/repo or a github.com URL.");
-  const pathB = parseGithubRepo(repoB);
+  const pathB = typeof repoB === "string" ? parseGithubRepo(repoB) : null;
   if (!pathB) throw new Error("'repo_b' must be a GitHub repository as owner/repo or a github.com URL.");
 
   async function fetchRepo(ownerRepo: string) {
