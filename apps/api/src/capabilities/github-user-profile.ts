@@ -1,24 +1,30 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { githubFailure, githubPublicGet, isGithubLogin } from "./lib/github-public.js";
 
 // GitHub REST API — free, no token required (60 req/hr unauthenticated)
 registerCapability("github-user-profile", async (input: CapabilityInput) => {
   const username = ((input.username as string) ?? (input.user as string) ?? (input.task as string) ?? "").trim();
   if (!username) throw new Error("'username' (GitHub username) is required.");
 
-  const headers: Record<string, string> = { Accept: "application/vnd.github+json" };
-  const ghToken = process.env.GITHUB_TOKEN;
-  if (ghToken) headers["Authorization"] = `Bearer ${ghToken}`;
+  // Checked against GitHub's login shape before any request, and no GitHub
+  // token is sent (lib/github-public.ts).
+  if (!isGithubLogin(username)) {
+    throw new Error("'username' must be a GitHub username: letters, digits and hyphens, at most 39 characters.");
+  }
 
   // Fetch user profile
-  const userResp = await fetch(`https://api.github.com/users/${encodeURIComponent(username)}`, {
-    headers,
-    signal: AbortSignal.timeout(10000),
-  });
+  const userResp = await githubPublicGet(`https://api.github.com/users/${encodeURIComponent(username)}`);
 
-  if (userResp.status === 404) throw new Error(`GitHub user "${username}" not found.`);
-  if (!userResp.ok) throw new Error(`GitHub API returned HTTP ${userResp.status}`);
+  if (userResp.status === 404) {
+    await userResp.body?.cancel();
+    throw new Error(`GitHub user "${username}" not found.`);
+  }
+  if (!userResp.ok) throw await githubFailure(userResp);
 
   const user = (await userResp.json()) as any;
+
+  // No Authorization header: see lib/github-public.ts.
+  const headers: Record<string, string> = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
 
   // Fetch recent public repos
   let topRepos: any[] = [];

@@ -467,6 +467,7 @@
         "apps/api/scripts/restore-swedish-known-answers.ts",
         "apps/api/scripts/session-close-check.ts",
         "apps/api/src/capabilities/belgian-company-data.ts",
+        "apps/api/src/capabilities/github-public-reads.test.ts",
         "apps/api/src/capabilities/providers/latvian-company-data-sdda.ts",
         "apps/api/src/capabilities/web-extract-resilience.test.ts",
         "apps/api/src/jobs/invariant-checker.ts",
