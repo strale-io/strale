@@ -12,6 +12,10 @@ from his own global-context notes, founder 2026-11-11.
   the masters in wow-core's `docs/fleet-roster.md`), launching new products from time to time and
   running other projects beside them.
 - He travels and is often away from his computer, sometimes for days, working from his phone.
+- **He is based in Stockholm (founder 2026-11-16).** Every time shown to him is Stockholm time, labelled
+  as such ("Mon 16 Nov 09:00 Stockholm"; IANA `Europe/Stockholm`, CET in winter and CEST in summer),
+  in chat, PR bodies, asks, digests and pages. Machine-facing values (cron, logs, API timestamps)
+  stay UTC; where he reads one, add the Stockholm time beside it.
 
 ## What he wants
 
@@ -80,7 +84,7 @@ from his own global-context notes, founder 2026-11-11.
   reports done is done and works (founder 2026-11-11).
 - **Design** (product, visual, UI, UX) matters and he notices detail. A session inspects its own
   work visually, measures it against a current best-practice reference, and iterates until
-  its output holds that level (`UX_CORE.md`, `DESIGN_TASTE_CORE.md`).
+  its output holds that level (`UX_CORE.md`, `BRAND_CORE.md`).
 - **Design references:** every project keeps its own set. In general he likes modern agentic AI
   tools: Legora, Hebbia, freda.com, sumary.com, grasp-ai.com/product (founder 2026-11-11).
 - **Copy:** he is allergic to text that reads as AI-written. Text reads as written by an inspired
@@ -109,6 +113,11 @@ from his own global-context notes, founder 2026-11-11.
   plain language, list the options with pros and cons, give one clear recommendation he can answer
   with one word, then exact steps: which app, window, tab or session, and the text to paste
   (founder 2026-11-11). Keep his steps off the terminal wherever the platform allows.
+- **Every step he does opens with a clickable link and the login** (founder 2026-11-16: "include
+  links to where I should go so I can just click it ... tell me which username I need to sign in
+  with"). Give the full `https://` address of the exact page, as deep as the provider allows, and
+  the username or email for that page, never a password, code or key. Where the record does not
+  name the login, write that it is unknown instead of guessing.
 - **Never hand him git, shell or PowerShell commands** (founder 2026-11-06: a master asked him to remove a
   worktree and delete a branch by hand). GitHub work (branches, PRs, labels) a cloud session does itself;
   work on his PC (worktrees, local files, local tools) goes to the PC desk as a PC job

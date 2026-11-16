@@ -10,6 +10,7 @@
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
+        ".claude/scripts/bus.mjs",
         ".claude/scripts/wow-hook.mjs",
         ".github/workflows/ci.yml",
         "CLAUDE.md",
