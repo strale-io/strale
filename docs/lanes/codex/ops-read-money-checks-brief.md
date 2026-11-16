@@ -20,23 +20,24 @@ Add five entries to `OPS_READ_CHECKS` in `apps/api/src/lib/ops-read.ts`. Each ta
 |---|---|---|
 | `capability-debits` | Q1 | `{ total: {…}, slugs: [ {slug, …} ] }`: the `(total)` row as `total`, the other rows as `slugs` |
 | `solution-debits` | Q2 and Q2b | `{ total: {…}, slugs: [ … ], before_wp3: { calls, recorded_cents, first_day, last_day } }` |
-| `kept-charges` | Q3 and Q3b | `{ groups: [ … ], orphan_debits: [ {month, no_reference, debits, debited_cents} ] }` |
+| `kept-charges` | Q3, Q3b and Q3c | `{ groups: [ … ], orphan_debits: [ {month, no_reference, debits, debited_cents} ], unmatched_refunds: [ {pre_wp3, refunds, refunded_cents} ] }` |
 | `swallowed-failure-exposure` | Q4 | `{ total: {…}, slugs: [ {slug, payment_method, …} ] }` |
 | `fx-error-rate` | Q5 | `{ from: "2026-11-09", to: "2026-11-15", rows: [ {source, slug, outcome, n} ] }` |
 
 Rules for the SQL:
 1. **Totals without a fake slug.** Do not emit the `'(total)'` string (it fails the `slug` shape). Run the per-slug query and a separate total query, or split the ROLLUP row out in TypeScript using a `GROUPING(...)` column you then drop.
-2. **Payers only in the total.** `distinct_payers` and `payers_unknown` appear in `swallowed-failure-exposure`'s `total` only, never per slug: a per-tool payer count of 1 can point to one customer.
+2. **Payers only in the total.** `distinct_payers` and `payers_unknown` appear in `swallowed-failure-exposure`'s `total` only, never per slug: a per-tool payer count of 1 can point to one customer. `OUTPUT_FIELDS` is a flat key map, so it cannot enforce this by depth: `run()` must build each per-slug row from an explicit list of allowed fields, and the per-slug SQL must not compute payer columns at all.
 3. **Counts as integers, cents as text.** Cast counts `::int`; cast cents `::bigint::text`, as `test-call-cost` does. Every cents value here is non-negative by construction (debits are negated sums, refunds are positive sums); keep it that way.
 4. **No ids, no content.** Select no user, wallet, transaction or key id, and no input, output or error text. The only text values are slugs, the closed vocabularies below and dates.
-5. **Keep the reviewed filters exactly:** the 2026-08-22 floor in Q2/Q2b, the `now() - interval '1 day'` cut in Q3, `receipt_rail IS DISTINCT FROM 'internal'` and the 2026-11-09 to 2026-11-16 window in Q5, the 36 slugs of Q4. The Q4 slug list lives once, as a `const` array in the file, bound with `= ANY(${list}::text[])` or expanded with `sql.join`, and a test asserts it has 36 distinct entries equal to the brief's list.
+5. **Keep the reviewed filters exactly:** the 2026-08-22 floor in Q2/Q2b/Q3c, the `now() - interval '1 day'` cut in Q3, `receipt_rail IS DISTINCT FROM 'internal'`, the piggyback exclusion and the 2026-11-09 to 2026-11-16 window in Q5, the 36 slugs of Q4. The Q4 slug list lives once, as a `const` array in the file, bound with `= ANY(${list}::text[])` or expanded with `sql.join`.
+7. **Timeouts and bad values fail loudly.** The route's statement timeout is 5 seconds. Several of these statements scan `transactions`, which is never pruned and has no index on `solution_slug`, `payment_method`, `price_cents` or `created_at` alone (`apps/api/src/db/schema.ts` around lines 586-613). A timed-out check must surface as the route's existing error ("The check failed."), never as zero rows: do not catch database errors inside `run()`. Likewise, a negative cents value from a ledger bug fails the `cents` shape and the whole check errors; that is intended. In your report, give for each statement the indexes it can use and whether you expect a sequential scan. Do not add indexes or migrations; the master times each check after deploy and, if one is too slow, a follow-up adds a date-window parameter or a partial index.
 6. **Date strings in SQL output** come from `to_char(... AT TIME ZONE 'UTC', 'YYYY-MM-DD')` (days) or `'YYYY-MM'` (months).
 
 Extend the output contract (`OUTPUT_FIELDS`, `SHAPES`, `checkLeaf`) only by adding:
-- keys: `total`, `slugs`, `groups`, `orphan_debits`, `rows`, `before_wp3` (objects or lists as named above), and the leaf columns each query returns (for example `calls`, `no_debit`, `debit_ne_recorded`, `recorded_ne_listed`, `no_longer_listed`, `refunded`, `debited_cents`, `recorded_cents`, `debited_calls`, `overcharged_calls`, `overcharged_cents`, `overrefunded_calls`, `overrefunded_cents`, `completed_paid_calls`, `distinct_payers`, `payers_unknown`, `first_day`, `last_day`, `month`, `no_reference`, `debits`, `n`, `is_solution`, `slug`, `source`, `outcome`, `status`, `payment_method`);
+- keys: `total`, `slugs`, `groups`, `orphan_debits`, `unmatched_refunds`, `rows`, `before_wp3` (objects or lists as named above; Q3c's boolean column is `pre_wp3`, a different key, so each key keeps one shape), and the leaf columns each query returns (for example `calls`, `no_debit`, `debit_ne_recorded`, `recorded_ne_listed`, `no_longer_listed`, `refunded`, `debited_cents`, `recorded_cents`, `debited_calls`, `overcharged_calls`, `overcharged_cents`, `overrefunded_calls`, `overrefunded_cents`, `refunds`, `refunded_cents`, `pre_wp3`, `completed_paid_calls`, `distinct_payers`, `payers_unknown`, `first_day`, `last_day`, `month`, `no_reference`, `debits`, `n`, `is_solution`, `slug`, `source`, `outcome`, `status`, `payment_method`);
 - a `month` shape `/^\d{4}-\d{2}$/`;
 - closed vocabularies, as sets like `TEST_TYPES`: `payment_method` ∈ {`wallet`, `x402`}; `status` and `outcome` ∈ {`completed`, `failed`, `executing`, `pending`, `passed`}; `source` ∈ {`calls`, `tests`}.
-  If the schema or code shows a transaction status outside that set, add it and name the file and line in your report.
+  These are all the values the code writes to `transactions.status` and `payment_method` (`deferred` appears in reconciler status guards but is never written). If you find another written value, add it and name the file and line in your report.
 
 Do not loosen any existing shape, and do not change the three existing checks, the route, the token rule or the 5-second statement timeout.
 
@@ -48,10 +49,10 @@ Do not loosen any existing shape, and do not change the three existing checks, t
   - passes the result through `assertSafeOutput({ check, result })`;
   - asserts the returned shape exactly.
 - `no Date reaches a query`: for all five checks, every bound parameter is not a `Date`.
-- `no id or content column is selected`: for all five checks, the select lists contain none of `user_id`, `wallet_id`, `api_key_id`, `t.id AS`, `input`, `output`, `error`, `key_prefix`, `email`.
-- `reviewed filters are present`: Q2's `2026-08-22`, Q3's `interval '1 day'` and its completed-price allowance (`CASE WHEN t.status = 'completed' THEN t.price_cents ELSE 0 END`), Q5's `receipt_rail IS DISTINCT FROM 'internal'` and both window bounds appear in the SQL text.
-- `swallowed-failure slug list`: 36 distinct entries, equal to the list in `docs/lanes/pc/a7-bundle-queries-brief.md` (read the file in the test and parse the quoted slugs between `c.slug IN (` and `)`).
-- `payers never per slug`: a canned per-slug row carrying `distinct_payers` is not passed through, or the output contract refuses it.
+- `no id or content key is returned`: for all five checks, fed canned rows that also carry `user_id`, `wallet_id`, `api_key_id`, `id`, `input`, `output`, `error`, `key_prefix` and `email`, the result passed through `assertSafeOutput` either throws or contains none of those keys at any depth. (Ids may appear inside aggregates in the SQL, for example `COUNT(DISTINCT ...user_id...)`; the test is on what comes back.)
+- `reviewed filters are present`: Q2's `2026-08-22`, Q3's `interval '1 day'` and its completed-price allowance (`CASE WHEN t.status = 'completed' THEN t.price_cents ELSE 0 END`), Q5's `receipt_rail IS DISTINCT FROM 'internal'` the piggyback exclusion, and both window bounds appear in the SQL text or its bound parameters.
+- `swallowed-failure slug list`: the exported `const` has exactly these 36 distinct entries, written out in the test (copied once from Q4 of `docs/lanes/pc/a7-bundle-queries-brief.md`; do not read that file at test time).
+- `payers never per slug`: a canned per-slug row carrying `distinct_payers` and `payers_unknown` comes back without those keys, while the canned total keeps them.
 - `planted text is refused`: a canned `payment_method` of `"refund to jane.doe@example.com"` makes `assertSafeOutput` throw.
 
 Show each new test failing once before your code makes it pass, and quote that in the report.
