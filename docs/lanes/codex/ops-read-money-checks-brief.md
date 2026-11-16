@@ -33,7 +33,7 @@ Rules for the SQL:
 6. **Date strings in SQL output** come from `to_char(... AT TIME ZONE 'UTC', 'YYYY-MM-DD')` (days) or `'YYYY-MM'` (months).
 
 Extend the output contract (`OUTPUT_FIELDS`, `SHAPES`, `checkLeaf`) only by adding:
-- keys: `total`, `slugs`, `groups`, `orphan_debits`, `rows`, `before_wp3` (objects or lists as named above), and the leaf columns each query returns (for example `calls`, `no_debit`, `debit_ne_recorded`, `recorded_ne_listed`, `no_longer_listed`, `refunded`, `debited_cents`, `recorded_cents`, `debited_calls`, `unrefunded_calls`, `unrefunded_cents`, `completed_paid_calls`, `distinct_payers`, `payers_unknown`, `first_day`, `last_day`, `month`, `no_reference`, `debits`, `n`, `is_solution`, `slug`, `source`, `outcome`, `status`, `payment_method`);
+- keys: `total`, `slugs`, `groups`, `orphan_debits`, `rows`, `before_wp3` (objects or lists as named above), and the leaf columns each query returns (for example `calls`, `no_debit`, `debit_ne_recorded`, `recorded_ne_listed`, `no_longer_listed`, `refunded`, `debited_cents`, `recorded_cents`, `debited_calls`, `overcharged_calls`, `overcharged_cents`, `overrefunded_calls`, `overrefunded_cents`, `completed_paid_calls`, `distinct_payers`, `payers_unknown`, `first_day`, `last_day`, `month`, `no_reference`, `debits`, `n`, `is_solution`, `slug`, `source`, `outcome`, `status`, `payment_method`);
 - a `month` shape `/^\d{4}-\d{2}$/`;
 - closed vocabularies, as sets like `TEST_TYPES`: `payment_method` ∈ {`wallet`, `x402`}; `status` and `outcome` ∈ {`completed`, `failed`, `executing`, `pending`, `passed`}; `source` ∈ {`calls`, `tests`}.
   If the schema or code shows a transaction status outside that set, add it and name the file and line in your report.
@@ -49,7 +49,7 @@ Do not loosen any existing shape, and do not change the three existing checks, t
   - asserts the returned shape exactly.
 - `no Date reaches a query`: for all five checks, every bound parameter is not a `Date`.
 - `no id or content column is selected`: for all five checks, the select lists contain none of `user_id`, `wallet_id`, `api_key_id`, `t.id AS`, `input`, `output`, `error`, `key_prefix`, `email`.
-- `reviewed filters are present`: Q2's `2026-08-22`, Q3's `interval '1 day'`, Q5's `receipt_rail IS DISTINCT FROM 'internal'` and both window bounds appear in the SQL text.
+- `reviewed filters are present`: Q2's `2026-08-22`, Q3's `interval '1 day'` and its completed-price allowance (`CASE WHEN t.status = 'completed' THEN t.price_cents ELSE 0 END`), Q5's `receipt_rail IS DISTINCT FROM 'internal'` and both window bounds appear in the SQL text.
 - `swallowed-failure slug list`: 36 distinct entries, equal to the list in `docs/lanes/pc/a7-bundle-queries-brief.md` (read the file in the test and parse the quoted slugs between `c.slug IN (` and `)`).
 - `payers never per slug`: a canned per-slug row carrying `distinct_payers` is not passed through, or the output contract refuses it.
 - `planted text is refused`: a canned `payment_method` of `"refund to jane.doe@example.com"` makes `assertSafeOutput` throw.

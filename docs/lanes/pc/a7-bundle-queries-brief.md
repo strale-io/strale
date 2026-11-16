@@ -50,11 +50,11 @@ This brief is the fallback until those checks exist; its SQL is the starting poi
 In `C:\Users\pette\Projects\strale`, in Git Bash, connect with the URL in the root `.env` and force read-only for the whole session:
 
 ```bash
-export DATABASE_URL="$(grep -m1 '^DATABASE_URL=' .env | cut -d= -f2- | sed 's/^"//;s/"$//')"
+export DATABASE_URL="$(grep -m1 '^DATABASE_URL=' .env | cut -d= -f2- | tr -d '\r' | sed "s/^[\"']//;s/[\"']\$//")"
 PGOPTIONS='-c default_transaction_read_only=on -c statement_timeout=30s' psql "$DATABASE_URL" -X -v ON_ERROR_STOP=0
 ```
 
-This reads only the one line, so nothing else in `.env` is executed or exported.
+This reads only the one line, so nothing else in `.env` is executed or exported. It also strips Windows line endings and surrounding quotes.
 
 Then, inside `psql`, start with:
 
@@ -146,7 +146,7 @@ SELECT CASE WHEN GROUPING(slug) = 1 THEN '(total)' ELSE slug END  AS slug,
 
 If every row shows `no_debit = calls`, the solution debit references something other than the transaction id even after WP3. Record that and go on; the fleet reads it.
 
-**Q2b (A-7): solution calls before WP3, unlinked by design.** Counts only; these are not findings.
+**Q2b (A-7): solution calls before 22 August, unlinked by design.** Counts only; these are not findings. Calls from WP3's deploy on 21 August until midnight are in fact linked but counted here too; that is harmless.
 
 ```sql
 SELECT COUNT(*)                                                    AS calls,
@@ -162,9 +162,9 @@ SELECT COUNT(*)                                                    AS calls,
    AND t.created_at < TIMESTAMPTZ '2026-08-22 00:00:00+00';
 ```
 
-**Q3 (A-7, P-001): any call that did not complete and kept its charge.**
-Asynchronous and solution calls are debited when they start and refunded if they fail, so a debit on a failed call is correct as long as a refund of the same size follows. Q3 nets the two. Calls from the last day are left out, because they may still be running or awaiting the reconciler.
-The expected result is `unrefunded_calls = 0` on every row. Any other value is a charge kept for a call that failed or never finished.
+**Q3 (A-7, P-001): any call charged more than it recorded, or refunded more than it was charged.**
+Asynchronous and solution calls are debited when they start and refunded if they fail, so a debit on a failed call is correct as long as a refund of the same size follows. Q3 nets the two per call. A call may keep, net, at most its recorded price if it completed and nothing if it did not. That includes a solution run written as `completed` with price 0 because it had to be refunded: if that refund failed, it shows here. Calls from the last day are left out, because they may still be running or awaiting the reconciler.
+The expected result is `overcharged_calls = 0` and `overrefunded_calls = 0` on every row. Any other value is a ledger defect: a charge kept that should not have been, or a refund paid twice.
 
 ```sql
 WITH d AS (SELECT reference_id AS id, -SUM(amount_cents) AS debited
@@ -174,20 +174,27 @@ WITH d AS (SELECT reference_id AS id, -SUM(amount_cents) AS debited
      r AS (SELECT reference_id AS id, SUM(amount_cents) AS refunded
              FROM wallet_transactions
             WHERE type = 'refund' AND reference_id IS NOT NULL
-            GROUP BY 1)
-SELECT t.status,
-       t.payment_method,
-       (t.solution_slug IS NOT NULL)                                         AS is_solution,
-       COUNT(*)                                                              AS debited_calls,
-       COUNT(*) FILTER (WHERE d.debited > COALESCE(r.refunded, 0))           AS unrefunded_calls,
-       SUM(GREATEST(d.debited - COALESCE(r.refunded, 0), 0))                 AS unrefunded_cents,
-       to_char(MIN(t.created_at) AT TIME ZONE 'UTC', 'YYYY-MM-DD')           AS first_day,
-       to_char(MAX(t.created_at) AT TIME ZONE 'UTC', 'YYYY-MM-DD')           AS last_day
-  FROM d
-  JOIN transactions t ON t.id = d.id
-  LEFT JOIN r ON r.id = d.id
- WHERE t.status <> 'completed'
-   AND t.created_at < now() - interval '1 day'
+            GROUP BY 1),
+     x AS (SELECT t.status,
+                  t.payment_method,
+                  (t.solution_slug IS NOT NULL) AS is_solution,
+                  t.created_at,
+                  d.debited - COALESCE(r.refunded, 0)
+                    - CASE WHEN t.status = 'completed' THEN t.price_cents ELSE 0 END AS excess,
+                  COALESCE(r.refunded, 0) - d.debited AS overrefund
+             FROM d
+             JOIN transactions t ON t.id = d.id
+             LEFT JOIN r ON r.id = d.id
+            WHERE t.created_at < now() - interval '1 day')
+SELECT status,
+       payment_method,
+       is_solution,
+       COUNT(*)                                                      AS debited_calls,
+       COUNT(*) FILTER (WHERE excess > 0)                            AS overcharged_calls,
+       COALESCE(SUM(excess) FILTER (WHERE excess > 0), 0)            AS overcharged_cents,
+       COUNT(*) FILTER (WHERE overrefund > 0)                        AS overrefunded_calls,
+       COALESCE(SUM(overrefund) FILTER (WHERE overrefund > 0), 0)    AS overrefunded_cents
+  FROM x
  GROUP BY 1, 2, 3
  ORDER BY 1, 2, 3;
 ```
@@ -244,7 +251,7 @@ SELECT CASE WHEN GROUPING(c.slug) = 1 THEN '(total)' ELSE c.slug END AS slug,
 
 `distinct_payers` is a count only; the ids never leave the database.
 
-**Q5 (B-5): exchange-rate tools in the seven days after #976 and #977.**
+**Q5 (B-5): exchange-rate tools in the seven days after #976 and #977.** Direct calls only, as in Q4: an exchange-rate step inside a bundled check has no call row of its own.
 #976 merged 2026-11-08 09:48 UTC and #977 at 11:46 UTC; those are merge times, not deploy times. The window starts at 2026-11-09 00:00 UTC, more than twelve hours after the later merge, which leaves ample room for the deploy, and gives seven full days to 2026-11-16. Customer calls come from `transactions`, leaving out Strale's own test runs (`receipt_rail = 'internal'`); those runs are counted from `test_results`.
 
 ```sql
@@ -282,14 +289,19 @@ ROLLBACK;
   - the `SELECT current_user` result;
   - any error text.
 
-The master writes the receipts (`npm run receipt`) from it. Receipts are committed to the public repository, so they carry only the aggregate columns above, and `distinct_payers` only on the total row: a per-tool payer count of 1 can point to one customer.
+The master writes the receipts (`npm run receipt`) from it. Receipts are committed to the public repository, and a small count with exact days can single out a customer (an x402 payment, for example, can be matched against public settlements on those days). So a committed receipt carries:
+- each query's **total row only**, with its dates;
+- for findings, the slugs and counts, with no dates, and any row whose count is under 5 folded into one `(other)` row;
+- `distinct_payers` only as the total.
+
+The per-tool detail stays in the PC session's final message, which is not public.
 
 ## What happens with the results
 
 | Result | Next step | Owner |
 |---|---|---|
-| Q1–Q3b all clean | A-7's debit half is verified; its dry-run half (P-008) stays a code test | the fleet |
-| Q1–Q3b show mismatches, kept charges or orphan debits | a remediation batch, plus a refund measurement | the fleet, after measuring |
+| Q1–Q3b all clean (Q3 shows no overcharge or over-refund) | A-7's debit half is verified; its dry-run half (P-008) stays a code test | the fleet |
+| Q1–Q3b show mismatches, overcharges, over-refunds or orphan debits | a remediation batch, plus a refund measurement | the fleet, after measuring |
 | Q4 exposure | narrowed per tool, then a drain plan | the fleet |
 | Refunds themselves | the capped server-side refund function under a founder DEC (moonlighter-ab/wow-core#348). No refund runs from this job. | the founder's DEC first |
 | Q5 | written as the B-5 rate receipt | the fleet |
