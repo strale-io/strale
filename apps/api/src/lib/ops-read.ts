@@ -192,8 +192,11 @@ const OUTPUT_FIELDS: Record<string, Shape | Vocabulary> = {
   excess_refunded_cents: "cents",
   excess_unrefunded_cents: "cents",
   shortfall_cents_total: "cents",
-  excess_cents: "cents",
-  shortfall_cents: "cents",
+  refunds_attributed_to_several_bursts: "count",
+  refunds_also_near_other_debits: "count",
+  excess_refunded_is_upper_bound: "boolean",
+  net_excess_cents: "cents",
+  net_shortfall_cents: "cents",
   refunded_nearby_cents: "cents",
   debits_matching_several_solutions: "count",
   // transaction-quality-fk (A-7 follow-up). Catalog flags and counts only.
@@ -523,10 +526,11 @@ const BURST_TOTAL_FIELDS = [
   "bursts", "multi_debit_bursts", "debits_in_multi_debit_bursts",
   "bursts_with_excess", "bursts_without_excess", "bursts_with_shortfall",
   "excess_cents_total", "excess_refunded_cents", "excess_unrefunded_cents", "shortfall_cents_total",
+  "refunds_attributed_to_several_bursts", "refunds_also_near_other_debits", "excess_refunded_is_upper_bound",
 ] as const;
 const MATCHED_COMPLETED_TOTAL_FIELDS = [
   "debits", "debited_cents", "distinct_matched_completed_solution_calls", "recorded_cents",
-  "excess_cents", "shortfall_cents", "refunded_nearby_cents", "debits_matching_several_solutions",
+  "net_excess_cents", "net_shortfall_cents", "refunded_nearby_cents", "debits_matching_several_solutions",
 ] as const;
 const FOREIGN_KEY_FIELDS = ["confdeltype", "convalidated", "condeferrable"] as const;
 const ORPHANED_QUALITY_FIELDS = ["orphaned_rows", "orphaned_with_debit", "orphaned_without_debit", "orphaned_soft_deleted"] as const;
@@ -1019,9 +1023,18 @@ export const OPS_READ_CHECKS: Record<string, CheckDef<unknown>> = {
    *
    * `burst_totals`: per-burst excess summed where positive, with the nearby
    * refund capped at the excess; a burst whose calls cost more than its
-   * debits is a shortfall, reported apart rather than netted away.
+   * debits is a shortfall, reported apart rather than netted away. The
+   * refund rule matches by wallet, amount and time, not by reference, so one
+   * refund row can sit near two bursts, or near a burst and a no-reference
+   * debit outside `mcd` (matched to a failed call, or unmatched) that
+   * orphan-debit-trace already credits with it. Either way
+   * `excess_refunded_cents` counts a refund that may belong elsewhere, so
+   * `refunds_attributed_to_several_bursts` and
+   * `refunds_also_near_other_debits` count those refund rows, and
+   * `excess_refunded_is_upper_bound` is true unless both are zero.
    * `matched_completed_totals`: the same over all matched completed debits
-   * at once, so the receipt reconciles with orphan-debit-trace and Q2b.
+   * at once, netted (`net_excess_cents` or `net_shortfall_cents`, one of them
+   * zero), so the receipt reconciles with orphan-debit-trace and Q2b.
    * Aggregates only: no per-burst row, month, id or user leaves the statement.
    */
   "burst-debit-refund": check({
@@ -1067,6 +1080,17 @@ export const OPS_READ_CHECKS: Record<string, CheckDef<unknown>> = {
                          FROM bc GROUP BY 1, 2, 3) c USING (user_id, solution_slug, burst_no)
             LEFT JOIN (SELECT user_id, solution_slug, burst_no, SUM(amount_cents) AS refunded
                          FROM br GROUP BY 1, 2, 3) r USING (user_id, solution_slug, burst_no)
+        ),
+        near_other AS (
+          SELECT DISTINCT rf.id
+            FROM nr
+            JOIN rf ON ${REFUNDED_NEARBY}
+           WHERE NOT EXISTS (SELECT 1 FROM mcd WHERE mcd.id = nr.id)
+        ),
+        rc AS (
+          SELECT (SELECT COUNT(*) FROM (SELECT br.id FROM br GROUP BY br.id HAVING COUNT(*) > 1) several_bursts) AS several,
+                 (SELECT COUNT(DISTINCT br.id) FROM br
+                   WHERE EXISTS (SELECT 1 FROM near_other o WHERE o.id = br.id)) AS also_other
         )
         SELECT COUNT(*)::int AS bursts,
                COUNT(*) FILTER (WHERE debits > 1)::int AS multi_debit_bursts,
@@ -1077,7 +1101,10 @@ export const OPS_READ_CHECKS: Record<string, CheckDef<unknown>> = {
                COALESCE(SUM(excess) FILTER (WHERE excess > 0), 0)::bigint::text AS excess_cents_total,
                COALESCE(SUM(LEAST(refunded, excess)) FILTER (WHERE excess > 0), 0)::bigint::text AS excess_refunded_cents,
                COALESCE(SUM(excess - LEAST(refunded, excess)) FILTER (WHERE excess > 0), 0)::bigint::text AS excess_unrefunded_cents,
-               COALESCE(-SUM(excess) FILTER (WHERE excess < 0), 0)::bigint::text AS shortfall_cents_total
+               COALESCE(-SUM(excess) FILTER (WHERE excess < 0), 0)::bigint::text AS shortfall_cents_total,
+               (SELECT several FROM rc)::int AS refunds_attributed_to_several_bursts,
+               (SELECT also_other FROM rc)::int AS refunds_also_near_other_debits,
+               (SELECT several > 0 OR also_other > 0 FROM rc) AS excess_refunded_is_upper_bound
           FROM b
       `));
       const [all] = rowsOf(await tx.execute(sql`
@@ -1107,8 +1134,8 @@ export const OPS_READ_CHECKS: Record<string, CheckDef<unknown>> = {
                debited::bigint::text AS debited_cents,
                calls::int AS distinct_matched_completed_solution_calls,
                prices::bigint::text AS recorded_cents,
-               GREATEST(debited - prices, 0)::bigint::text AS excess_cents,
-               GREATEST(prices - debited, 0)::bigint::text AS shortfall_cents,
+               GREATEST(debited - prices, 0)::bigint::text AS net_excess_cents,
+               GREATEST(prices - debited, 0)::bigint::text AS net_shortfall_cents,
                refunded::bigint::text AS refunded_nearby_cents,
                several::int AS debits_matching_several_solutions
           FROM tot

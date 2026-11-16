@@ -251,10 +251,11 @@ const BURST_TOTALS = {
   bursts: 15, multi_debit_bursts: 4, debits_in_multi_debit_bursts: 12,
   bursts_with_excess: 2, bursts_without_excess: 13, bursts_with_shortfall: 0,
   excess_cents_total: "150", excess_refunded_cents: "0", excess_unrefunded_cents: "150", shortfall_cents_total: "0",
+  refunds_attributed_to_several_bursts: 0, refunds_also_near_other_debits: 0, excess_refunded_is_upper_bound: false,
 };
 const MATCHED_COMPLETED_TOTALS = {
   debits: 23, debited_cents: "5390", distinct_matched_completed_solution_calls: 22, recorded_cents: "5240",
-  excess_cents: "150", shortfall_cents: "0", refunded_nearby_cents: "0", debits_matching_several_solutions: 0,
+  net_excess_cents: "150", net_shortfall_cents: "0", refunded_nearby_cents: "0", debits_matching_several_solutions: 0,
 };
 const ORPHANED_QUALITY = { orphaned_rows: 3, orphaned_with_debit: 2, orphaned_without_debit: 1, orphaned_soft_deleted: 0 };
 
@@ -371,7 +372,11 @@ const REVIEWED_FILTERS: Record<MoneyCheck, string[][]> = {
       "JOIN pairs p ON p.debit_id = bd.id AND p.call_status = 'completed'",
       "JOIN sol s ON s.id = p.call_id AND s.solution_slug = bd.solution_slug",
       "JOIN rf ON rf.wallet_id = nr.wallet_id AND rf.amount_cents = nr.debited",
-      "SUM(LEAST(refunded, excess)) FILTER (WHERE excess > 0)"],
+      "SUM(LEAST(refunded, excess)) FILTER (WHERE excess > 0)",
+      "SELECT br.id FROM br GROUP BY br.id HAVING COUNT(*) > 1",
+      "WHERE NOT EXISTS (SELECT 1 FROM mcd WHERE mcd.id = nr.id)",
+      "WHERE EXISTS (SELECT 1 FROM near_other o WHERE o.id = br.id)",
+      "several > 0 OR also_other > 0"],
     ["w.type = 'purchase'", "w.reference_id IS NULL", "nr.created_at - interval '60 seconds'",
       "JOIN pairs p ON p.debit_id = nr.id AND p.call_status = 'completed'",
       "WHERE p.call_status = 'completed'",
@@ -802,11 +807,39 @@ describe("burst-debit-refund", () => {
     expect(q).toContain("SELECT DISTINCT bd.user_id, bd.solution_slug, bd.burst_no, rf.id, rf.amount_cents");
   });
 
+  it("flags refunds that also sit near another burst or another no-reference debit, so the refund total reads as an upper bound", async () => {
+    const { tx } = await runMoney("burst-debit-refund");
+    const q = squash(tx.queries[0].sql);
+    const nearby = squash(/JOIN rf ON ([\s\S]*?)\)\s*,\s*b AS/.exec(tx.queries[0].sql)![1]);
+    // Debits outside mcd (matched to a failed call, or unmatched) that the same rule ties the refund to.
+    expect(q).toContain(`near_other AS ( SELECT DISTINCT rf.id FROM nr JOIN rf ON ${nearby} WHERE NOT EXISTS (SELECT 1 FROM mcd WHERE mcd.id = nr.id) )`);
+    // br holds one row per (burst, refund): a refund id on two rows sits near two bursts.
+    expect(q).toContain("(SELECT COUNT(*) FROM (SELECT br.id FROM br GROUP BY br.id HAVING COUNT(*) > 1) several_bursts) AS several");
+    expect(q).toContain("(SELECT COUNT(DISTINCT br.id) FROM br WHERE EXISTS (SELECT 1 FROM near_other o WHERE o.id = br.id)) AS also_other");
+    expect(q).toContain("(SELECT several FROM rc)::int AS refunds_attributed_to_several_bursts");
+    expect(q).toContain("(SELECT also_other FROM rc)::int AS refunds_also_near_other_debits");
+    expect(q).toContain("(SELECT several > 0 OR also_other > 0 FROM rc) AS excess_refunded_is_upper_bound");
+  });
+
+  it.each([
+    ["a string count", { refunds_attributed_to_several_bursts: "1" }],
+    ["a negative count", { refunds_also_near_other_debits: -1 }],
+    ["a non-boolean flag", { excess_refunded_is_upper_bound: "true" }],
+  ])("the output contract refuses %s in the upper-bound fields", async (_label, change) => {
+    const answers = canned()["burst-debit-refund"];
+    answers[0][0] = { ...answers[0][0], ...change };
+    const { result } = await runMoney("burst-debit-refund", answers);
+    expect(() => assertSafeOutput({ check: "burst-debit-refund", result })).toThrow(OpsReadOutputError);
+  });
+
   it("returns aggregates only: one row per statement, no month, id or user selected out", async () => {
     const { tx } = await runMoney("burst-debit-refund");
-    for (const q of tx.queries) {
+    const anchors = ["SELECT COUNT(*)::int AS bursts", "SELECT debits::int AS debits"];
+    for (const [i, q] of tx.queries.entries()) {
       expect(q.params).toEqual([]);
-      const finalSelect = q.sql.slice(q.sql.lastIndexOf("SELECT "));
+      const at = q.sql.indexOf(anchors[i]);
+      expect(at, anchors[i]).toBeGreaterThan(-1);
+      const finalSelect = q.sql.slice(at);
       expect(finalSelect).not.toMatch(/GROUP BY|to_char|\buser_id\b|\bwallet_id\b|\bcall_id\b|\bburst_no\b|\bsolution_slug\b/);
       expect(q.sql).not.toMatch(/\b(?:id|user_id|wallet_id|reference_id|ref|call_id|debit_id)\s+AS\s/);
       expect(q.sql).not.toMatch(/\bemail\b|\bkey_prefix\b|\binput\b|\boutput\b/);
