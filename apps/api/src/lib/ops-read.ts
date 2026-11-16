@@ -219,8 +219,16 @@ const OUTPUT_FIELDS: Record<string, Shape | Vocabulary> = {
   orphaned_created_2026_04_17_to_2026_05_03: "count",
   orphaned_created_2026_05_04_to_2026_07_01: "count",
   orphaned_created_from_2026_07_02: "count",
-  orphaned_newer_than_oldest_call: "count",
+  plan: "object",
+  quality_read_from_table: "boolean",
+  transactions_probed_by_pkey: "boolean",
+  transactions_read_from_table: "boolean",
+  any_index_used: "boolean",
+  oldest_call: "object",
   oldest_call_before_2026_04_16: "boolean",
+  oldest_call_before_2026_04_17: "boolean",
+  oldest_call_before_2026_05_04: "boolean",
+  oldest_call_before_2026_07_02: "boolean",
 };
 
 export class OpsReadOutputError extends Error {
@@ -1224,21 +1232,26 @@ export const OPS_READ_CHECKS: Record<string, CheckDef<unknown>> = {
    * count, each in its own savepoint: `index_plan` finds the call rows only
    * through the primary-key index, `heap_plan` only by reading the table. If
    * they disagree, the index is missing entries (the 2026-04-16 outage was
-   * B-tree corruption on transactions) and the orphans are not all real. The
-   * heap reading also dates the orphaned quality rows against the named
-   * incident dates, counts those newer than the oldest surviving call row,
-   * and says whether that oldest call predates 2026-04-16. Counts and flags
-   * only: no id, user or month.
+   * B-tree corruption on transactions) and the orphans are not all real. Each
+   * reading carries `plan`, flags taken from EXPLAIN of that same statement
+   * under the same settings, so the result shows which access paths produced
+   * each count rather than assuming them. The heap reading also dates the
+   * orphaned quality rows against the named incident dates. `oldest_call`,
+   * in a savepoint of its own so a timeout there costs nothing else, says on
+   * which side of each window boundary the oldest surviving call falls.
+   * Counts and flags only: no id, user, month or data-derived instant.
    */
   "transaction-quality-orphans": check({
     prepare: () => null,
     run: async (tx) => {
-      const index = await underPlan(tx, "orphans_index_plan", INDEX_PLAN_SETTINGS, ORPHANS_INDEX_PLAN);
-      const heap = await underPlan(tx, "orphans_heap_plan", HEAP_PLAN_SETTINGS, ORPHANS_HEAP_PLAN);
+      const index = await underPlan(tx, "orphans_index_plan", INDEX_PLAN_SETTINGS, ORPHANS_INDEX_PLAN, true);
+      const heap = await underPlan(tx, "orphans_heap_plan", HEAP_PLAN_SETTINGS, ORPHANS_HEAP_PLAN, true);
+      const oldest = await underPlan(tx, "orphans_oldest_call", [], OLDEST_CALL, false);
       return {
         // A missing row reads as nulls, not as a confident zero.
-        index_plan: { complete: index.complete, ...pick(index.row ?? {}, ["orphaned_rows"]) },
-        heap_plan: { complete: heap.complete, ...pick(heap.row ?? {}, HEAP_PLAN_FIELDS) },
+        index_plan: { complete: index.complete, plan: index.plan, ...pick(index.row ?? {}, ["orphaned_rows"]) },
+        heap_plan: { complete: heap.complete, plan: heap.plan, ...pick(heap.row ?? {}, HEAP_PLAN_FIELDS) },
+        oldest_call: { complete: oldest.complete, ...pick(oldest.row ?? {}, OLDEST_CALL_FIELDS) },
       };
     },
   }),
@@ -1270,17 +1283,20 @@ function isStatementTimeout(err: unknown): boolean {
 
 /**
  * Planner settings for the two orphan counts in transaction-quality-orphans.
- * INDEX: no hash or merge join, so each quality row is looked up in
- * `transactions` by a nested-loop probe of its primary-key index (sequential
- * scans stay allowed, so the quality rows themselves are read from the
- * table, not from an index that could be the corrupt one). HEAP: no
+ * INDEX: no hash or merge join, no index-only or bitmap scan, so each quality
+ * row is looked up in `transactions` by a nested-loop Index Scan of its
+ * primary key, and the quality rows themselves are not read from the
+ * quality table's index-only path (which could be the faulty index). HEAP: no
  * index is used anywhere, so every `transactions` row is read from the table
- * itself. Both are SET LOCAL inside a savepoint that is rolled back after the
- * read, which restores the settings for the rest of the transaction.
+ * itself. Settings only price plans; `plan` in the output records the plan
+ * that ran. Both are SET LOCAL inside a savepoint that is rolled back after
+ * the read, which restores the settings for the rest of the transaction.
  */
 export const INDEX_PLAN_SETTINGS = [
   sql`SET LOCAL enable_hashjoin = off`,
   sql`SET LOCAL enable_mergejoin = off`,
+  sql`SET LOCAL enable_indexonlyscan = off`,
+  sql`SET LOCAL enable_bitmapscan = off`,
 ];
 export const HEAP_PLAN_SETTINGS = [
   sql`SET LOCAL enable_indexscan = off`,
@@ -1306,11 +1322,19 @@ export const ORPHANS_HEAP_PLAN = sql`
                                   AND q.created_at <  TIMESTAMPTZ '2026-05-04 00:00:00+00')::int AS orphaned_created_2026_04_17_to_2026_05_03,
                COUNT(*) FILTER (WHERE q.created_at >= TIMESTAMPTZ '2026-05-04 00:00:00+00'
                                   AND q.created_at <  TIMESTAMPTZ '2026-07-02 00:00:00+00')::int AS orphaned_created_2026_05_04_to_2026_07_01,
-               COUNT(*) FILTER (WHERE q.created_at >= TIMESTAMPTZ '2026-07-02 00:00:00+00')::int AS orphaned_created_from_2026_07_02,
-               COUNT(*) FILTER (WHERE q.created_at > (SELECT MIN(t0.created_at) FROM transactions t0))::int AS orphaned_newer_than_oldest_call,
-               (SELECT MIN(t1.created_at) < TIMESTAMPTZ '2026-04-16 00:00:00+00' FROM transactions t1) AS oldest_call_before_2026_04_16
+               COUNT(*) FILTER (WHERE q.created_at >= TIMESTAMPTZ '2026-07-02 00:00:00+00')::int AS orphaned_created_from_2026_07_02
           FROM transaction_quality q
          WHERE NOT EXISTS (SELECT 1 FROM transactions t WHERE t.id = q.transaction_id)
+      `;
+
+// Flags at the window boundaries only, never the instant itself: an instant
+// taken from the data would split a window and could undo a "<5" band.
+export const OLDEST_CALL = sql`
+        SELECT MIN(created_at) < TIMESTAMPTZ '2026-04-16 00:00:00+00' AS oldest_call_before_2026_04_16,
+               MIN(created_at) < TIMESTAMPTZ '2026-04-17 00:00:00+00' AS oldest_call_before_2026_04_17,
+               MIN(created_at) < TIMESTAMPTZ '2026-05-04 00:00:00+00' AS oldest_call_before_2026_05_04,
+               MIN(created_at) < TIMESTAMPTZ '2026-07-02 00:00:00+00' AS oldest_call_before_2026_07_02
+          FROM transactions
       `;
 
 const HEAP_PLAN_FIELDS = [
@@ -1320,26 +1344,72 @@ const HEAP_PLAN_FIELDS = [
   "orphaned_created_2026_04_17_to_2026_05_03",
   "orphaned_created_2026_05_04_to_2026_07_01",
   "orphaned_created_from_2026_07_02",
-  "orphaned_newer_than_oldest_call",
-  "oldest_call_before_2026_04_16",
 ] as const;
+
+const OLDEST_CALL_FIELDS = [
+  "oldest_call_before_2026_04_16",
+  "oldest_call_before_2026_04_17",
+  "oldest_call_before_2026_05_04",
+  "oldest_call_before_2026_07_02",
+] as const;
+
+type PlanFlags = {
+  quality_read_from_table: boolean;
+  transactions_probed_by_pkey: boolean;
+  transactions_read_from_table: boolean;
+  any_index_used: boolean;
+};
+
+/**
+ * Access-path flags from an `EXPLAIN (FORMAT JSON)` result. Null when the
+ * result is not the expected shape, so an unreadable plan never reads as a
+ * confident false.
+ */
+export function planFlags(rows: Record<string, unknown>[]): PlanFlags | null {
+  let doc: unknown = rows[0]?.["QUERY PLAN"];
+  if (typeof doc === "string") {
+    try { doc = JSON.parse(doc); } catch { return null; }
+  }
+  const root = Array.isArray(doc) ? (doc[0] as { Plan?: unknown } | undefined)?.Plan : undefined;
+  if (!root || typeof root !== "object") return null;
+  const nodes: Record<string, unknown>[] = [];
+  const walk = (n: unknown): void => {
+    if (!n || typeof n !== "object") return;
+    nodes.push(n as Record<string, unknown>);
+    const kids = (n as { Plans?: unknown }).Plans;
+    if (Array.isArray(kids)) kids.forEach(walk);
+  };
+  walk(root);
+  const seq = (rel: string) => nodes.some((n) => n["Node Type"] === "Seq Scan" && n["Relation Name"] === rel);
+  return {
+    quality_read_from_table: seq("transaction_quality"),
+    transactions_probed_by_pkey: nodes.some((n) => n["Index Name"] === "transactions_pkey"),
+    transactions_read_from_table: seq("transactions"),
+    any_index_used: nodes.some((n) => typeof n["Index Name"] === "string"),
+  };
+}
 
 /**
  * Runs `query` under `settings` inside a savepoint that is always rolled back
- * (restoring the settings). A statement timeout reads as incomplete; any other
- * error fails the check.
+ * (restoring the settings). With `explain`, first records the plan of the same
+ * statement under the same settings (planning only; nothing is bound, so the
+ * plan that runs next is this one). A statement timeout reads as incomplete;
+ * any other error fails the check.
  */
 async function underPlan(
   tx: ReadExecutor,
   name: string,
   settings: SQL[],
   query: SQL,
-): Promise<{ row: Record<string, unknown> | undefined; complete: boolean }> {
+  explain: boolean,
+): Promise<{ row: Record<string, unknown> | undefined; plan: PlanFlags | null; complete: boolean }> {
   await tx.execute(sql.raw(`SAVEPOINT ${name}`));
   let row: Record<string, unknown> | undefined;
+  let plan: PlanFlags | null = null;
   let complete = true;
   try {
     for (const s of settings) await tx.execute(s);
+    if (explain) plan = planFlags(rowsOf(await tx.execute(sql`EXPLAIN (FORMAT JSON) ${query}`)));
     [row] = rowsOf(await tx.execute(query));
   } catch (err) {
     if (!isStatementTimeout(err)) throw err;
@@ -1347,7 +1417,7 @@ async function underPlan(
   }
   await tx.execute(sql.raw(`ROLLBACK TO SAVEPOINT ${name}`));
   await tx.execute(sql.raw(`RELEASE SAVEPOINT ${name}`));
-  return { row, complete };
+  return { row, plan, complete };
 }
 
 export function isOpsReadCheck(name: string): boolean {

@@ -266,11 +266,28 @@ suite("transaction-quality-orphans on disposable Postgres", () => {
       VALUES (${transactionId}::uuid, 10, true, 1, 1, 100, ${at}::timestamptz)`);
   }
 
-  it("runs read-only, completes both plans, and leaves the planner settings as it found them", async () => {
+  /** The oldest-call flags the check should give for whatever calls this database holds. */
+  async function oldestCallFlags(tx: Tx) {
+    const [{ oldest }] = await tx.execute(sql`SELECT MIN(created_at) AS oldest FROM transactions`);
+    const at = oldest === null ? null : new Date(oldest as string).getTime();
+    const before = (day: string) => (at === null ? null : at < Date.parse(`${day}T00:00:00Z`));
+    return {
+      oldest_call_before_2026_04_16: before("2026-04-16"),
+      oldest_call_before_2026_04_17: before("2026-04-17"),
+      oldest_call_before_2026_05_04: before("2026-05-04"),
+      oldest_call_before_2026_07_02: before("2026-07-02"),
+    };
+  }
+
+  it("runs read-only, completes every part, and leaves the planner settings as it found them", async () => {
     await inRollback(async (tx) => {
       const result = await def.run(tx as unknown as ReadExecutor, def.prepare({}));
       assertSafeOutput({ check: "transaction-quality-orphans", result });
-      expect(result).toMatchObject({ index_plan: { complete: true, orphaned_rows: 0 }, heap_plan: { complete: true, orphaned_rows: 0 } });
+      expect(result).toMatchObject({
+        index_plan: { complete: true, orphaned_rows: 0 },
+        heap_plan: { complete: true, orphaned_rows: 0 },
+        oldest_call: { complete: true },
+      });
       for (const name of ["enable_hashjoin", "enable_mergejoin", "enable_indexscan", "enable_indexonlyscan", "enable_bitmapscan"]) {
         const [row] = await tx.execute(sql.raw(`SELECT current_setting('${name}') AS v`));
         expect(row.v, name).toBe("on");
@@ -278,41 +295,47 @@ suite("transaction-quality-orphans on disposable Postgres", () => {
     }, READ_ONLY);
   });
 
-  it("dates each orphan into its incident window, and both plans agree on an intact index", async () => {
+  it("dates each orphan into its incident window in UTC, whatever the session time zone, and reports the plans that ran", async () => {
     await inRollback(async (tx) => {
       await tx.execute(sql`DELETE FROM transaction_quality`);
-      // Surviving calls with their quality rows; the oldest is 2026-04-20.
+      // Surviving calls with their quality rows.
       for (const at of ["2026-04-20T08:00:00Z", "2026-06-01T08:00:00Z"]) await quality(tx, await call(tx, at), at);
       await tx.execute(sql`SET LOCAL session_replication_role = replica`);
       const orphanAt = [
         "2026-04-15T23:59:59Z",                         // before 04-16
         "2026-04-16T00:00:00Z", "2026-04-16T23:59:59Z", // on 04-16
-        "2026-04-17T00:00:00Z",                         // 04-17 to 05-03
+        "2026-04-17T00:00:00Z", "2026-05-03T23:59:59Z", // 04-17 to 05-03
         "2026-05-04T00:00:00Z", "2026-07-01T23:59:59Z", // 05-04 to 07-01
         "2026-07-02T00:00:00Z",                         // from 07-02
       ];
       for (const at of orphanAt) await quality(tx, crypto.randomUUID(), at);
       await tx.execute(sql`SET LOCAL session_replication_role = origin`);
+      // A UTC+9 session would move every boundary by nine hours if a literal lost its +00.
+      await tx.execute(sql`SET LOCAL TimeZone = 'Asia/Tokyo'`);
       const result = await def.run(tx as unknown as ReadExecutor, def.prepare({}));
       assertSafeOutput({ check: "transaction-quality-orphans", result });
       expect(result).toEqual({
-        index_plan: { complete: true, orphaned_rows: 7 },
+        index_plan: {
+          complete: true,
+          plan: { quality_read_from_table: true, transactions_probed_by_pkey: true, transactions_read_from_table: false, any_index_used: true },
+          orphaned_rows: 8,
+        },
         heap_plan: {
           complete: true,
-          orphaned_rows: 7,
+          plan: { quality_read_from_table: true, transactions_probed_by_pkey: false, transactions_read_from_table: true, any_index_used: false },
+          orphaned_rows: 8,
           orphaned_created_before_2026_04_16: 1,
           orphaned_created_on_2026_04_16: 2,
-          orphaned_created_2026_04_17_to_2026_05_03: 1,
+          orphaned_created_2026_04_17_to_2026_05_03: 2,
           orphaned_created_2026_05_04_to_2026_07_01: 2,
           orphaned_created_from_2026_07_02: 1,
-          orphaned_newer_than_oldest_call: 3, // 05-04, 07-01 and 07-02 are after 04-20
-          oldest_call_before_2026_04_16: false,
         },
+        oldest_call: { complete: true, ...(await oldestCallFlags(tx)) },
       });
     });
   });
 
-  it("each plan takes the path it claims: an index probe of transactions, or no index at all", async () => {
+  it("each plan takes the path it claims: an index probe of transactions over a table read of the quality rows, or no index at all", async () => {
     await inRollback(async (tx) => {
       const plan = async (settings: SQL[], query: SQL) => {
         await tx.execute(sql`SAVEPOINT plan_probe`);
@@ -324,7 +347,8 @@ suite("transaction-quality-orphans on disposable Postgres", () => {
       };
       const index = await plan(INDEX_PLAN_SETTINGS, ORPHANS_INDEX_PLAN);
       expect(index).toMatch(/Nested Loop Anti Join/);
-      expect(index).toMatch(/Index (Only )?Scan using transactions_pkey on transactions t/);
+      expect(index).toMatch(/Seq Scan on transaction_quality q\b/);
+      expect(index).toMatch(/Index Scan using transactions_pkey on transactions t\b/);
       const heap = await plan(HEAP_PLAN_SETTINGS, ORPHANS_HEAP_PLAN);
       expect(heap).not.toMatch(/Index|Bitmap/);
       expect(heap).toMatch(/Seq Scan on transactions t\b/);
