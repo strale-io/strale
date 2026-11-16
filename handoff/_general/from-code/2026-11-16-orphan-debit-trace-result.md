@@ -3,7 +3,7 @@ Intent: run `orphan-debit-trace` (merged in #1071, deployed as 9bfb7d9117dc) onc
 Evidence: `archive/receipts/2026-11-16-check-a7-orphan-debit-trace-banded.json`. It follows the Q3b privacy rule: no months, counts from 1 to 4 shown as `<5`, groups smaller than 5 given in cents only, and no field that would let such a count be worked out. The check answered 200 in about 1 second.
 
 A. Debits whose reference matches no call. There are fewer than 5, totalling 65 cents, and all are capability debits.
-- Each one has a surviving `transaction_quality` row for its reference. `quality-capture.ts` writes that row only when the call row exists, so the call did run.
+- Each one has a surviving `transaction_quality` row for its reference. The charging path of that era inserted the call row before it wrote the quality row, so the call did run.
 - Each call row is now gone. `transaction_quality.transaction_id` references `transactions.id` with ON DELETE CASCADE, so an ordinary delete would have removed the quality row too. The row must therefore have been removed while that foreign key was missing or bypassed in production. This has not been measured, and the cause of the deletion is unknown.
 - No current code path deletes paid call rows. Outside tests, only the health probe and the x402 price-0 claims delete call rows.
 - Before WP3, the charging code in `apps/api/src/routes/do.ts` charged a sync call only on success. For a failed async call, it wrote the refund against the same reference before recording quality (DEC-14). These references have no refund, so the charges were for calls that finished.
