@@ -31,7 +31,7 @@
  * surface never carries admin power.
  */
 import { timingSafeEqual } from "node:crypto";
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 import { PAID_CALL_QUARANTINE_MARKER } from "./paid-call-guard.js";
 
 export const OPS_READ_TOKEN_MIN_LENGTH = 32;
@@ -210,6 +210,25 @@ const OUTPUT_FIELDS: Record<string, Shape | Vocabulary> = {
   orphaned_without_debit: "count",
   orphaned_soft_deleted: "count",
   orphan_counts_complete: "boolean",
+  // transaction-quality-orphans (A-7 follow-up). Counts and flags only.
+  index_plan: "object",
+  heap_plan: "object",
+  complete: "boolean",
+  orphaned_created_before_2026_04_16: "count",
+  orphaned_created_on_2026_04_16: "count",
+  orphaned_created_2026_04_17_to_2026_05_03: "count",
+  orphaned_created_2026_05_04_to_2026_07_01: "count",
+  orphaned_created_from_2026_07_02: "count",
+  plan: "object",
+  quality_read_from_table: "boolean",
+  transactions_probed_by_pkey: "boolean",
+  transactions_read_from_table: "boolean",
+  any_index_used: "boolean",
+  oldest_call: "object",
+  oldest_call_before_2026_04_16: "boolean",
+  oldest_call_before_2026_04_17: "boolean",
+  oldest_call_before_2026_05_04: "boolean",
+  oldest_call_before_2026_07_02: "boolean",
 };
 
 export class OpsReadOutputError extends Error {
@@ -1206,6 +1225,36 @@ export const OPS_READ_CHECKS: Record<string, CheckDef<unknown>> = {
       };
     },
   }),
+
+  /**
+   * A-7 follow-up to transaction-quality-fk, which found a validated cascade
+   * key and still 103,416 quality rows with no call row. Two readings of that
+   * count, each in its own savepoint: `index_plan` finds the call rows only
+   * through the primary-key index, `heap_plan` only by reading the table. If
+   * they disagree, the index is missing entries (the 2026-04-16 outage was
+   * B-tree corruption on transactions) and the orphans are not all real. Each
+   * reading carries `plan`, flags taken from EXPLAIN of that same statement
+   * under the same settings, so the result shows which access paths produced
+   * each count rather than assuming them. The heap reading also dates the
+   * orphaned quality rows against the named incident dates. `oldest_call`,
+   * in a savepoint of its own so a timeout there costs nothing else, says on
+   * which side of each window boundary the oldest surviving call falls.
+   * Counts and flags only: no id, user, month or data-derived instant.
+   */
+  "transaction-quality-orphans": check({
+    prepare: () => null,
+    run: async (tx) => {
+      const index = await underPlan(tx, "orphans_index_plan", INDEX_PLAN_SETTINGS, ORPHANS_INDEX_PLAN, true);
+      const heap = await underPlan(tx, "orphans_heap_plan", HEAP_PLAN_SETTINGS, ORPHANS_HEAP_PLAN, true);
+      const oldest = await underPlan(tx, "orphans_oldest_call", HEAP_PLAN_SETTINGS, OLDEST_CALL, false);
+      return {
+        // A missing row reads as nulls, not as a confident zero.
+        index_plan: { complete: index.complete, plan: index.plan, ...pick(index.row ?? {}, ["orphaned_rows"]) },
+        heap_plan: { complete: heap.complete, plan: heap.plan, ...pick(heap.row ?? {}, HEAP_PLAN_FIELDS) },
+        oldest_call: { complete: oldest.complete, ...pick(oldest.row ?? {}, OLDEST_CALL_FIELDS) },
+      };
+    },
+  }),
 };
 
 const ORPHANED_QUALITY_COUNT = sql`
@@ -1230,6 +1279,158 @@ function isStatementTimeout(err: unknown): boolean {
     if ((e as { code?: unknown }).code === "57014") return true;
   }
   return false;
+}
+
+/**
+ * Planner settings for the two orphan counts in transaction-quality-orphans.
+ * INDEX: no hash or merge join and no bitmap scan, so each quality row is
+ * looked up in `transactions` by a nested-loop probe of its primary key (an
+ * index-only probe is allowed: a missing index entry is missed either way).
+ * The count reads q.created_at, which the quality table's unique index does
+ * not hold, so the quality rows cannot come from an index-only path on that
+ * index. HEAP: no index is used anywhere, so every `transactions` row is read
+ * from the table itself. Settings only price plans; `plan` in the output
+ * records the planned access paths. All are SET LOCAL inside a savepoint that
+ * is rolled back after the read, which restores the settings for the rest of
+ * the transaction.
+ */
+export const INDEX_PLAN_SETTINGS = [
+  sql`SET LOCAL enable_hashjoin = off`,
+  sql`SET LOCAL enable_mergejoin = off`,
+  sql`SET LOCAL enable_bitmapscan = off`,
+];
+export const HEAP_PLAN_SETTINGS = [
+  sql`SET LOCAL enable_indexscan = off`,
+  sql`SET LOCAL enable_indexonlyscan = off`,
+  sql`SET LOCAL enable_bitmapscan = off`,
+];
+
+// created_at is NOT NULL, so COUNT(q.created_at) = COUNT(*).
+export const ORPHANS_INDEX_PLAN = sql`
+        SELECT COUNT(q.created_at)::int AS orphaned_rows
+          FROM transaction_quality q
+         WHERE NOT EXISTS (SELECT 1 FROM transactions t WHERE t.id = q.transaction_id)
+      `;
+
+// Incident dates, UTC: 2026-04-16 B-tree corruption outage on transactions;
+// 2026-05-04 disk-full crash-loop; 2026-07-02 I/O degradation. A quality row's
+// created_at dates the call it described, not the deletion of that call.
+export const ORPHANS_HEAP_PLAN = sql`
+        SELECT COUNT(*)::int AS orphaned_rows,
+               COUNT(*) FILTER (WHERE q.created_at < TIMESTAMPTZ '2026-04-16 00:00:00+00')::int AS orphaned_created_before_2026_04_16,
+               COUNT(*) FILTER (WHERE q.created_at >= TIMESTAMPTZ '2026-04-16 00:00:00+00'
+                                  AND q.created_at <  TIMESTAMPTZ '2026-04-17 00:00:00+00')::int AS orphaned_created_on_2026_04_16,
+               COUNT(*) FILTER (WHERE q.created_at >= TIMESTAMPTZ '2026-04-17 00:00:00+00'
+                                  AND q.created_at <  TIMESTAMPTZ '2026-05-04 00:00:00+00')::int AS orphaned_created_2026_04_17_to_2026_05_03,
+               COUNT(*) FILTER (WHERE q.created_at >= TIMESTAMPTZ '2026-05-04 00:00:00+00'
+                                  AND q.created_at <  TIMESTAMPTZ '2026-07-02 00:00:00+00')::int AS orphaned_created_2026_05_04_to_2026_07_01,
+               COUNT(*) FILTER (WHERE q.created_at >= TIMESTAMPTZ '2026-07-02 00:00:00+00')::int AS orphaned_created_from_2026_07_02
+          FROM transaction_quality q
+         WHERE NOT EXISTS (SELECT 1 FROM transactions t WHERE t.id = q.transaction_id)
+      `;
+
+// Flags at the window boundaries only, never the instant itself: an instant
+// taken from the data would split a window and could undo a "<5" band. Run
+// under HEAP_PLAN_SETTINGS so no index supplies the MIN.
+export const OLDEST_CALL = sql`
+        SELECT MIN(created_at) < TIMESTAMPTZ '2026-04-16 00:00:00+00' AS oldest_call_before_2026_04_16,
+               MIN(created_at) < TIMESTAMPTZ '2026-04-17 00:00:00+00' AS oldest_call_before_2026_04_17,
+               MIN(created_at) < TIMESTAMPTZ '2026-05-04 00:00:00+00' AS oldest_call_before_2026_05_04,
+               MIN(created_at) < TIMESTAMPTZ '2026-07-02 00:00:00+00' AS oldest_call_before_2026_07_02
+          FROM transactions
+      `;
+
+const HEAP_PLAN_FIELDS = [
+  "orphaned_rows",
+  "orphaned_created_before_2026_04_16",
+  "orphaned_created_on_2026_04_16",
+  "orphaned_created_2026_04_17_to_2026_05_03",
+  "orphaned_created_2026_05_04_to_2026_07_01",
+  "orphaned_created_from_2026_07_02",
+] as const;
+
+const OLDEST_CALL_FIELDS = [
+  "oldest_call_before_2026_04_16",
+  "oldest_call_before_2026_04_17",
+  "oldest_call_before_2026_05_04",
+  "oldest_call_before_2026_07_02",
+] as const;
+
+type PlanFlags = {
+  quality_read_from_table: boolean | null;
+  transactions_probed_by_pkey: boolean | null;
+  transactions_read_from_table: boolean | null;
+  any_index_used: boolean | null;
+};
+/** The plan could not be read or EXPLAIN did not finish: null leaves, so the output contract still holds. */
+const UNKNOWN_PLAN: PlanFlags = {
+  quality_read_from_table: null,
+  transactions_probed_by_pkey: null,
+  transactions_read_from_table: null,
+  any_index_used: null,
+};
+
+/**
+ * Access-path flags from an `EXPLAIN (FORMAT JSON)` result. Null when the
+ * result is not the expected shape, so an unreadable plan never reads as a
+ * confident false.
+ */
+export function planFlags(rows: Record<string, unknown>[]): PlanFlags | null {
+  let doc: unknown = rows[0]?.["QUERY PLAN"];
+  if (typeof doc === "string") {
+    try { doc = JSON.parse(doc); } catch { return null; }
+  }
+  const root = Array.isArray(doc) ? (doc[0] as { Plan?: unknown } | undefined)?.Plan : undefined;
+  if (!root || typeof root !== "object") return null;
+  const nodes: Record<string, unknown>[] = [];
+  const walk = (n: unknown): void => {
+    if (!n || typeof n !== "object") return;
+    nodes.push(n as Record<string, unknown>);
+    const kids = (n as { Plans?: unknown }).Plans;
+    if (Array.isArray(kids)) kids.forEach(walk);
+  };
+  walk(root);
+  if (!nodes.some((n) => typeof n["Node Type"] === "string")) return null;
+  const seq = (rel: string) => nodes.some((n) => n["Node Type"] === "Seq Scan" && n["Relation Name"] === rel);
+  return {
+    quality_read_from_table: seq("transaction_quality"),
+    transactions_probed_by_pkey: nodes.some((n) => n["Index Name"] === "transactions_pkey"),
+    transactions_read_from_table: seq("transactions"),
+    any_index_used: nodes.some((n) => typeof n["Index Name"] === "string"),
+  };
+}
+
+/**
+ * Runs `query` under `settings` inside a savepoint that is always rolled back
+ * (restoring the settings). With `explain`, first records the plan of the same
+ * statement under the same settings. That is planning only: a plan cached on
+ * the connection for the count itself was made under the same settings but
+ * possibly older statistics, so the flags are strong evidence of the access
+ * paths, not proof. A statement timeout reads as incomplete; any other error
+ * fails the check. An unavailable plan is reported as null flags.
+ */
+async function underPlan(
+  tx: ReadExecutor,
+  name: string,
+  settings: SQL[],
+  query: SQL,
+  explain: boolean,
+): Promise<{ row: Record<string, unknown> | undefined; plan: PlanFlags; complete: boolean }> {
+  await tx.execute(sql.raw(`SAVEPOINT ${name}`));
+  let row: Record<string, unknown> | undefined;
+  let plan: PlanFlags | null = null;
+  let complete = true;
+  try {
+    for (const s of settings) await tx.execute(s);
+    if (explain) plan = planFlags(rowsOf(await tx.execute(sql`EXPLAIN (FORMAT JSON) ${query}`)));
+    [row] = rowsOf(await tx.execute(query));
+  } catch (err) {
+    if (!isStatementTimeout(err)) throw err;
+    complete = false;
+  }
+  await tx.execute(sql.raw(`ROLLBACK TO SAVEPOINT ${name}`));
+  await tx.execute(sql.raw(`RELEASE SAVEPOINT ${name}`));
+  return { row, plan: plan ?? UNKNOWN_PLAN, complete };
 }
 
 export function isOpsReadCheck(name: string): boolean {

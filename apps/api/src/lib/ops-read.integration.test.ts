@@ -6,7 +6,7 @@ import { useTestDatabase } from "../test-support/integration-db.js";
 const DATABASE_URL_TEST = useTestDatabase();
 const suite = DATABASE_URL_TEST ? describe : describe.skip;
 const { getDb, closeDbPool } = await import("../db/index.js");
-const { OPS_READ_CHECKS, assertSafeOutput } = await import("./ops-read.js");
+const { OPS_READ_CHECKS, assertSafeOutput, INDEX_PLAN_SETTINGS, HEAP_PLAN_SETTINGS, ORPHANS_INDEX_PLAN, ORPHANS_HEAP_PLAN } = await import("./ops-read.js");
 type ReadExecutor = import("./ops-read.js").ReadExecutor;
 type Tx = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
 class Rollback extends Error {}
@@ -75,10 +75,18 @@ async function runBursts(tx: Tx, mutations: [from: string, to: string][] = []) {
 }
 
 async function inRollback(fn: (tx: Tx) => Promise<void>, config?: { accessMode: "read only" }) {
-  await expect(getDb().transaction(async (tx) => {
-    await fn(tx);
-    throw new Rollback();
-  }, config)).rejects.toBeInstanceOf(Rollback);
+  // A failure inside the transaction is rethrown as itself, so the report shows
+  // its diff rather than "expected … to be an instance of Rollback".
+  try {
+    await getDb().transaction(async (tx) => {
+      await fn(tx);
+      throw new Rollback();
+    }, config);
+  } catch (err) {
+    if (err instanceof Rollback) return;
+    throw err;
+  }
+  throw new Error("the transaction committed instead of rolling back");
 }
 
 // The route runs every check read-only (routes/ops-read.ts); so do these.
@@ -243,5 +251,144 @@ suite("transaction-quality-fk on disposable Postgres", () => {
       held.release();
       await locker.end();
     }
+  });
+});
+
+/**
+ * transaction-quality-orphans on a real database: the two plans the check
+ * forces are the plans Postgres actually uses, the settings do not outlive the
+ * check, and the dating counts land each orphan in its incident window.
+ * Orphans are made the way production must have got them, by inserting with
+ * the foreign-key triggers bypassed (session_replication_role = replica).
+ */
+suite("transaction-quality-orphans on disposable Postgres", () => {
+  const def = OPS_READ_CHECKS["transaction-quality-orphans"];
+
+  async function call(tx: Tx, at: string) {
+    const [t] = await tx.execute(sql`INSERT INTO transactions(status, input, price_cents, solution_slug, payment_method, created_at)
+      VALUES ('completed', '{}', 0, 'orphan-fixture', 'wallet', ${at}::timestamptz) RETURNING id`);
+    return t.id as string;
+  }
+  async function quality(tx: Tx, transactionId: string, at: string) {
+    await tx.execute(sql`INSERT INTO transaction_quality(transaction_id, response_time_ms, schema_conformant, fields_returned, fields_expected, field_completeness_pct, created_at)
+      VALUES (${transactionId}::uuid, 10, true, 1, 1, 100, ${at}::timestamptz)`);
+  }
+
+  /**
+   * Surviving calls, each with its quality row, then fresh statistics. The
+   * planner picks the transactions_pkey probe under INDEX_PLAN_SETTINGS only
+   * when it believes the tables hold rows. On the handful other suites leave
+   * behind, or after autovacuum analysed the tables while they were empty
+   * (reltuples 0, so any number of inserted rows still plans as one), it reads
+   * transactions from the table instead, and the check reports exactly that,
+   * as planFlags does in production. So the tests that pin the plan seed a
+   * thousand rows and analyse them inside their own transaction, which then
+   * plans the same way whatever state the shared database is in. ANALYZE
+   * writes reltuples in place, so the rollback leaves them behind; the
+   * afterAll below analyses the tables again to put back statistics for what
+   * they really hold.
+   */
+  async function survivingCalls(tx: Tx, n: number, at: string) {
+    await tx.execute(sql`WITH t AS (
+        INSERT INTO transactions(status, input, price_cents, solution_slug, payment_method, created_at)
+        SELECT 'completed', '{}', 0, 'orphan-fixture', 'wallet', ${at}::timestamptz FROM generate_series(1, ${n}::int)
+        RETURNING id)
+      INSERT INTO transaction_quality(transaction_id, response_time_ms, schema_conformant, fields_returned, fields_expected, field_completeness_pct, created_at)
+      SELECT id, 10, true, 1, 1, 100, ${at}::timestamptz FROM t`);
+    await tx.execute(sql`ANALYZE transactions, transaction_quality`);
+  }
+  afterAll(async () => {
+    if (DATABASE_URL_TEST) await getDb().execute(sql`ANALYZE transactions, transaction_quality`);
+  });
+
+  /** The oldest-call flags the check should give for whatever calls this database holds. */
+  async function oldestCallFlags(tx: Tx) {
+    const [{ oldest }] = await tx.execute(sql`SELECT MIN(created_at) AS oldest FROM transactions`);
+    const at = oldest === null ? null : new Date(oldest as string).getTime();
+    const before = (day: string) => (at === null ? null : at < Date.parse(`${day}T00:00:00Z`));
+    return {
+      oldest_call_before_2026_04_16: before("2026-04-16"),
+      oldest_call_before_2026_04_17: before("2026-04-17"),
+      oldest_call_before_2026_05_04: before("2026-05-04"),
+      oldest_call_before_2026_07_02: before("2026-07-02"),
+    };
+  }
+
+  it("runs read-only, completes every part, and leaves the planner settings as it found them", async () => {
+    await inRollback(async (tx) => {
+      const result = await def.run(tx as unknown as ReadExecutor, def.prepare({}));
+      assertSafeOutput({ check: "transaction-quality-orphans", result });
+      expect(result).toMatchObject({
+        index_plan: { complete: true, orphaned_rows: 0 },
+        heap_plan: { complete: true, orphaned_rows: 0 },
+        oldest_call: { complete: true },
+      });
+      for (const name of ["enable_hashjoin", "enable_mergejoin", "enable_indexscan", "enable_indexonlyscan", "enable_bitmapscan"]) {
+        const [row] = await tx.execute(sql.raw(`SELECT current_setting('${name}') AS v`));
+        expect(row.v, name).toBe("on");
+      }
+    }, READ_ONLY);
+  });
+
+  it("dates each orphan into its incident window in UTC, whatever the session time zone, and reports the plans that ran", async () => {
+    await inRollback(async (tx) => {
+      await tx.execute(sql`DELETE FROM transaction_quality`);
+      // Surviving calls with their quality rows.
+      for (const at of ["2026-04-20T08:00:00Z", "2026-06-01T08:00:00Z"]) await quality(tx, await call(tx, at), at);
+      await survivingCalls(tx, 1000, "2026-06-01T08:00:00Z");
+      await tx.execute(sql`SET LOCAL session_replication_role = replica`);
+      const orphanAt = [
+        "2026-04-15T23:59:59Z",                         // before 04-16
+        "2026-04-16T00:00:00Z", "2026-04-16T23:59:59Z", // on 04-16
+        "2026-04-17T00:00:00Z", "2026-05-03T23:59:59Z", // 04-17 to 05-03
+        "2026-05-04T00:00:00Z", "2026-07-01T23:59:59Z", // 05-04 to 07-01
+        "2026-07-02T00:00:00Z",                         // from 07-02
+      ];
+      for (const at of orphanAt) await quality(tx, crypto.randomUUID(), at);
+      await tx.execute(sql`SET LOCAL session_replication_role = origin`);
+      // A UTC+9 session would move every boundary by nine hours if a literal lost its +00.
+      await tx.execute(sql`SET LOCAL TimeZone = 'Asia/Tokyo'`);
+      const result = await def.run(tx as unknown as ReadExecutor, def.prepare({}));
+      assertSafeOutput({ check: "transaction-quality-orphans", result });
+      expect(result).toEqual({
+        index_plan: {
+          complete: true,
+          plan: { quality_read_from_table: true, transactions_probed_by_pkey: true, transactions_read_from_table: false, any_index_used: true },
+          orphaned_rows: 8,
+        },
+        heap_plan: {
+          complete: true,
+          plan: { quality_read_from_table: true, transactions_probed_by_pkey: false, transactions_read_from_table: true, any_index_used: false },
+          orphaned_rows: 8,
+          orphaned_created_before_2026_04_16: 1,
+          orphaned_created_on_2026_04_16: 2,
+          orphaned_created_2026_04_17_to_2026_05_03: 2,
+          orphaned_created_2026_05_04_to_2026_07_01: 2,
+          orphaned_created_from_2026_07_02: 1,
+        },
+        oldest_call: { complete: true, ...(await oldestCallFlags(tx)) },
+      });
+    });
+  });
+
+  it("each plan takes the path it claims: an index probe of transactions over a table read of the quality rows, or no index at all", async () => {
+    await inRollback(async (tx) => {
+      await survivingCalls(tx, 1000, "2026-06-01T08:00:00Z");
+      const plan = async (settings: SQL[], query: SQL) => {
+        await tx.execute(sql`SAVEPOINT plan_probe`);
+        for (const s of settings) await tx.execute(s);
+        const { sql: text } = dialect.sqlToQuery(query);
+        const rows = await tx.execute(sql.raw(`EXPLAIN ${text}`));
+        await tx.execute(sql`ROLLBACK TO SAVEPOINT plan_probe`);
+        return rows.map((r) => String(r["QUERY PLAN"])).join("\n");
+      };
+      const index = await plan(INDEX_PLAN_SETTINGS, ORPHANS_INDEX_PLAN);
+      expect(index).toMatch(/Nested Loop Anti Join/);
+      expect(index).toMatch(/Seq Scan on transaction_quality q\b/);
+      expect(index).toMatch(/Index (Only )?Scan using transactions_pkey on transactions t\b/);
+      const heap = await plan(HEAP_PLAN_SETTINGS, ORPHANS_HEAP_PLAN);
+      expect(heap).not.toMatch(/Index|Bitmap/);
+      expect(heap).toMatch(/Seq Scan on transactions t\b/);
+    });
   });
 });

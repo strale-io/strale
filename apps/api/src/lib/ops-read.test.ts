@@ -11,6 +11,12 @@ import {
   isValidOpsReadAuth,
   parseDateRange,
   SWALLOWED_FAILURE_SLUGS,
+  INDEX_PLAN_SETTINGS,
+  HEAP_PLAN_SETTINGS,
+  ORPHANS_INDEX_PLAN,
+  ORPHANS_HEAP_PLAN,
+  OLDEST_CALL,
+  planFlags,
   type ReadExecutor,
 } from "./ops-read.js";
 import { PAID_CALL_QUARANTINE_MARKER } from "./paid-call-guard.js";
@@ -147,6 +153,7 @@ describe("checks", () => {
       "swallowed-failure-exposure",
       "test-call-cost",
       "transaction-quality-fk",
+      "transaction-quality-orphans",
     ]);
     expect(isOpsReadCheck("toString")).toBe(false);
     expect(isOpsReadCheck("__proto__")).toBe(false);
@@ -218,6 +225,7 @@ const MONEY_CHECKS = [
   "fx-error-rate",
   "burst-debit-refund",
   "transaction-quality-fk",
+  "transaction-quality-orphans",
 ] as const;
 type MoneyCheck = (typeof MONEY_CHECKS)[number];
 
@@ -261,8 +269,47 @@ function canned(): Record<MoneyCheck, Record<string, unknown>[][]> {
       [{ ...ORPHANED_QUALITY }],
       [], // RELEASE SAVEPOINT
     ],
+    "transaction-quality-orphans": [
+      [], [], [], [], // SAVEPOINT, three SET LOCAL
+      [{ "QUERY PLAN": INDEX_EXPLAIN }],
+      [{ orphaned_rows: 7 }],
+      [], [], // ROLLBACK TO, RELEASE
+      [], [], [], [], // SAVEPOINT, three SET LOCAL
+      [{ "QUERY PLAN": JSON.stringify(HEAP_EXPLAIN) }], // a driver may hand json back as text
+      [{ ...HEAP_ORPHANS }],
+      [], [], // ROLLBACK TO, RELEASE
+      [], [], [], [], // SAVEPOINT, three SET LOCAL
+      [{ ...OLDEST_CALL_FLAGS }],
+      [], [], // ROLLBACK TO, RELEASE
+    ],
   };
 }
+
+const HEAP_ORPHANS = {
+  orphaned_rows: 7,
+  orphaned_created_before_2026_04_16: 1,
+  orphaned_created_on_2026_04_16: 2,
+  orphaned_created_2026_04_17_to_2026_05_03: 3,
+  orphaned_created_2026_05_04_to_2026_07_01: 1,
+  orphaned_created_from_2026_07_02: 0,
+};
+const OLDEST_CALL_FLAGS = {
+  oldest_call_before_2026_04_16: false,
+  oldest_call_before_2026_04_17: false,
+  oldest_call_before_2026_05_04: true,
+  oldest_call_before_2026_07_02: true,
+};
+// EXPLAIN (FORMAT JSON) shapes: an index-probing anti-join and a heap-only one.
+const INDEX_EXPLAIN = [{ Plan: { "Node Type": "Aggregate", Plans: [{ "Node Type": "Nested Loop", "Join Type": "Anti", Plans: [
+  { "Node Type": "Seq Scan", "Relation Name": "transaction_quality", Alias: "q" },
+  { "Node Type": "Index Scan", "Relation Name": "transactions", "Index Name": "transactions_pkey", Alias: "t" },
+] }] } }];
+const HEAP_EXPLAIN = [{ Plan: { "Node Type": "Aggregate", Plans: [{ "Node Type": "Hash Join", "Join Type": "Anti", Plans: [
+  { "Node Type": "Seq Scan", "Relation Name": "transaction_quality", Alias: "q" },
+  { "Node Type": "Hash", Plans: [{ "Node Type": "Seq Scan", "Relation Name": "transactions", Alias: "t" }] },
+] }] } }];
+const INDEX_PLAN_FLAGS = { quality_read_from_table: true, transactions_probed_by_pkey: true, transactions_read_from_table: false, any_index_used: true };
+const HEAP_PLAN_FLAGS = { quality_read_from_table: true, transactions_probed_by_pkey: false, transactions_read_from_table: true, any_index_used: false };
 
 const BURST_TOTALS = {
   bursts: 15, multi_debit_bursts: 4, debits_in_multi_debit_bursts: 12,
@@ -310,6 +357,11 @@ const EXPECTED: Record<MoneyCheck, unknown> = {
     foreign_keys: [{ confdeltype: "c", convalidated: false, condeferrable: false }],
     orphan_counts_complete: true,
     ...ORPHANED_QUALITY,
+  },
+  "transaction-quality-orphans": {
+    index_plan: { complete: true, plan: INDEX_PLAN_FLAGS, orphaned_rows: 7 },
+    heap_plan: { complete: true, plan: HEAP_PLAN_FLAGS, ...HEAP_ORPHANS },
+    oldest_call: { complete: true, ...OLDEST_CALL_FLAGS },
   },
 };
 
@@ -410,6 +462,40 @@ const REVIEWED_FILTERS: Record<MoneyCheck, string[][]> = {
       "w.type = 'purchase' AND w.reference_id = q.transaction_id", "q.deleted_at IS NOT NULL"],
     ["RELEASE SAVEPOINT orphan_count"],
   ],
+  "transaction-quality-orphans": [
+    ["SAVEPOINT orphans_index_plan"],
+    ["SET LOCAL enable_hashjoin = off"],
+    ["SET LOCAL enable_mergejoin = off"],
+    ["SET LOCAL enable_bitmapscan = off"],
+    ["EXPLAIN (FORMAT JSON)", "FROM transaction_quality q", "NOT EXISTS (SELECT 1 FROM transactions t WHERE t.id = q.transaction_id)"],
+    ["SELECT COUNT(q.created_at)::int AS orphaned_rows", "FROM transaction_quality q", "NOT EXISTS (SELECT 1 FROM transactions t WHERE t.id = q.transaction_id)"],
+    ["ROLLBACK TO SAVEPOINT orphans_index_plan"],
+    ["RELEASE SAVEPOINT orphans_index_plan"],
+    ["SAVEPOINT orphans_heap_plan"],
+    ["SET LOCAL enable_indexscan = off"],
+    ["SET LOCAL enable_indexonlyscan = off"],
+    ["SET LOCAL enable_bitmapscan = off"],
+    ["EXPLAIN (FORMAT JSON)", "FROM transaction_quality q", "NOT EXISTS (SELECT 1 FROM transactions t WHERE t.id = q.transaction_id)"],
+    ["FROM transaction_quality q", "NOT EXISTS (SELECT 1 FROM transactions t WHERE t.id = q.transaction_id)",
+      "(WHERE q.created_at < TIMESTAMPTZ '2026-04-16 00:00:00+00')::int AS orphaned_created_before_2026_04_16",
+      "(WHERE q.created_at >= TIMESTAMPTZ '2026-04-16 00:00:00+00'\n                                  AND q.created_at <  TIMESTAMPTZ '2026-04-17 00:00:00+00')::int AS orphaned_created_on_2026_04_16",
+      "(WHERE q.created_at >= TIMESTAMPTZ '2026-04-17 00:00:00+00'\n                                  AND q.created_at <  TIMESTAMPTZ '2026-05-04 00:00:00+00')::int AS orphaned_created_2026_04_17_to_2026_05_03",
+      "(WHERE q.created_at >= TIMESTAMPTZ '2026-05-04 00:00:00+00'\n                                  AND q.created_at <  TIMESTAMPTZ '2026-07-02 00:00:00+00')::int AS orphaned_created_2026_05_04_to_2026_07_01",
+      "(WHERE q.created_at >= TIMESTAMPTZ '2026-07-02 00:00:00+00')::int AS orphaned_created_from_2026_07_02"],
+    ["ROLLBACK TO SAVEPOINT orphans_heap_plan"],
+    ["RELEASE SAVEPOINT orphans_heap_plan"],
+    ["SAVEPOINT orphans_oldest_call"],
+    ["SET LOCAL enable_indexscan = off"],
+    ["SET LOCAL enable_indexonlyscan = off"],
+    ["SET LOCAL enable_bitmapscan = off"],
+    ["FROM transactions\n",
+      "MIN(created_at) < TIMESTAMPTZ '2026-04-16 00:00:00+00' AS oldest_call_before_2026_04_16",
+      "MIN(created_at) < TIMESTAMPTZ '2026-04-17 00:00:00+00' AS oldest_call_before_2026_04_17",
+      "MIN(created_at) < TIMESTAMPTZ '2026-05-04 00:00:00+00' AS oldest_call_before_2026_05_04",
+      "MIN(created_at) < TIMESTAMPTZ '2026-07-02 00:00:00+00' AS oldest_call_before_2026_07_02"],
+    ["ROLLBACK TO SAVEPOINT orphans_oldest_call"],
+    ["RELEASE SAVEPOINT orphans_oldest_call"],
+  ],
 };
 
 /** Every leaf key ending in `_cents` in a value. */
@@ -494,7 +580,7 @@ describe("money-path checks", () => {
     await expect(OPS_READ_CHECKS[name].run(tx, null)).rejects.toThrow("canceling statement due to statement timeout");
   });
 
-  it.each(["solution-debits", "kept-charges", "swallowed-failure-exposure", "fx-error-rate", "burst-debit-refund", "transaction-quality-fk"] as const)(
+  it.each(["solution-debits", "kept-charges", "swallowed-failure-exposure", "fx-error-rate", "burst-debit-refund", "transaction-quality-fk", "transaction-quality-orphans"] as const)(
     "a database error in a later statement of %s propagates too",
     async (name) => {
       let i = 0;
@@ -949,5 +1035,189 @@ describe("transaction-quality-fk", () => {
     answers[0][0] = { ...answers[0][0], ...change };
     const { result } = await runMoney("transaction-quality-fk", answers);
     expect(() => assertSafeOutput({ check: "transaction-quality-fk", result })).toThrow(OpsReadOutputError);
+  });
+});
+
+// ─── transaction-quality-orphans (A-7 follow-up) ────────────────────────────
+
+/** Answers every statement, and throws `err` on the one whose text starts with `failOn`. */
+function failingPlanExecutor(failOn: string, err: Error): ReadExecutor & { statements: string[] } {
+  const statements: string[] = [];
+  return {
+    statements,
+    async execute(query) {
+      const text = dialect.sqlToQuery(query as SQL).sql.trim();
+      statements.push(text);
+      if (text.startsWith(failOn)) throw err;
+      if (text.startsWith("EXPLAIN")) return [{ "QUERY PLAN": text.includes("orphaned_rows,") ? HEAP_EXPLAIN : INDEX_EXPLAIN }];
+      if (text.startsWith("SELECT COUNT(*)::int AS orphaned_rows,")) return [{ ...HEAP_ORPHANS }];
+      if (text.startsWith("SELECT COUNT(q.created_at)::int AS orphaned_rows")) return [{ orphaned_rows: 7 }];
+      if (text.startsWith("SELECT MIN(created_at)")) return [{ ...OLDEST_CALL_FLAGS }];
+      return [];
+    },
+  };
+}
+
+const nulls = (o: object) => Object.fromEntries(Object.keys(o).map((k) => [k, null]));
+
+describe("transaction-quality-orphans", () => {
+  const def = OPS_READ_CHECKS["transaction-quality-orphans"];
+  const timeout = () => Object.assign(new Error("Failed query"), { cause: { code: "57014" } });
+  const text = (q: SQL) => dialect.sqlToQuery(q).sql;
+
+  it("binds nothing: the incident dates are literals in the SQL, not Date parameters", async () => {
+    const { tx } = await runMoney("transaction-quality-orphans");
+    for (const q of tx.queries) expect(q.params).toEqual([]);
+  });
+
+  it("each plan's settings and EXPLAIN run after its savepoint, and rolling back to it undoes them, also on success", async () => {
+    const { tx } = await runMoney("transaction-quality-orphans");
+    const heads = tx.queries.map((q) => q.sql.trim().split(/\s+/).slice(0, 4).join(" "));
+    expect(heads).toEqual([
+      "SAVEPOINT orphans_index_plan",
+      "SET LOCAL enable_hashjoin =", "SET LOCAL enable_mergejoin =", "SET LOCAL enable_bitmapscan =",
+      "EXPLAIN (FORMAT JSON) SELECT",
+      "SELECT COUNT(q.created_at)::int AS orphaned_rows",
+      "ROLLBACK TO SAVEPOINT orphans_index_plan", "RELEASE SAVEPOINT orphans_index_plan",
+      "SAVEPOINT orphans_heap_plan",
+      "SET LOCAL enable_indexscan =", "SET LOCAL enable_indexonlyscan =", "SET LOCAL enable_bitmapscan =",
+      "EXPLAIN (FORMAT JSON) SELECT",
+      "SELECT COUNT(*)::int AS orphaned_rows,",
+      "ROLLBACK TO SAVEPOINT orphans_heap_plan", "RELEASE SAVEPOINT orphans_heap_plan",
+      "SAVEPOINT orphans_oldest_call",
+      "SET LOCAL enable_indexscan =", "SET LOCAL enable_indexonlyscan =", "SET LOCAL enable_bitmapscan =",
+      "SELECT MIN(created_at) < TIMESTAMPTZ",
+      "ROLLBACK TO SAVEPOINT orphans_oldest_call", "RELEASE SAVEPOINT orphans_oldest_call",
+    ]);
+  });
+
+  it("each EXPLAIN is of the exact statement that then runs", async () => {
+    const { tx } = await runMoney("transaction-quality-orphans");
+    for (const [explain, run] of [[4, 5], [12, 13]]) {
+      const [head, rest] = [tx.queries[explain].sql.slice(0, 22), tx.queries[explain].sql.slice(22)];
+      expect(head).toBe("EXPLAIN (FORMAT JSON) ");
+      expect(rest).toBe(tx.queries[run].sql);
+    }
+  });
+
+  it("the index plan keeps the primary-key probe and the heap plan turns off every index access", () => {
+    const settings = (xs: SQL[]) => xs.map(text).join("; ");
+    const index = settings(INDEX_PLAN_SETTINGS);
+    for (const s of ["enable_hashjoin = off", "enable_mergejoin = off", "enable_bitmapscan = off"]) expect(index).toContain(s);
+    expect(index).not.toMatch(/enable_index(only)?scan/);
+    // The count reads a column the quality table's unique index lacks, so no index-only path can supply q.
+    expect(text(ORPHANS_INDEX_PLAN)).toMatch(/^\s*SELECT COUNT\(q\.created_at\)::int AS orphaned_rows\s/);
+    expect(index).not.toContain("enable_seqscan");
+    const heap = settings(HEAP_PLAN_SETTINGS);
+    for (const s of ["enable_indexscan = off", "enable_indexonlyscan = off", "enable_bitmapscan = off"]) expect(heap).toContain(s);
+  });
+
+  it("both plans count the same orphan predicate, and no window filter widens with OR", () => {
+    const where = (q: SQL) => text(q).split("WHERE NOT EXISTS")[1]?.trim();
+    expect(where(ORPHANS_INDEX_PLAN)).toBe("(SELECT 1 FROM transactions t WHERE t.id = q.transaction_id)");
+    expect(where(ORPHANS_HEAP_PLAN)).toBe(where(ORPHANS_INDEX_PLAN));
+    expect(text(ORPHANS_HEAP_PLAN)).not.toMatch(/\bOR\b/i);
+    expect(text(ORPHANS_HEAP_PLAN).match(/FILTER/g)).toHaveLength(5);
+  });
+
+  it("the oldest call is reported only as flags at the window boundaries, never as an instant", async () => {
+    const q = text(OLDEST_CALL);
+    expect(q.match(/MIN\(created_at\)/g)).toHaveLength(4);
+    expect(q.match(/MIN\(created_at\) < TIMESTAMPTZ '2026-\d\d-\d\d 00:00:00\+00' AS oldest_call_before_/g)).toHaveLength(4);
+    const answers = canned()["transaction-quality-orphans"];
+    answers[20][0] = { ...answers[20][0], oldest_call_at: "2026-04-20T00:00:00Z", orphaned_newer_than_oldest_call: 4 };
+    const { result } = await runMoney("transaction-quality-orphans", answers);
+    expect([...allKeys(result)].filter((k) => /newer_than|oldest_call_at/.test(k))).toEqual([]);
+  });
+
+  it.each([
+    ["index_plan", "SELECT COUNT(q.created_at)::int AS orphaned_rows", {
+      index_plan: { complete: false, plan: INDEX_PLAN_FLAGS, orphaned_rows: null },
+      heap_plan: { complete: true, plan: HEAP_PLAN_FLAGS, ...HEAP_ORPHANS },
+      oldest_call: { complete: true, ...OLDEST_CALL_FLAGS },
+    }],
+    ["heap_plan", "SELECT COUNT(*)::int AS orphaned_rows,", {
+      index_plan: { complete: true, plan: INDEX_PLAN_FLAGS, orphaned_rows: 7 },
+      heap_plan: { complete: false, plan: HEAP_PLAN_FLAGS, ...nulls(HEAP_ORPHANS) },
+      oldest_call: { complete: true, ...OLDEST_CALL_FLAGS },
+    }],
+    ["oldest_call", "SELECT MIN(created_at)", {
+      index_plan: { complete: true, plan: INDEX_PLAN_FLAGS, orphaned_rows: 7 },
+      heap_plan: { complete: true, plan: HEAP_PLAN_FLAGS, ...HEAP_ORPHANS },
+      oldest_call: { complete: false, ...nulls(OLDEST_CALL_FLAGS) },
+    }],
+  ])("a statement timeout in %s keeps the others and rolls back its own savepoint", async (part, failOn, expected) => {
+    const tx = failingPlanExecutor(failOn, timeout());
+    const result = await def.run(tx, def.prepare({}));
+    expect(result).toEqual(expected);
+    expect(() => assertSafeOutput({ check: "transaction-quality-orphans", result })).not.toThrow();
+    const i = tx.statements.findIndex((t) => t.startsWith(failOn));
+    expect(tx.statements[i + 1]).toBe(`ROLLBACK TO SAVEPOINT orphans_${part}`);
+    expect(tx.statements[i + 2]).toBe(`RELEASE SAVEPOINT orphans_${part}`);
+  });
+
+  it.each([["index_plan", INDEX_PLAN_FLAGS], ["heap_plan", HEAP_PLAN_FLAGS]] as const)(
+    "a timeout on the %s EXPLAIN reports null plan flags, still passes the output contract, and keeps every count",
+    async (part, flags) => {
+      const failOn = part === "index_plan" ? "EXPLAIN (FORMAT JSON) \n        SELECT COUNT(q.created_at)" : "EXPLAIN (FORMAT JSON) \n        SELECT COUNT(*)::int AS orphaned_rows,";
+      const tx = failingPlanExecutor(failOn, timeout());
+      const result = (await def.run(tx, def.prepare({}))) as Record<string, Record<string, unknown>>;
+      expect(() => assertSafeOutput({ check: "transaction-quality-orphans", result })).not.toThrow();
+      expect(result[part]).toMatchObject({ complete: false, plan: nulls(flags) });
+      const other = part === "index_plan" ? "heap_plan" : "index_plan";
+      expect(result[other].complete).toBe(true);
+      expect(result.oldest_call).toEqual({ complete: true, ...OLDEST_CALL_FLAGS });
+    },
+  );
+
+  it("an unreadable plan reports null flags, completes the count, and passes the output contract", async () => {
+    const answers = canned()["transaction-quality-orphans"];
+    answers[4] = [{ "QUERY PLAN": [{ Plan: {} }] }];
+    const { result } = await runMoney("transaction-quality-orphans", answers);
+    expect(() => assertSafeOutput({ check: "transaction-quality-orphans", result })).not.toThrow();
+    expect(result).toMatchObject({ index_plan: { complete: true, plan: nulls(INDEX_PLAN_FLAGS), orphaned_rows: 7 } });
+  });
+
+  it("any other error fails the check and skips the remaining parts", async () => {
+    const tx = failingPlanExecutor("SET LOCAL enable_hashjoin", Object.assign(new Error("permission denied"), { cause: { code: "42501" } }));
+    await expect(def.run(tx, def.prepare({}))).rejects.toThrow("permission denied");
+    expect(tx.statements.some((t) => t.startsWith("SAVEPOINT orphans_heap_plan"))).toBe(false);
+  });
+
+  it("an extra column, such as a month, never reaches the output: run() keeps its fixed fields", async () => {
+    const answers = canned()["transaction-quality-orphans"];
+    for (const i of [5, 13, 20]) answers[i][0] = { ...answers[i][0], month: "2026-05" };
+    const { result } = await runMoney("transaction-quality-orphans", answers);
+    expect(result).toEqual(EXPECTED["transaction-quality-orphans"]);
+  });
+
+  it.each([
+    ["a count as text", 13, { orphaned_created_on_2026_04_16: "2" }],
+    ["a flag as text", 20, { oldest_call_before_2026_04_16: "t" }],
+  ])("the output contract refuses %s", async (_label, at, change) => {
+    const answers = canned()["transaction-quality-orphans"];
+    answers[at][0] = { ...answers[at][0], ...change };
+    const { result } = await runMoney("transaction-quality-orphans", answers);
+    expect(() => assertSafeOutput({ check: "transaction-quality-orphans", result })).toThrow(OpsReadOutputError);
+  });
+
+  describe("planFlags", () => {
+    it("reads an index-probing plan, given as parsed json or as text", () => {
+      expect(planFlags([{ "QUERY PLAN": INDEX_EXPLAIN }])).toEqual(INDEX_PLAN_FLAGS);
+      expect(planFlags([{ "QUERY PLAN": JSON.stringify(HEAP_EXPLAIN) }])).toEqual(HEAP_PLAN_FLAGS);
+    });
+
+    it("flags the quality table read through an index as not read from the table", () => {
+      const plan = structuredClone(INDEX_EXPLAIN);
+      plan[0].Plan.Plans[0].Plans[0] = { "Node Type": "Index Only Scan", "Relation Name": "transaction_quality", "Index Name": "transaction_quality_transaction_id_unique", Alias: "q" } as never;
+      expect(planFlags([{ "QUERY PLAN": plan }])).toMatchObject({ quality_read_from_table: false, any_index_used: true });
+    });
+
+    it("returns null for an unreadable plan rather than a confident false", () => {
+      for (const v of [undefined, "not json", [], [{}], { Plan: {} }, [{ Plan: {} }], [{ Plan: { Plans: [{ "Relation Name": "transactions" }] } }]]) {
+        expect(planFlags([{ "QUERY PLAN": v }])).toBeNull();
+      }
+      expect(planFlags([])).toBeNull();
+    });
   });
 });
