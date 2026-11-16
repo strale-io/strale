@@ -55,7 +55,7 @@ export function isValidOpsReadAuth(header: string | undefined, token: string | u
 
 type Shape = "count" | "cents" | "slug" | "uuid" | "date" | "month" | "timestamp" | "boolean" | "commit" | "list" | "object";
 /** Leaves checked against a closed vocabulary rather than a pattern. */
-type Vocabulary = "test_type" | "test_mode" | "payment_method" | "call_status" | "source" | "debit_note";
+type Vocabulary = "test_type" | "test_mode" | "payment_method" | "call_status" | "source" | "debit_note" | "fk_action";
 
 const SHAPES: Record<Exclude<Shape, "list" | "object" | "count" | "boolean">, RegExp> = {
   cents: /^\d{1,12}$/, // non-negative integer cents, as a string (postgres bigint)
@@ -84,6 +84,9 @@ const VOCABULARIES: Record<Vocabulary, Set<string>> = {
   // orphan-debit-trace: a purchase debit's `description`, reduced to the
   // writer it came from (DEBIT_TYPE_NOTE). The raw text is never selected.
   debit_note: new Set(["capability", "solution", "batch_item", "reservation_capture", "none", "other"]),
+  // transaction-quality-fk: pg_constraint.confdeltype as Postgres stores it
+  // (a = no action, r = restrict, c = cascade, n = set null, d = set default).
+  fk_action: new Set(["a", "r", "c", "n", "d"]),
 };
 
 /** Every key a check may return, and the one shape each accepts. Null is allowed for any leaf. */
@@ -176,6 +179,36 @@ const OUTPUT_FIELDS: Record<string, Shape | Vocabulary> = {
   debit_type_note: "debit_note",
   solution_call_within_10m: "boolean",
   refunded_nearby: "boolean",
+  // burst-debit-refund (A-7 follow-up to orphan-debit-trace). Aggregates only.
+  burst_totals: "object",
+  matched_completed_totals: "object",
+  bursts: "count",
+  multi_debit_bursts: "count",
+  debits_in_multi_debit_bursts: "count",
+  bursts_with_excess: "count",
+  bursts_without_excess: "count",
+  bursts_with_shortfall: "count",
+  excess_cents_total: "cents",
+  excess_refunded_cents: "cents",
+  excess_unrefunded_cents: "cents",
+  shortfall_cents_total: "cents",
+  refunds_attributed_to_several_bursts: "count",
+  refunds_also_near_other_debits: "count",
+  excess_refunded_is_upper_bound: "boolean",
+  net_excess_cents: "cents",
+  net_shortfall_cents: "cents",
+  refunded_nearby_cents: "cents",
+  debits_matching_several_solutions: "count",
+  // transaction-quality-fk (A-7 follow-up). Catalog flags and counts only.
+  foreign_key_exists: "boolean",
+  foreign_keys: "list",
+  confdeltype: "fk_action",
+  convalidated: "boolean",
+  condeferrable: "boolean",
+  orphaned_rows: "count",
+  orphaned_with_debit: "count",
+  orphaned_without_debit: "count",
+  orphaned_soft_deleted: "count",
 };
 
 export class OpsReadOutputError extends Error {
@@ -191,7 +224,7 @@ function checkLeaf(shape: Shape | Vocabulary, value: unknown, path: string): voi
     switch (shape) {
       case "count": return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
       case "boolean": return typeof value === "boolean";
-      case "test_type": case "test_mode": case "payment_method": case "call_status": case "source": case "debit_note":
+      case "test_type": case "test_mode": case "payment_method": case "call_status": case "source": case "debit_note": case "fk_action":
         return typeof value === "string" && VOCABULARIES[shape].has(value);
       case "list": case "object": return false;
       default: return typeof value === "string" && SHAPES[shape].test(value);
@@ -372,6 +405,16 @@ const DEBIT_TYPE_NOTE = sql`CASE
          END`;
 
 /**
+ * orphan-debit-trace's "refunded nearby" rule, as a join or EXISTS predicate
+ * over `rf` and `nr`: a no-reference refund of the same amount to the same
+ * wallet within ten minutes after the debit. One fragment, so
+ * burst-debit-refund applies exactly the rule orphan-debit-trace reports.
+ */
+const REFUNDED_NEARBY = sql`rf.wallet_id = nr.wallet_id AND rf.amount_cents = nr.debited
+                            AND rf.created_at BETWEEN nr.created_at
+                                                  AND nr.created_at + interval '10 minutes'`;
+
+/**
  * Purchase debits with no reference, each with whether a wallet solution call
  * explains it: same user (wallets.user_id), `price_cents = -amount_cents`,
  * `created_at` within 60 seconds. `pairs` holds every (debit, call) match by
@@ -384,6 +427,8 @@ const DEBIT_TYPE_NOTE = sql`CASE
  * no-reference refund of the same amount to the same wallet within ten
  * minutes after: the early route refunded a failed run that way) describe
  * the rest, and `refunded_nearby` also the matched calls that did not complete.
+ * `sol.solution_slug` and `rf.id` serve burst-debit-refund, which embeds this
+ * fragment unchanged; like every id here they never leave the statement.
  */
 const NO_REFERENCE_DEBITS = sql`nr AS MATERIALIZED (
           SELECT w.id, w.wallet_id, wl.user_id, w.created_at, -w.amount_cents AS debited,
@@ -394,7 +439,7 @@ const NO_REFERENCE_DEBITS = sql`nr AS MATERIALIZED (
              AND w.reference_id IS NULL
         ),
         sol AS MATERIALIZED (
-          SELECT t.id, t.user_id, t.created_at, t.price_cents, t.status
+          SELECT t.id, t.user_id, t.created_at, t.price_cents, t.status, t.solution_slug
             FROM transactions t
            WHERE t.solution_slug IS NOT NULL
              AND t.payment_method = 'wallet'
@@ -409,7 +454,7 @@ const NO_REFERENCE_DEBITS = sql`nr AS MATERIALIZED (
                                   AND nr.created_at + interval '60 seconds'
         ),
         rf AS MATERIALIZED (
-          SELECT r.wallet_id, r.created_at, r.amount_cents
+          SELECT r.id, r.wallet_id, r.created_at, r.amount_cents
             FROM wallet_transactions r
            WHERE r.type = 'refund'
              AND r.reference_id IS NULL
@@ -429,11 +474,25 @@ const NO_REFERENCE_DEBITS = sql`nr AS MATERIALIZED (
                           WHERE s.user_id = nr.user_id AND s.price_cents = nr.debited
                             AND s.created_at BETWEEN nr.created_at - interval '10 minutes'
                                                  AND nr.created_at + interval '10 minutes') AS solution_call_within_10m,
-                 EXISTS (SELECT 1 FROM rf
-                          WHERE rf.wallet_id = nr.wallet_id AND rf.amount_cents = nr.debited
-                            AND rf.created_at BETWEEN nr.created_at
-                                                  AND nr.created_at + interval '10 minutes') AS refunded_nearby
+                 EXISTS (SELECT 1 FROM rf WHERE ${REFUNDED_NEARBY}) AS refunded_nearby
             FROM nr
+        )`;
+
+/**
+ * Follows NO_REFERENCE_DEBITS in a WITH list. `mcd`: one row per matched
+ * completed debit (m's `matched_completed`: a pair whose call completed),
+ * carrying the solution of its completed calls. A debit whose completed
+ * matches span several solutions takes the lowest slug and is counted in
+ * `solutions`, so that ambiguity is reported rather than hidden.
+ */
+const MATCHED_COMPLETED_DEBITS = sql`mcd AS MATERIALIZED (
+          SELECT nr.id, nr.wallet_id, nr.user_id, nr.created_at, nr.debited,
+                 MIN(s.solution_slug) AS solution_slug,
+                 COUNT(DISTINCT s.solution_slug)::int AS solutions
+            FROM nr
+            JOIN pairs p ON p.debit_id = nr.id AND p.call_status = 'completed'
+            JOIN sol s ON s.id = p.call_id
+           GROUP BY nr.id, nr.wallet_id, nr.user_id, nr.created_at, nr.debited
         )`;
 
 /**
@@ -463,6 +522,18 @@ const NO_REFERENCE_TOTAL_FIELDS = [
   "debits_sharing_a_call", "unmatched", "unmatched_cents",
 ] as const;
 const UNMATCHED_KIND_FIELDS = ["month", "debit_type_note", "solution_call_within_10m", "refunded_nearby", "debits", "debited_cents"] as const;
+const BURST_TOTAL_FIELDS = [
+  "bursts", "multi_debit_bursts", "debits_in_multi_debit_bursts",
+  "bursts_with_excess", "bursts_without_excess", "bursts_with_shortfall",
+  "excess_cents_total", "excess_refunded_cents", "excess_unrefunded_cents", "shortfall_cents_total",
+  "refunds_attributed_to_several_bursts", "refunds_also_near_other_debits", "excess_refunded_is_upper_bound",
+] as const;
+const MATCHED_COMPLETED_TOTAL_FIELDS = [
+  "debits", "debited_cents", "distinct_matched_completed_solution_calls", "recorded_cents",
+  "net_excess_cents", "net_shortfall_cents", "refunded_nearby_cents", "debits_matching_several_solutions",
+] as const;
+const FOREIGN_KEY_FIELDS = ["confdeltype", "convalidated", "condeferrable"] as const;
+const ORPHANED_QUALITY_FIELDS = ["orphaned_rows", "orphaned_with_debit", "orphaned_without_debit", "orphaned_soft_deleted"] as const;
 
 interface CheckDef<P> {
   /** Validates caller input before any database work; throws OpsReadInputError. */
@@ -930,6 +1001,197 @@ export const OPS_READ_CHECKS: Record<string, CheckDef<unknown>> = {
           },
           unmatched_kinds: kinds.map((r) => pick(r, UNMATCHED_KIND_FIELDS)),
         },
+      };
+    },
+  }),
+
+  /**
+   * A-7 follow-up to orphan-debit-trace: the no-reference debits matched to
+   * completed solution calls total more than those calls' recorded prices,
+   * and some sit in bursts. Was the excess refunded?
+   *
+   * Matching is orphan-debit-trace's own (NO_REFERENCE_DEBITS, embedded
+   * verbatim; MATCHED_COMPLETED_DEBITS keeps its `matched_completed`). A
+   * burst is a run of matched completed debits by one user for one solution
+   * whose candidate call windows (debit time +/- 60 seconds, the matching
+   * window) overlap, chained in time order. Per burst: its debits, the
+   * distinct completed calls of that solution they match and those calls'
+   * recorded prices; excess = debited - prices. Refunded nearby is
+   * orphan-debit-trace's rule (REFUNDED_NEARBY), each refund row counted
+   * once per burst. A single debit is a burst of one, so `bursts` covers
+   * every matched completed debit and `multi_debit_bursts` the repeated ones.
+   *
+   * `burst_totals`: per-burst excess summed where positive, with the nearby
+   * refund capped at the excess; a burst whose calls cost more than its
+   * debits is a shortfall, reported apart rather than netted away. The
+   * refund rule matches by wallet, amount and time, not by reference, so one
+   * refund row can sit near two bursts, or near a burst and a no-reference
+   * debit outside `mcd` (matched to a failed call, or unmatched) that
+   * orphan-debit-trace already credits with it. Either way
+   * `excess_refunded_cents` counts a refund that may belong elsewhere, so
+   * `refunds_attributed_to_several_bursts` and
+   * `refunds_also_near_other_debits` count those refund rows, and
+   * `excess_refunded_is_upper_bound` is true unless both are zero.
+   * `matched_completed_totals`: the same over all matched completed debits
+   * at once, netted (`net_excess_cents` or `net_shortfall_cents`, one of them
+   * zero), so the receipt reconciles with orphan-debit-trace and Q2b.
+   * Aggregates only: no per-burst row, month, id or user leaves the statement.
+   */
+  "burst-debit-refund": check({
+    prepare: () => null,
+    run: async (tx) => {
+      const [bursts] = rowsOf(await tx.execute(sql`
+        WITH ${NO_REFERENCE_DEBITS},
+        ${MATCHED_COMPLETED_DEBITS},
+        ord AS (
+          SELECT mcd.*,
+                 CASE WHEN (LAG(mcd.created_at) OVER w) + interval '60 seconds'
+                           >= mcd.created_at - interval '60 seconds'
+                      THEN 0 ELSE 1 END AS starts_burst
+            FROM mcd
+          WINDOW w AS (PARTITION BY mcd.user_id, mcd.solution_slug ORDER BY mcd.created_at, mcd.id)
+        ),
+        bd AS (
+          SELECT ord.*,
+                 SUM(ord.starts_burst) OVER (PARTITION BY ord.user_id, ord.solution_slug
+                                             ORDER BY ord.created_at, ord.id
+                                             ROWS UNBOUNDED PRECEDING) AS burst_no
+            FROM ord
+        ),
+        bc AS (
+          SELECT DISTINCT bd.user_id, bd.solution_slug, bd.burst_no, p.call_id, s.price_cents
+            FROM bd
+            JOIN pairs p ON p.debit_id = bd.id AND p.call_status = 'completed'
+            JOIN sol s ON s.id = p.call_id AND s.solution_slug = bd.solution_slug
+        ),
+        br AS (
+          SELECT DISTINCT bd.user_id, bd.solution_slug, bd.burst_no, rf.id, rf.amount_cents
+            FROM bd
+            JOIN nr ON nr.id = bd.id
+            JOIN rf ON ${REFUNDED_NEARBY}
+        ),
+        b AS (
+          SELECT d.debits,
+                 d.debited - COALESCE(c.prices, 0) AS excess,
+                 COALESCE(r.refunded, 0) AS refunded
+            FROM (SELECT user_id, solution_slug, burst_no, COUNT(*)::int AS debits, SUM(debited) AS debited
+                    FROM bd GROUP BY 1, 2, 3) d
+            LEFT JOIN (SELECT user_id, solution_slug, burst_no, SUM(price_cents) AS prices
+                         FROM bc GROUP BY 1, 2, 3) c USING (user_id, solution_slug, burst_no)
+            LEFT JOIN (SELECT user_id, solution_slug, burst_no, SUM(amount_cents) AS refunded
+                         FROM br GROUP BY 1, 2, 3) r USING (user_id, solution_slug, burst_no)
+        ),
+        near_other AS (
+          SELECT DISTINCT rf.id
+            FROM nr
+            JOIN rf ON ${REFUNDED_NEARBY}
+           WHERE NOT EXISTS (SELECT 1 FROM mcd WHERE mcd.id = nr.id)
+        ),
+        rc AS (
+          SELECT (SELECT COUNT(*) FROM (SELECT br.id FROM br GROUP BY br.id HAVING COUNT(*) > 1) several_bursts) AS several,
+                 (SELECT COUNT(DISTINCT br.id) FROM br
+                   WHERE EXISTS (SELECT 1 FROM near_other o WHERE o.id = br.id)) AS also_other
+        )
+        SELECT COUNT(*)::int AS bursts,
+               COUNT(*) FILTER (WHERE debits > 1)::int AS multi_debit_bursts,
+               COALESCE(SUM(debits) FILTER (WHERE debits > 1), 0)::int AS debits_in_multi_debit_bursts,
+               COUNT(*) FILTER (WHERE excess > 0)::int AS bursts_with_excess,
+               COUNT(*) FILTER (WHERE excess <= 0)::int AS bursts_without_excess,
+               COUNT(*) FILTER (WHERE excess < 0)::int AS bursts_with_shortfall,
+               COALESCE(SUM(excess) FILTER (WHERE excess > 0), 0)::bigint::text AS excess_cents_total,
+               COALESCE(SUM(LEAST(refunded, excess)) FILTER (WHERE excess > 0), 0)::bigint::text AS excess_refunded_cents,
+               COALESCE(SUM(excess - LEAST(refunded, excess)) FILTER (WHERE excess > 0), 0)::bigint::text AS excess_unrefunded_cents,
+               COALESCE(-SUM(excess) FILTER (WHERE excess < 0), 0)::bigint::text AS shortfall_cents_total,
+               (SELECT several FROM rc)::int AS refunds_attributed_to_several_bursts,
+               (SELECT also_other FROM rc)::int AS refunds_also_near_other_debits,
+               (SELECT several > 0 OR also_other > 0 FROM rc) AS excess_refunded_is_upper_bound
+          FROM b
+      `));
+      const [all] = rowsOf(await tx.execute(sql`
+        WITH ${NO_REFERENCE_DEBITS},
+        ${MATCHED_COMPLETED_DEBITS},
+        mc_calls AS (
+          SELECT DISTINCT p.call_id, s.price_cents
+            FROM pairs p
+            JOIN sol s ON s.id = p.call_id
+           WHERE p.call_status = 'completed'
+        ),
+        mc_refunds AS (
+          SELECT DISTINCT rf.id, rf.amount_cents
+            FROM mcd
+            JOIN nr ON nr.id = mcd.id
+            JOIN rf ON ${REFUNDED_NEARBY}
+        ),
+        tot AS (
+          SELECT (SELECT COUNT(*) FROM mcd) AS debits,
+                 (SELECT COALESCE(SUM(debited), 0) FROM mcd) AS debited,
+                 (SELECT COUNT(*) FROM mc_calls) AS calls,
+                 (SELECT COALESCE(SUM(price_cents), 0) FROM mc_calls) AS prices,
+                 (SELECT COALESCE(SUM(amount_cents), 0) FROM mc_refunds) AS refunded,
+                 (SELECT COUNT(*) FROM mcd WHERE solutions > 1) AS several
+        )
+        SELECT debits::int AS debits,
+               debited::bigint::text AS debited_cents,
+               calls::int AS distinct_matched_completed_solution_calls,
+               prices::bigint::text AS recorded_cents,
+               GREATEST(debited - prices, 0)::bigint::text AS net_excess_cents,
+               GREATEST(prices - debited, 0)::bigint::text AS net_shortfall_cents,
+               refunded::bigint::text AS refunded_nearby_cents,
+               several::int AS debits_matching_several_solutions
+          FROM tot
+      `));
+      // Each statement is one aggregate row; a missing one reads as nulls.
+      return {
+        burst_totals: pick(bursts ?? {}, BURST_TOTAL_FIELDS),
+        matched_completed_totals: pick(all ?? {}, MATCHED_COMPLETED_TOTAL_FIELDS),
+      };
+    },
+  }),
+
+  /**
+   * A-7 follow-up: some debits reference call rows that are gone while their
+   * `transaction_quality` rows survive, although schema.ts declares
+   * transaction_quality.transaction_id -> transactions.id ON DELETE CASCADE.
+   * `foreign_keys`: every such constraint in pg_constraint, matched by its
+   * columns (not its name), with confdeltype, convalidated and condeferrable
+   * as Postgres stores them; an empty list means the key is absent in this
+   * database. `orphaned_*`: transaction_quality rows with no transactions
+   * row, split by whether a purchase debit references the same id, and how
+   * many carry the soft-delete marker. Catalog flags and counts only: no id,
+   * constraint name, month or user.
+   */
+  "transaction-quality-fk": check({
+    prepare: () => null,
+    run: async (tx) => {
+      const fks = rowsOf(await tx.execute(sql`
+        SELECT c.confdeltype::text AS confdeltype,
+               c.convalidated,
+               c.condeferrable
+          FROM pg_constraint c
+          JOIN pg_attribute a  ON a.attrelid = c.conrelid AND a.attname = 'transaction_id'
+          JOIN pg_attribute fa ON fa.attrelid = c.confrelid AND fa.attname = 'id'
+         WHERE c.contype = 'f'
+           AND c.conrelid = 'transaction_quality'::regclass
+           AND c.confrelid = 'transactions'::regclass
+           AND c.conkey = ARRAY[a.attnum]
+           AND c.confkey = ARRAY[fa.attnum]
+         ORDER BY 1, 2, 3
+      `));
+      const [orphaned] = rowsOf(await tx.execute(sql`
+        SELECT COUNT(*)::int AS orphaned_rows,
+               COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM wallet_transactions w
+                                               WHERE w.type = 'purchase' AND w.reference_id = q.transaction_id))::int AS orphaned_with_debit,
+               COUNT(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM wallet_transactions w
+                                                   WHERE w.type = 'purchase' AND w.reference_id = q.transaction_id))::int AS orphaned_without_debit,
+               COUNT(*) FILTER (WHERE q.deleted_at IS NOT NULL)::int AS orphaned_soft_deleted
+          FROM transaction_quality q
+         WHERE NOT EXISTS (SELECT 1 FROM transactions t WHERE t.id = q.transaction_id)
+      `));
+      return {
+        foreign_key_exists: fks.length > 0,
+        foreign_keys: fks.map((r) => pick(r, FOREIGN_KEY_FIELDS)),
+        // A missing row reads as nulls, not as a confident zero.
+        ...pick(orphaned ?? {}, ORPHANED_QUALITY_FIELDS),
       };
     },
   }),

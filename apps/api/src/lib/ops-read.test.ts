@@ -122,6 +122,7 @@ describe("checks", () => {
   it("only the named checks exist", () => {
     expect(Object.keys(OPS_READ_CHECKS).sort()).toEqual([
       "build",
+      "burst-debit-refund",
       "capability-debits",
       "fx-error-rate",
       "kept-charges",
@@ -130,6 +131,7 @@ describe("checks", () => {
       "solution-debits",
       "swallowed-failure-exposure",
       "test-call-cost",
+      "transaction-quality-fk",
     ]);
     expect(isOpsReadCheck("toString")).toBe(false);
     expect(isOpsReadCheck("__proto__")).toBe(false);
@@ -199,6 +201,8 @@ const MONEY_CHECKS = [
   "kept-charges",
   "swallowed-failure-exposure",
   "fx-error-rate",
+  "burst-debit-refund",
+  "transaction-quality-fk",
 ] as const;
 type MoneyCheck = (typeof MONEY_CHECKS)[number];
 
@@ -232,8 +236,28 @@ function canned(): Record<MoneyCheck, Record<string, unknown>[][]> {
       ],
       [{ oldest_result_day: "2026-10-18" }],
     ],
+    "burst-debit-refund": [
+      [{ ...BURST_TOTALS }],
+      [{ ...MATCHED_COMPLETED_TOTALS }],
+    ],
+    "transaction-quality-fk": [
+      [{ confdeltype: "c", convalidated: false, condeferrable: false }],
+      [{ ...ORPHANED_QUALITY }],
+    ],
   };
 }
+
+const BURST_TOTALS = {
+  bursts: 15, multi_debit_bursts: 4, debits_in_multi_debit_bursts: 12,
+  bursts_with_excess: 2, bursts_without_excess: 13, bursts_with_shortfall: 0,
+  excess_cents_total: "150", excess_refunded_cents: "0", excess_unrefunded_cents: "150", shortfall_cents_total: "0",
+  refunds_attributed_to_several_bursts: 0, refunds_also_near_other_debits: 0, excess_refunded_is_upper_bound: false,
+};
+const MATCHED_COMPLETED_TOTALS = {
+  debits: 23, debited_cents: "5390", distinct_matched_completed_solution_calls: 22, recorded_cents: "5240",
+  net_excess_cents: "150", net_shortfall_cents: "0", refunded_nearby_cents: "0", debits_matching_several_solutions: 0,
+};
+const ORPHANED_QUALITY = { orphaned_rows: 3, orphaned_with_debit: 2, orphaned_without_debit: 1, orphaned_soft_deleted: 0 };
 
 const EXPECTED: Record<MoneyCheck, unknown> = {
   "capability-debits": {
@@ -262,6 +286,12 @@ const EXPECTED: Record<MoneyCheck, unknown> = {
       { source: "calls", slug: "exchange-rate", outcome: "completed", n: 14 },
       { source: "tests", slug: "currency-convert", outcome: "passed", n: 30 },
     ],
+  },
+  "burst-debit-refund": { burst_totals: BURST_TOTALS, matched_completed_totals: MATCHED_COMPLETED_TOTALS },
+  "transaction-quality-fk": {
+    foreign_key_exists: true,
+    foreign_keys: [{ confdeltype: "c", convalidated: false, condeferrable: false }],
+    ...ORPHANED_QUALITY,
   },
 };
 
@@ -331,6 +361,34 @@ const REVIEWED_FILTERS: Record<MoneyCheck, string[][]> = {
       "c.slug IN ('exchange-rate', 'currency-convert', 'forex-history')",
       "tr.capability_slug IN ('exchange-rate', 'currency-convert', 'forex-history')"],
     ["MIN(executed_at)", "FROM test_results"],
+  ],
+  // The no-reference matching rule itself is pinned by the drift test in the
+  // burst-debit-refund block below; these pin what each statement adds to it.
+  "burst-debit-refund": [
+    ["w.type = 'purchase'", "w.reference_id IS NULL", "nr.created_at - interval '60 seconds'",
+      "JOIN pairs p ON p.debit_id = nr.id AND p.call_status = 'completed'",
+      "(LAG(mcd.created_at) OVER w) + interval '60 seconds'", ">= mcd.created_at - interval '60 seconds'",
+      "PARTITION BY mcd.user_id, mcd.solution_slug ORDER BY mcd.created_at, mcd.id",
+      "JOIN pairs p ON p.debit_id = bd.id AND p.call_status = 'completed'",
+      "JOIN sol s ON s.id = p.call_id AND s.solution_slug = bd.solution_slug",
+      "JOIN rf ON rf.wallet_id = nr.wallet_id AND rf.amount_cents = nr.debited",
+      "SUM(LEAST(refunded, excess)) FILTER (WHERE excess > 0)",
+      "SELECT br.id FROM br GROUP BY br.id HAVING COUNT(*) > 1",
+      "WHERE NOT EXISTS (SELECT 1 FROM mcd WHERE mcd.id = nr.id)",
+      "WHERE EXISTS (SELECT 1 FROM near_other o WHERE o.id = br.id)",
+      "several > 0 OR also_other > 0"],
+    ["w.type = 'purchase'", "w.reference_id IS NULL", "nr.created_at - interval '60 seconds'",
+      "JOIN pairs p ON p.debit_id = nr.id AND p.call_status = 'completed'",
+      "WHERE p.call_status = 'completed'",
+      "JOIN rf ON rf.wallet_id = nr.wallet_id AND rf.amount_cents = nr.debited",
+      "FROM mcd WHERE solutions > 1"],
+  ],
+  "transaction-quality-fk": [
+    ["FROM pg_constraint c", "c.contype = 'f'", "c.conrelid = 'transaction_quality'::regclass",
+      "c.confrelid = 'transactions'::regclass", "a.attname = 'transaction_id'", "fa.attname = 'id'",
+      "c.conkey = ARRAY[a.attnum]", "c.confkey = ARRAY[fa.attnum]"],
+    ["FROM transaction_quality q", "NOT EXISTS (SELECT 1 FROM transactions t WHERE t.id = q.transaction_id)",
+      "w.type = 'purchase' AND w.reference_id = q.transaction_id", "q.deleted_at IS NOT NULL"],
   ],
 };
 
@@ -416,7 +474,7 @@ describe("money-path checks", () => {
     await expect(OPS_READ_CHECKS[name].run(tx, null)).rejects.toThrow("canceling statement due to statement timeout");
   });
 
-  it.each(["solution-debits", "kept-charges", "swallowed-failure-exposure", "fx-error-rate"] as const)(
+  it.each(["solution-debits", "kept-charges", "swallowed-failure-exposure", "fx-error-rate", "burst-debit-refund", "transaction-quality-fk"] as const)(
     "a database error in a later statement of %s propagates too",
     async (name) => {
       let i = 0;
@@ -702,5 +760,141 @@ describe("orphan-debit-trace", () => {
     answers[0][0] = { ...answers[0][0], ...change };
     const { result } = await runTrace(answers);
     expect(() => assertSafeOutput({ check: "orphan-debit-trace", result })).toThrow(OpsReadOutputError);
+  });
+});
+
+// ─── burst-debit-refund and transaction-quality-fk (A-7 follow-ups) ─────────
+
+const squash = (s: string) => s.replace(/\s+/g, " ").trim();
+
+describe("burst-debit-refund", () => {
+  it("matches debits by orphan-debit-trace's exact rule: its no-reference CTEs appear verbatim in both statements", async () => {
+    const { tx: trace } = await runTrace();
+    const traceSql = trace.queries[1].sql;
+    const start = traceSql.indexOf("nr AS MATERIALIZED (");
+    const end = traceSql.indexOf("SELECT GROUPING(month)");
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const fragment = traceSql.slice(start, end).trimEnd();
+    // Not vacuous: the fragment is the matching rule, refund rule included.
+    for (const f of NO_REFERENCE_FILTERS) expect(fragment, f).toContain(f);
+    expect(fragment).toContain("interval '10 minutes'");
+
+    const { tx } = await runMoney("burst-debit-refund");
+    expect(tx.queries).toHaveLength(2);
+    for (const q of tx.queries) expect(q.sql).toContain(fragment);
+  });
+
+  it("applies orphan-debit-trace's refunded-nearby predicate, not a new one", async () => {
+    const { tx: trace } = await runTrace();
+    const m = /EXISTS \(SELECT 1 FROM rf WHERE ([\s\S]*?)\) AS refunded_nearby/.exec(trace.queries[1].sql);
+    expect(m).not.toBeNull();
+    const predicate = squash(m![1]);
+    expect(predicate).toContain("rf.amount_cents = nr.debited");
+    const { tx } = await runMoney("burst-debit-refund");
+    for (const q of tx.queries) expect(squash(q.sql)).toContain(`JOIN rf ON ${predicate}`);
+  });
+
+  it("chains a burst on the 60-second matching window, per user and solution, over matched completed debits only", async () => {
+    const { tx } = await runMoney("burst-debit-refund");
+    const q = squash(tx.queries[0].sql);
+    expect(q).toContain("CASE WHEN (LAG(mcd.created_at) OVER w) + interval '60 seconds' >= mcd.created_at - interval '60 seconds' THEN 0 ELSE 1 END AS starts_burst");
+    expect(q).toContain("WINDOW w AS (PARTITION BY mcd.user_id, mcd.solution_slug ORDER BY mcd.created_at, mcd.id)");
+    expect(q).toContain("PARTITION BY ord.user_id, ord.solution_slug ORDER BY ord.created_at, ord.id ROWS UNBOUNDED PRECEDING) AS burst_no");
+    expect(q).toContain("JOIN pairs p ON p.debit_id = nr.id AND p.call_status = 'completed'");
+    // Each call and each refund row counts once per burst.
+    expect(q).toContain("SELECT DISTINCT bd.user_id, bd.solution_slug, bd.burst_no, p.call_id, s.price_cents");
+    expect(q).toContain("SELECT DISTINCT bd.user_id, bd.solution_slug, bd.burst_no, rf.id, rf.amount_cents");
+  });
+
+  it("flags refunds that also sit near another burst or another no-reference debit, so the refund total reads as an upper bound", async () => {
+    const { tx } = await runMoney("burst-debit-refund");
+    const q = squash(tx.queries[0].sql);
+    const nearby = squash(/JOIN rf ON ([\s\S]*?)\)\s*,\s*b AS/.exec(tx.queries[0].sql)![1]);
+    // Debits outside mcd (matched to a failed call, or unmatched) that the same rule ties the refund to.
+    expect(q).toContain(`near_other AS ( SELECT DISTINCT rf.id FROM nr JOIN rf ON ${nearby} WHERE NOT EXISTS (SELECT 1 FROM mcd WHERE mcd.id = nr.id) )`);
+    // br holds one row per (burst, refund): a refund id on two rows sits near two bursts.
+    expect(q).toContain("(SELECT COUNT(*) FROM (SELECT br.id FROM br GROUP BY br.id HAVING COUNT(*) > 1) several_bursts) AS several");
+    expect(q).toContain("(SELECT COUNT(DISTINCT br.id) FROM br WHERE EXISTS (SELECT 1 FROM near_other o WHERE o.id = br.id)) AS also_other");
+    expect(q).toContain("(SELECT several FROM rc)::int AS refunds_attributed_to_several_bursts");
+    expect(q).toContain("(SELECT also_other FROM rc)::int AS refunds_also_near_other_debits");
+    expect(q).toContain("(SELECT several > 0 OR also_other > 0 FROM rc) AS excess_refunded_is_upper_bound");
+  });
+
+  it.each([
+    ["a string count", { refunds_attributed_to_several_bursts: "1" }],
+    ["a negative count", { refunds_also_near_other_debits: -1 }],
+    ["a non-boolean flag", { excess_refunded_is_upper_bound: "true" }],
+  ])("the output contract refuses %s in the upper-bound fields", async (_label, change) => {
+    const answers = canned()["burst-debit-refund"];
+    answers[0][0] = { ...answers[0][0], ...change };
+    const { result } = await runMoney("burst-debit-refund", answers);
+    expect(() => assertSafeOutput({ check: "burst-debit-refund", result })).toThrow(OpsReadOutputError);
+  });
+
+  it("returns aggregates only: one row per statement, no month, id or user selected out", async () => {
+    const { tx } = await runMoney("burst-debit-refund");
+    const anchors = ["SELECT COUNT(*)::int AS bursts", "SELECT debits::int AS debits"];
+    for (const [i, q] of tx.queries.entries()) {
+      expect(q.params).toEqual([]);
+      const at = q.sql.indexOf(anchors[i]);
+      expect(at, anchors[i]).toBeGreaterThan(-1);
+      const finalSelect = q.sql.slice(at);
+      expect(finalSelect).not.toMatch(/GROUP BY|to_char|\buser_id\b|\bwallet_id\b|\bcall_id\b|\bburst_no\b|\bsolution_slug\b/);
+      expect(q.sql).not.toMatch(/\b(?:id|user_id|wallet_id|reference_id|ref|call_id|debit_id)\s+AS\s/);
+      expect(q.sql).not.toMatch(/\bemail\b|\bkey_prefix\b|\binput\b|\boutput\b/);
+      const withoutCase = q.sql.replace(/CASE\s+WHEN w\.description IS NULL[\s\S]*?END/g, "");
+      expect(withoutCase).not.toMatch(/\bdescription\b/);
+    }
+  });
+
+  it("missing rows read as nulls, not zeros", async () => {
+    const { result } = await runMoney("burst-debit-refund", [[], []]);
+    const out = result as Record<string, Record<string, unknown>>;
+    expect(Object.values(out.burst_totals).every((v) => v === null)).toBe(true);
+    expect(Object.values(out.matched_completed_totals).every((v) => v === null)).toBe(true);
+    expect(() => assertSafeOutput({ check: "burst-debit-refund", result })).not.toThrow();
+  });
+
+  it.each([
+    ["negative excess", { excess_cents_total: "-150" }],
+    ["a string count", { bursts: "15" }],
+    ["fractional cents", { excess_refunded_cents: "1.5" }],
+  ])("the output contract refuses %s", async (_label, change) => {
+    const answers = canned()["burst-debit-refund"];
+    answers[0][0] = { ...answers[0][0], ...change };
+    const { result } = await runMoney("burst-debit-refund", answers);
+    expect(() => assertSafeOutput({ check: "burst-debit-refund", result })).toThrow(OpsReadOutputError);
+  });
+});
+
+describe("transaction-quality-fk", () => {
+  it("reads the key by its columns from pg_constraint and binds nothing", async () => {
+    const { tx } = await runMoney("transaction-quality-fk");
+    for (const q of tx.queries) expect(q.params).toEqual([]);
+    expect(tx.queries[0].sql).toContain("SELECT c.confdeltype::text AS confdeltype");
+    expect(tx.queries[0].sql).not.toMatch(/\bconname\b/);
+  });
+
+  it("an absent key reads as foreign_key_exists false with an empty list", async () => {
+    const { result } = await runMoney("transaction-quality-fk", [[], [{ ...ORPHANED_QUALITY }]]);
+    expect(result).toEqual({ foreign_key_exists: false, foreign_keys: [], ...ORPHANED_QUALITY });
+    expect(() => assertSafeOutput({ check: "transaction-quality-fk", result })).not.toThrow();
+  });
+
+  it("a missing count row reads as nulls, not zeros", async () => {
+    const { result } = await runMoney("transaction-quality-fk", [[], []]);
+    expect(result).toMatchObject({ orphaned_rows: null, orphaned_with_debit: null, orphaned_without_debit: null, orphaned_soft_deleted: null });
+  });
+
+  it.each([
+    ["an action outside the vocabulary", { confdeltype: "x" }],
+    ["a constraint name in the action", { confdeltype: "transaction_quality_transaction_id_fkey" }],
+    ["a flag as text", { convalidated: "t" }],
+  ])("the output contract refuses %s", async (_label, change) => {
+    const answers = canned()["transaction-quality-fk"];
+    answers[0][0] = { ...answers[0][0], ...change };
+    const { result } = await runMoney("transaction-quality-fk", answers);
+    expect(() => assertSafeOutput({ check: "transaction-quality-fk", result })).toThrow(OpsReadOutputError);
   });
 });
