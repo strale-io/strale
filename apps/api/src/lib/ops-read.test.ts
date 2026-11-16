@@ -31,6 +31,21 @@ function recordingExecutor(answers: unknown[][]): ReadExecutor & { queries: { sq
   };
 }
 
+/** Answers the catalog query, then throws `err` on the orphan count. */
+function failingCountExecutor(err: Error): ReadExecutor & { statements: string[] } {
+  const statements: string[] = [];
+  return {
+    statements,
+    async execute(query) {
+      const text = dialect.sqlToQuery(query as SQL).sql.trim();
+      statements.push(text);
+      if (text.startsWith("SELECT c.confdeltype")) return [{ confdeltype: "c", convalidated: true, condeferrable: false }];
+      if (text.startsWith("SELECT COUNT(*)::int AS orphaned_rows")) throw err;
+      return [];
+    },
+  };
+}
+
 describe("isValidOpsReadAuth", () => {
   it("accepts the exact bearer token", () => {
     expect(isValidOpsReadAuth(`Bearer ${TOKEN}`, TOKEN)).toBe(true);
@@ -242,7 +257,9 @@ function canned(): Record<MoneyCheck, Record<string, unknown>[][]> {
     ],
     "transaction-quality-fk": [
       [{ confdeltype: "c", convalidated: false, condeferrable: false }],
+      [], // SAVEPOINT
       [{ ...ORPHANED_QUALITY }],
+      [], // RELEASE SAVEPOINT
     ],
   };
 }
@@ -291,6 +308,7 @@ const EXPECTED: Record<MoneyCheck, unknown> = {
   "transaction-quality-fk": {
     foreign_key_exists: true,
     foreign_keys: [{ confdeltype: "c", convalidated: false, condeferrable: false }],
+    orphan_counts_complete: true,
     ...ORPHANED_QUALITY,
   },
 };
@@ -387,8 +405,10 @@ const REVIEWED_FILTERS: Record<MoneyCheck, string[][]> = {
     ["FROM pg_constraint c", "c.contype = 'f'", "c.conrelid = 'transaction_quality'::regclass",
       "c.confrelid = 'transactions'::regclass", "a.attname = 'transaction_id'", "fa.attname = 'id'",
       "c.conkey = ARRAY[a.attnum]", "c.confkey = ARRAY[fa.attnum]"],
+    ["SAVEPOINT orphan_count"],
     ["FROM transaction_quality q", "NOT EXISTS (SELECT 1 FROM transactions t WHERE t.id = q.transaction_id)",
       "w.type = 'purchase' AND w.reference_id = q.transaction_id", "q.deleted_at IS NOT NULL"],
+    ["RELEASE SAVEPOINT orphan_count"],
   ],
 };
 
@@ -877,14 +897,47 @@ describe("transaction-quality-fk", () => {
   });
 
   it("an absent key reads as foreign_key_exists false with an empty list", async () => {
-    const { result } = await runMoney("transaction-quality-fk", [[], [{ ...ORPHANED_QUALITY }]]);
-    expect(result).toEqual({ foreign_key_exists: false, foreign_keys: [], ...ORPHANED_QUALITY });
+    const { result } = await runMoney("transaction-quality-fk", [[], [], [{ ...ORPHANED_QUALITY }], []]);
+    expect(result).toEqual({ foreign_key_exists: false, foreign_keys: [], orphan_counts_complete: true, ...ORPHANED_QUALITY });
     expect(() => assertSafeOutput({ check: "transaction-quality-fk", result })).not.toThrow();
   });
 
   it("a missing count row reads as nulls, not zeros", async () => {
-    const { result } = await runMoney("transaction-quality-fk", [[], []]);
+    const { result } = await runMoney("transaction-quality-fk", [[], [], [], []]);
     expect(result).toMatchObject({ orphaned_rows: null, orphaned_with_debit: null, orphaned_without_debit: null, orphaned_soft_deleted: null });
+  });
+
+  it("runs the count inside a savepoint and releases it", async () => {
+    const { tx } = await runMoney("transaction-quality-fk");
+    expect(tx.queries.map((q) => q.sql.trim().split(/\s+/).slice(0, 3).join(" "))).toEqual([
+      "SELECT c.confdeltype::text AS", "SAVEPOINT orphan_count", "SELECT COUNT(*)::int AS", "RELEASE SAVEPOINT orphan_count",
+    ]);
+  });
+
+  // Production, 2026-11-16: the count outran the 5 s statement timeout and the
+  // whole check answered 500, losing the catalog answer.
+  it.each([
+    ["raised directly", Object.assign(new Error("canceling statement due to statement timeout"), { code: "57014" })],
+    ["wrapped by drizzle", Object.assign(new Error("Failed query"), { cause: { code: "57014" } })],
+  ])("a statement timeout on the count (%s) keeps the catalog answer and reports the counts incomplete", async (_label, timeout) => {
+    const tx = failingCountExecutor(timeout);
+    const def = OPS_READ_CHECKS["transaction-quality-fk"];
+    const result = await def.run(tx, def.prepare({}));
+    expect(result).toEqual({
+      foreign_key_exists: true,
+      foreign_keys: [{ confdeltype: "c", convalidated: true, condeferrable: false }],
+      orphan_counts_complete: false,
+      orphaned_rows: null, orphaned_with_debit: null, orphaned_without_debit: null, orphaned_soft_deleted: null,
+    });
+    expect(tx.statements.at(-1)).toBe("ROLLBACK TO SAVEPOINT orphan_count");
+    expect(() => assertSafeOutput({ check: "transaction-quality-fk", result })).not.toThrow();
+  });
+
+  it("any other error on the count still fails the check", async () => {
+    const tx = failingCountExecutor(Object.assign(new Error("permission denied"), { cause: { code: "42501" } }));
+    const def = OPS_READ_CHECKS["transaction-quality-fk"];
+    await expect(def.run(tx, def.prepare({}))).rejects.toThrow("permission denied");
+    expect(tx.statements).not.toContain("ROLLBACK TO SAVEPOINT orphan_count");
   });
 
   it.each([

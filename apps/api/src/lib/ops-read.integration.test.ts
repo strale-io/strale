@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { sql, type SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
+import postgres from "postgres";
 import { useTestDatabase } from "../test-support/integration-db.js";
 const DATABASE_URL_TEST = useTestDatabase();
 const suite = DATABASE_URL_TEST ? describe : describe.skip;
@@ -109,8 +110,10 @@ const NO_OUTSIDE_MCD = ["WHERE NOT EXISTS (SELECT 1 FROM mcd WHERE mcd.id = nr.i
 const NO_NEAR_OTHER_FILTER = ["WHERE EXISTS (SELECT 1 FROM near_other o WHERE o.id = br.id)", ""] as [string, string];
 const FLAG_SEVERAL_ONLY = ["several > 0 OR also_other > 0", "several > 0"] as [string, string];
 
+// One pool for both suites; closed once, after the last.
+afterAll(async () => { if (DATABASE_URL_TEST) await closeDbPool(); });
+
 suite("burst-debit-refund on disposable Postgres", () => {
-  afterAll(async () => { await closeDbPool(); });
 
   it("one refund near two bursts counts in both, and is reported as attributed to several bursts", async () => {
     await inRollback(async (tx) => {
@@ -184,5 +187,56 @@ suite("burst-debit-refund on disposable Postgres", () => {
         expect(out.excess_refunded_is_upper_bound).toBe(false);
       });
     });
+  });
+});
+
+/**
+ * transaction-quality-fk on a real database. In production (2026-11-16) the
+ * orphan count outran the 5 s statement timeout and the whole check failed,
+ * losing the catalog answer. A second connection holds an exclusive lock on
+ * transaction_quality, so the count blocks until the timeout cancels it; the
+ * catalog query reads only pg_constraint and pg_attribute and is not blocked.
+ */
+suite("transaction-quality-fk on disposable Postgres", () => {
+  const def = OPS_READ_CHECKS["transaction-quality-fk"];
+
+  it("reads the cascade key from the catalog and completes the count", async () => {
+    await inRollback(async (tx) => {
+      const result = await def.run(tx as unknown as ReadExecutor, def.prepare({}));
+      assertSafeOutput({ check: "transaction-quality-fk", result });
+      expect(result).toMatchObject({
+        foreign_key_exists: true,
+        foreign_keys: [{ confdeltype: "c", convalidated: true, condeferrable: false }],
+        orphan_counts_complete: true,
+        orphaned_rows: 0,
+      });
+    });
+  });
+
+  it("a statement timeout on the count keeps the catalog answer and leaves the transaction usable", async () => {
+    const locker = postgres(DATABASE_URL_TEST!, { max: 1 });
+    const held = await locker.reserve();
+    try {
+      await held`BEGIN`;
+      await held`LOCK TABLE transaction_quality IN ACCESS EXCLUSIVE MODE`;
+      await inRollback(async (tx) => {
+        await tx.execute(sql`SET LOCAL statement_timeout = '300ms'`);
+        const result = await def.run(tx as unknown as ReadExecutor, def.prepare({}));
+        assertSafeOutput({ check: "transaction-quality-fk", result });
+        expect(result).toEqual({
+          foreign_key_exists: true,
+          foreign_keys: [{ confdeltype: "c", convalidated: true, condeferrable: false }],
+          orphan_counts_complete: false,
+          orphaned_rows: null, orphaned_with_debit: null, orphaned_without_debit: null, orphaned_soft_deleted: null,
+        });
+        // ROLLBACK TO SAVEPOINT left the transaction open, not aborted.
+        const [row] = await tx.execute(sql`SELECT 1 AS ok`);
+        expect(row.ok).toBe(1);
+      });
+    } finally {
+      await held`ROLLBACK`;
+      held.release();
+      await locker.end();
+    }
   });
 });
