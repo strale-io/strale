@@ -6,7 +6,7 @@ import { useTestDatabase } from "../test-support/integration-db.js";
 const DATABASE_URL_TEST = useTestDatabase();
 const suite = DATABASE_URL_TEST ? describe : describe.skip;
 const { getDb, closeDbPool } = await import("../db/index.js");
-const { OPS_READ_CHECKS, assertSafeOutput } = await import("./ops-read.js");
+const { OPS_READ_CHECKS, assertSafeOutput, INDEX_PLAN_SETTINGS, HEAP_PLAN_SETTINGS, ORPHANS_INDEX_PLAN, ORPHANS_HEAP_PLAN } = await import("./ops-read.js");
 type ReadExecutor = import("./ops-read.js").ReadExecutor;
 type Tx = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
 class Rollback extends Error {}
@@ -243,5 +243,91 @@ suite("transaction-quality-fk on disposable Postgres", () => {
       held.release();
       await locker.end();
     }
+  });
+});
+
+/**
+ * transaction-quality-orphans on a real database: the two plans the check
+ * forces are the plans Postgres actually uses, the settings do not outlive the
+ * check, and the dating counts land each orphan in its incident window.
+ * Orphans are made the way production must have got them, by inserting with
+ * the foreign-key triggers bypassed (session_replication_role = replica).
+ */
+suite("transaction-quality-orphans on disposable Postgres", () => {
+  const def = OPS_READ_CHECKS["transaction-quality-orphans"];
+
+  async function call(tx: Tx, at: string) {
+    const [t] = await tx.execute(sql`INSERT INTO transactions(status, input, price_cents, solution_slug, payment_method, created_at)
+      VALUES ('completed', '{}', 0, 'orphan-fixture', 'wallet', ${at}::timestamptz) RETURNING id`);
+    return t.id as string;
+  }
+  async function quality(tx: Tx, transactionId: string, at: string) {
+    await tx.execute(sql`INSERT INTO transaction_quality(transaction_id, response_time_ms, schema_conformant, fields_returned, fields_expected, field_completeness_pct, created_at)
+      VALUES (${transactionId}::uuid, 10, true, 1, 1, 100, ${at}::timestamptz)`);
+  }
+
+  it("runs read-only, completes both plans, and leaves the planner settings as it found them", async () => {
+    await inRollback(async (tx) => {
+      const result = await def.run(tx as unknown as ReadExecutor, def.prepare({}));
+      assertSafeOutput({ check: "transaction-quality-orphans", result });
+      expect(result).toMatchObject({ index_plan: { complete: true, orphaned_rows: 0 }, heap_plan: { complete: true, orphaned_rows: 0 } });
+      for (const name of ["enable_hashjoin", "enable_mergejoin", "enable_indexscan", "enable_indexonlyscan", "enable_bitmapscan"]) {
+        const [row] = await tx.execute(sql.raw(`SELECT current_setting('${name}') AS v`));
+        expect(row.v, name).toBe("on");
+      }
+    }, READ_ONLY);
+  });
+
+  it("dates each orphan into its incident window, and both plans agree on an intact index", async () => {
+    await inRollback(async (tx) => {
+      await tx.execute(sql`DELETE FROM transaction_quality`);
+      // Surviving calls with their quality rows; the oldest is 2026-04-20.
+      for (const at of ["2026-04-20T08:00:00Z", "2026-06-01T08:00:00Z"]) await quality(tx, await call(tx, at), at);
+      await tx.execute(sql`SET LOCAL session_replication_role = replica`);
+      const orphanAt = [
+        "2026-04-15T23:59:59Z",                         // before 04-16
+        "2026-04-16T00:00:00Z", "2026-04-16T23:59:59Z", // on 04-16
+        "2026-04-17T00:00:00Z",                         // 04-17 to 05-03
+        "2026-05-04T00:00:00Z", "2026-07-01T23:59:59Z", // 05-04 to 07-01
+        "2026-07-02T00:00:00Z",                         // from 07-02
+      ];
+      for (const at of orphanAt) await quality(tx, crypto.randomUUID(), at);
+      await tx.execute(sql`SET LOCAL session_replication_role = origin`);
+      const result = await def.run(tx as unknown as ReadExecutor, def.prepare({}));
+      assertSafeOutput({ check: "transaction-quality-orphans", result });
+      expect(result).toEqual({
+        index_plan: { complete: true, orphaned_rows: 7 },
+        heap_plan: {
+          complete: true,
+          orphaned_rows: 7,
+          orphaned_created_before_2026_04_16: 1,
+          orphaned_created_on_2026_04_16: 2,
+          orphaned_created_2026_04_17_to_2026_05_03: 1,
+          orphaned_created_2026_05_04_to_2026_07_01: 2,
+          orphaned_created_from_2026_07_02: 1,
+          orphaned_newer_than_oldest_call: 3, // 05-04, 07-01 and 07-02 are after 04-20
+          oldest_call_before_2026_04_16: false,
+        },
+      });
+    });
+  });
+
+  it("each plan takes the path it claims: an index probe of transactions, or no index at all", async () => {
+    await inRollback(async (tx) => {
+      const plan = async (settings: SQL[], query: SQL) => {
+        await tx.execute(sql`SAVEPOINT plan_probe`);
+        for (const s of settings) await tx.execute(s);
+        const { sql: text } = dialect.sqlToQuery(query);
+        const rows = await tx.execute(sql.raw(`EXPLAIN ${text}`));
+        await tx.execute(sql`ROLLBACK TO SAVEPOINT plan_probe`);
+        return rows.map((r) => String(r["QUERY PLAN"])).join("\n");
+      };
+      const index = await plan(INDEX_PLAN_SETTINGS, ORPHANS_INDEX_PLAN);
+      expect(index).toMatch(/Nested Loop Anti Join/);
+      expect(index).toMatch(/Index (Only )?Scan using transactions_pkey on transactions t/);
+      const heap = await plan(HEAP_PLAN_SETTINGS, ORPHANS_HEAP_PLAN);
+      expect(heap).not.toMatch(/Index|Bitmap/);
+      expect(heap).toMatch(/Seq Scan on transactions t\b/);
+    }, READ_ONLY);
   });
 });
