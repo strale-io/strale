@@ -75,10 +75,18 @@ async function runBursts(tx: Tx, mutations: [from: string, to: string][] = []) {
 }
 
 async function inRollback(fn: (tx: Tx) => Promise<void>, config?: { accessMode: "read only" }) {
-  await expect(getDb().transaction(async (tx) => {
-    await fn(tx);
-    throw new Rollback();
-  }, config)).rejects.toBeInstanceOf(Rollback);
+  // A failure inside the transaction is rethrown as itself, so the report shows
+  // its diff rather than "expected … to be an instance of Rollback".
+  try {
+    await getDb().transaction(async (tx) => {
+      await fn(tx);
+      throw new Rollback();
+    }, config);
+  } catch (err) {
+    if (err instanceof Rollback) return;
+    throw err;
+  }
+  throw new Error("the transaction committed instead of rolling back");
 }
 
 // The route runs every check read-only (routes/ops-read.ts); so do these.
@@ -266,6 +274,33 @@ suite("transaction-quality-orphans on disposable Postgres", () => {
       VALUES (${transactionId}::uuid, 10, true, 1, 1, 100, ${at}::timestamptz)`);
   }
 
+  /**
+   * Surviving calls, each with its quality row, then fresh statistics. The
+   * planner picks the transactions_pkey probe under INDEX_PLAN_SETTINGS only
+   * when it believes the tables hold rows. On the handful other suites leave
+   * behind, or after autovacuum analysed the tables while they were empty
+   * (reltuples 0, so any number of inserted rows still plans as one), it reads
+   * transactions from the table instead, and the check reports exactly that,
+   * as planFlags does in production. So the tests that pin the plan seed a
+   * thousand rows and analyse them inside their own transaction, which then
+   * plans the same way whatever state the shared database is in. ANALYZE
+   * writes reltuples in place, so the rollback leaves them behind; the
+   * afterAll below analyses the tables again to put back statistics for what
+   * they really hold.
+   */
+  async function survivingCalls(tx: Tx, n: number, at: string) {
+    await tx.execute(sql`WITH t AS (
+        INSERT INTO transactions(status, input, price_cents, solution_slug, payment_method, created_at)
+        SELECT 'completed', '{}', 0, 'orphan-fixture', 'wallet', ${at}::timestamptz FROM generate_series(1, ${n}::int)
+        RETURNING id)
+      INSERT INTO transaction_quality(transaction_id, response_time_ms, schema_conformant, fields_returned, fields_expected, field_completeness_pct, created_at)
+      SELECT id, 10, true, 1, 1, 100, ${at}::timestamptz FROM t`);
+    await tx.execute(sql`ANALYZE transactions, transaction_quality`);
+  }
+  afterAll(async () => {
+    if (DATABASE_URL_TEST) await getDb().execute(sql`ANALYZE transactions, transaction_quality`);
+  });
+
   /** The oldest-call flags the check should give for whatever calls this database holds. */
   async function oldestCallFlags(tx: Tx) {
     const [{ oldest }] = await tx.execute(sql`SELECT MIN(created_at) AS oldest FROM transactions`);
@@ -300,6 +335,7 @@ suite("transaction-quality-orphans on disposable Postgres", () => {
       await tx.execute(sql`DELETE FROM transaction_quality`);
       // Surviving calls with their quality rows.
       for (const at of ["2026-04-20T08:00:00Z", "2026-06-01T08:00:00Z"]) await quality(tx, await call(tx, at), at);
+      await survivingCalls(tx, 1000, "2026-06-01T08:00:00Z");
       await tx.execute(sql`SET LOCAL session_replication_role = replica`);
       const orphanAt = [
         "2026-04-15T23:59:59Z",                         // before 04-16
@@ -337,6 +373,7 @@ suite("transaction-quality-orphans on disposable Postgres", () => {
 
   it("each plan takes the path it claims: an index probe of transactions over a table read of the quality rows, or no index at all", async () => {
     await inRollback(async (tx) => {
+      await survivingCalls(tx, 1000, "2026-06-01T08:00:00Z");
       const plan = async (settings: SQL[], query: SQL) => {
         await tx.execute(sql`SAVEPOINT plan_probe`);
         for (const s of settings) await tx.execute(s);
@@ -352,6 +389,6 @@ suite("transaction-quality-orphans on disposable Postgres", () => {
       const heap = await plan(HEAP_PLAN_SETTINGS, ORPHANS_HEAP_PLAN);
       expect(heap).not.toMatch(/Index|Bitmap/);
       expect(heap).toMatch(/Seq Scan on transactions t\b/);
-    }, READ_ONLY);
+    });
   });
 });
