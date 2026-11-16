@@ -1219,7 +1219,12 @@ const ORPHANED_QUALITY_COUNT = sql`
          WHERE NOT EXISTS (SELECT 1 FROM transactions t WHERE t.id = q.transaction_id)
       `;
 
-/** Postgres query_canceled (57014), which a statement timeout raises; drizzle wraps it as `cause`. */
+/**
+ * Postgres query_canceled (57014); drizzle wraps it as `cause`. A statement
+ * timeout raises it, and so does an operator cancel (pg_cancel_backend) or a
+ * client-side cancel: each of those also reads as an incomplete count, which
+ * is the honest answer for a count that did not finish.
+ */
 function isStatementTimeout(err: unknown): boolean {
   for (let e: unknown = err, depth = 0; e && depth < 3; e = (e as { cause?: unknown }).cause, depth++) {
     if ((e as { code?: unknown }).code === "57014") return true;

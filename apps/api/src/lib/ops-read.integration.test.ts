@@ -74,12 +74,15 @@ async function runBursts(tx: Tx, mutations: [from: string, to: string][] = []) {
   return (result as { burst_totals: Record<string, unknown> }).burst_totals;
 }
 
-async function inRollback(fn: (tx: Tx) => Promise<void>) {
+async function inRollback(fn: (tx: Tx) => Promise<void>, config?: { accessMode: "read only" }) {
   await expect(getDb().transaction(async (tx) => {
     await fn(tx);
     throw new Rollback();
-  })).rejects.toBeInstanceOf(Rollback);
+  }, config)).rejects.toBeInstanceOf(Rollback);
 }
+
+// The route runs every check read-only (routes/ops-read.ts); so do these.
+const READ_ONLY = { accessMode: "read only" } as const;
 
 // Two debits explained by one completed call: a burst with 100 cents of excess.
 const burstAt = (secs: number, slug = "kyb-essentials-se"): Pick<Seed, "debits" | "calls"> => ({
@@ -210,7 +213,7 @@ suite("transaction-quality-fk on disposable Postgres", () => {
         orphan_counts_complete: true,
         orphaned_rows: 0,
       });
-    });
+    }, READ_ONLY);
   });
 
   it("a statement timeout on the count keeps the catalog answer and leaves the transaction usable", async () => {
@@ -218,6 +221,8 @@ suite("transaction-quality-fk on disposable Postgres", () => {
     const held = await locker.reserve();
     try {
       await held`BEGIN`;
+      // Fail fast rather than hang if another test holds a lock on the table.
+      await held`SET LOCAL lock_timeout = '5s'`;
       await held`LOCK TABLE transaction_quality IN ACCESS EXCLUSIVE MODE`;
       await inRollback(async (tx) => {
         await tx.execute(sql`SET LOCAL statement_timeout = '300ms'`);
@@ -232,7 +237,7 @@ suite("transaction-quality-fk on disposable Postgres", () => {
         // ROLLBACK TO SAVEPOINT left the transaction open, not aborted.
         const [row] = await tx.execute(sql`SELECT 1 AS ok`);
         expect(row.ok).toBe(1);
-      });
+      }, READ_ONLY);
     } finally {
       await held`ROLLBACK`;
       held.release();
