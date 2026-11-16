@@ -20,9 +20,9 @@ Add five entries to `OPS_READ_CHECKS` in `apps/api/src/lib/ops-read.ts`. Each ta
 |---|---|---|
 | `capability-debits` | Q1 | `{ total: {…}, slugs: [ {slug, …} ] }`: the `(total)` row as `total`, the other rows as `slugs` |
 | `solution-debits` | Q2 and Q2b | `{ total: {…}, slugs: [ … ], before_wp3: { calls, recorded_cents, first_day, last_day } }` |
-| `kept-charges` | Q3, Q3b and Q3c | `{ groups: [ … ], orphan_debits: [ {month, no_reference, debits, debited_cents} ], unmatched_refunds: [ {pre_wp3, refunds, refunded_cents} ] }` |
+| `kept-charges` | Q3, Q3b and Q3c | `{ groups: [ … ], orphan_debits: [ {month, no_reference, debits, debited_cents} ], unmatched_refunds: [ {pre_wp3, is_solution, refunds, refunded_cents} ] }` |
 | `swallowed-failure-exposure` | Q4 | `{ total: {…}, slugs: [ {slug, payment_method, …} ] }` |
-| `fx-error-rate` | Q5 | `{ from: "2026-11-09", to: "2026-11-15", rows: [ {source, slug, outcome, n} ] }` |
+| `fx-error-rate` | Q5 | `{ from: "2026-11-09", to: "2026-11-15", oldest_result_day, rows: [ {source, slug, outcome, n} ] }`; `oldest_result_day` is `MIN(executed_at)` of `test_results` as a day (or null), computed as `test-call-cost` does, so a pruned window is visible rather than a false zero |
 
 Rules for the SQL:
 1. **Totals without a fake slug.** Do not emit the `'(total)'` string (it fails the `slug` shape). Run the per-slug query and a separate total query, or split the ROLLUP row out in TypeScript using a `GROUPING(...)` column you then drop.
@@ -30,7 +30,7 @@ Rules for the SQL:
 3. **Counts as integers, cents as text.** Cast counts `::int`; cast cents `::bigint::text`, as `test-call-cost` does. Every cents value here is non-negative by construction (debits are negated sums, refunds are positive sums); keep it that way.
 4. **No ids, no content.** Select no user, wallet, transaction or key id, and no input, output or error text. The only text values are slugs, the closed vocabularies below and dates.
 5. **Keep the reviewed filters exactly**, in every query that has them:
-   - Q1, Q2, Q2b, Q4: `t.status = 'completed'`, `t.is_free_tier = false` and `t.price_cents > 0` (the last keeps Strale's test-harness rows out: they are written completed, wallet, price 0); Q1 and Q2/Q2b also `t.payment_method = 'wallet'`;
+   - Q1, Q2, Q2b, Q4: `t.status = 'completed'`, `t.is_free_tier = false` and `t.price_cents > 0` (the last keeps Strale's test-harness rows out: they are written completed, wallet, price 0); Q1 and Q2/Q2b also `t.payment_method = 'wallet'`; Q1 also `t.solution_slug IS NULL`, Q2/Q2b `t.solution_slug IS NOT NULL`;
    - Q2: `created_at >= 2026-08-22`; Q2b: `created_at < 2026-08-22`; Q3c: the `pre_wp3` split at 2026-08-22;
    - Q3: `created_at < now() - interval '1 day'` and the completed-price allowance;
    - Q5: `receipt_rail IS DISTINCT FROM 'internal'` on calls, `test_type <> 'piggyback'` on tests, and the 2026-11-09 to 2026-11-16 window on both;
@@ -43,6 +43,7 @@ Extend the output contract (`OUTPUT_FIELDS`, `SHAPES`, `checkLeaf`) only by addi
 - keys: `total`, `slugs`, `groups`, `orphan_debits`, `unmatched_refunds`, `rows`, `before_wp3` (objects or lists as named above; Q3c's boolean column is `pre_wp3`, a different key, so each key keeps one shape), and the leaf columns each query returns (for example `calls`, `no_debit`, `debit_ne_recorded`, `recorded_ne_listed`, `no_longer_listed`, `refunded`, `debited_cents`, `recorded_cents`, `debited_calls`, `overcharged_calls`, `overcharged_cents`, `overrefunded_calls`, `overrefunded_cents`, `refunds`, `refunded_cents`, `pre_wp3`, `completed_paid_calls`, `distinct_payers`, `payers_unknown`, `first_day`, `last_day`, `month`, `no_reference`, `debits`, `n`, `is_solution`, `slug`, `source`, `outcome`, `status`, `payment_method`);
 - a `month` shape `/^\d{4}-\d{2}$/`;
 - closed vocabularies, as sets like `TEST_TYPES`: `payment_method` ∈ {`wallet`, `x402`}; `status` and `outcome` ∈ {`completed`, `failed`, `executing`, `pending`, `passed`}; `source` ∈ {`calls`, `tests`}.
+  Q3 has no date floor, so a status written by older code and missing here makes `kept-charges` fail on its first production run. That is the intended loud failure; the master then adds the value with its source.
   These cover every value these five checks can return (`health_probe` is also written to `transactions.status`, by `app.ts`, but those rows are price 0 and outside every filter here; `deferred` is never written to it). If you find another written value, add it and name the file and line in your report.
 
 Do not loosen any existing shape, and do not change the three existing checks, the route, the token rule or the 5-second statement timeout.
@@ -55,7 +56,7 @@ Do not loosen any existing shape, and do not change the three existing checks, t
   - passes the result through `assertSafeOutput({ check, result })`;
   - asserts the returned shape exactly.
 - `no Date reaches a query`: for all five checks, every bound parameter is not a `Date`.
-- `no id or content key is returned`: for all five checks, fed canned rows that also carry `user_id`, `wallet_id`, `api_key_id`, `id`, `input`, `output`, `error`, `key_prefix` and `email`, the result passed through `assertSafeOutput` either throws or contains none of those keys at any depth. (Ids may appear inside aggregates in the SQL, for example `COUNT(DISTINCT ...user_id...)`; the test is on what comes back.)
+- `no id or content key is returned`: for all five checks, fed canned rows that also carry `user_id`, `wallet_id`, `api_key_id`, `id`, `input`, `output`, `error`, `key_prefix` and `email`, `run()`'s own result, **before** `assertSafeOutput`, contains none of those keys at any depth, and then passes `assertSafeOutput`. (`assertSafeOutput` would throw on those keys anyway, so testing after it proves nothing: `run()` must build every row from an explicit field list, as rule 2 asks for per-slug rows. Ids may appear inside aggregates in the SQL, for example `COUNT(DISTINCT ...user_id...)`; the test is on what comes back.)
 - `reviewed filters are present`, **per check and per query**: for each statement each check runs, assert that its own SQL text or bound parameters contain every filter rule 5 lists for that query. One check carrying a filter must not satisfy the test for another.
 - `the slug list binds as one array`: the `swallowed-failure-exposure` SQL contains `ANY($` with a single array parameter equal to the list, or `IN ($1, $2,` with 36 parameters; it never contains `ANY(($`.
 - `a database error propagates`: for each of the five checks, an executor whose `execute` rejects with `new Error("canceling statement due to statement timeout")` makes `run(...)` reject with that error. A `run()` that catches it and returns empty rows must fail this test.

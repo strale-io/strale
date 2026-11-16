@@ -11,7 +11,7 @@ PLAN item 3 lists five pieces. Only three are reads, and the brief is now just t
 
 | Item | What PLAN said | What this brief does |
 |---|---|---|
-| A-7 (P-008/P-011) | debits against listed prices | Q1, Q2, Q2b, Q3, Q3b below |
+| A-7 (P-008/P-011) | debits against listed prices | Q1, Q2, Q2b, Q3, Q3c, Q3b below |
 | B-6 (P-001) | refunds for past failed charges, measured | Q4 below: exposure only; per-tool narrowing is fleet analysis afterwards |
 | B-5 | exchange-rate 7-day error rate after #976/#977 | Q5 below |
 | B-3 | six fixture manifests still on strale.dev | **Not here.** It is a database write. It goes through the deploy-time route (a startup-migration block), the same way four of the six DQ-33 inputs were fixed on 12–13 September. That is ordinary engineering for a lane, with no founder session. |
@@ -206,19 +206,21 @@ SELECT status,
  ORDER BY 1, 2, 3;
 ```
 
-**Q3c (A-7): refunds with no matching debit.** A refund whose call has no purchase debit is invisible to Q3. Before WP3, solution debits carried no reference but their refunds did, so rows before 22 August are expected; from 22 August on, any row is a finding (a refund with no charge, or one paid twice).
+**Q3c (A-7): refunds with no matching debit.** A refund whose call has no purchase debit is invisible to Q3. Before 21 August neither solution debits nor solution refunds carried a reference, so they never reach this query. Only on 21 August, between the WP0–2 change (merged 08:53 UTC) and the WP3 deploy (PR #350, merged 09:27 UTC), were solution refunds referenced while their debits were not. So the only expected rows are `is_solution = true` with `pre_wp3 = true`, a handful at most. Any capability row (`is_solution = false`) at any date, and any row from 22 August on, is a finding: a refund with no charge. (A refund paid twice still has its debit, so it shows in Q3's over-refund columns, not here.)
 
 ```sql
 SELECT (w.created_at < TIMESTAMPTZ '2026-08-22 00:00:00+00')  AS pre_wp3,
+       (t.solution_slug IS NOT NULL)                            AS is_solution,
        COUNT(*)                                                 AS refunds,
        COALESCE(SUM(w.amount_cents), 0)                         AS refunded_cents
   FROM wallet_transactions w
+  LEFT JOIN transactions t ON t.id = w.reference_id
  WHERE w.type = 'refund'
    AND w.reference_id IS NOT NULL
    AND NOT EXISTS (SELECT 1 FROM wallet_transactions p
                     WHERE p.type = 'purchase' AND p.reference_id = w.reference_id)
- GROUP BY 1
- ORDER BY 1;
+ GROUP BY 1, 2
+ ORDER BY 1, 2;
 ```
 
 **Q3b (A-7): purchase debits that point at no call.** Per month, split by whether the debit has no reference at all (solution debits before WP3 are expected here) or a reference that matches no transaction (a finding).
@@ -274,7 +276,7 @@ SELECT CASE WHEN GROUPING(c.slug) = 1 THEN '(total)' ELSE c.slug END AS slug,
 `distinct_payers` is a count only; the ids never leave the database.
 
 **Q5 (B-5): exchange-rate tools in the seven days after #976 and #977.** Direct calls only, as in Q4: an exchange-rate step inside a bundled check has no call row of its own.
-#976 merged 2026-11-08 09:48 UTC and #977 at 11:46 UTC; those are merge times, not deploy times. The window starts at 2026-11-09 00:00 UTC, more than twelve hours after the later merge, which leaves ample room for the deploy, and gives seven full days to 2026-11-16. Customer calls come from `transactions`, leaving out Strale's own test runs (`receipt_rail = 'internal'`); those runs are counted from `test_results`, leaving out piggyback results, which come from customer traffic.
+#976 merged 2026-11-08 09:48 UTC and #977 at 11:46 UTC; those are merge times, not deploy times. The window starts at 2026-11-09 00:00 UTC, more than twelve hours after the later merge, which leaves ample room for the deploy, and gives seven full days to 2026-11-16. Customer calls come from `transactions`, leaving out Strale's own test runs (`receipt_rail = 'internal'`); those runs are counted from `test_results`, leaving out piggyback results, which come from customer traffic. `test_results` is kept for 30 days, so its rows for this window start disappearing on 2026-12-09: run Q5 and write the B-5 receipt before then, or the `tests` rows read as a false zero.
 
 ```sql
 SELECT 'calls' AS source, c.slug, t.status AS outcome, COUNT(*) AS n
@@ -317,10 +319,10 @@ The master writes the receipts (`npm run receipt`) from it. Receipts are committ
 
 | Query | What the committed receipt holds |
 |---|---|
-| Q1, Q2, Q4 | the total row, with its days only when its call count is 5 or more (otherwise months only, and the count as `<5`); for findings, slugs and counts without dates, any row with a count under 5 folded into one `(other)` row; `distinct_payers` only in the total |
+| Q1, Q2 | the total row; for findings, slugs and counts, any row with a count under 5 folded into one `(other)` row |
+| Q4 | the total row, with its days only when both `completed_paid_calls` and `distinct_payers` are 5 or more; otherwise months only, and each count under 5 shown as `<5`; for findings, slugs and counts without dates, any row with a count under 5 folded into one `(other)` row; `distinct_payers` only in the total |
 | Q2b | `calls` and `recorded_cents` only, without its day columns |
-| Q3c | the rows as returned: they carry no slug or date |
-| Q3 | the counts and cents summed across all groups, plus the per-status counts with any count under 5 shown as `<5`; no dates |
+| Q3, Q3c | the counts and cents summed across all groups, plus the per-group counts with any count under 5 shown as `<5`; no dates |
 | Q3b | the totals per `no_reference` value, without months |
 | Q5 | the `tests` rows as returned, plus one `calls` row per outcome summed over the three tools, with any count under 5 shown as `<5` |
 
@@ -330,8 +332,8 @@ The per-tool detail stays in the PC session's final message, which is not public
 
 | Result | Next step | Owner |
 |---|---|---|
-| Q1–Q3b all clean (Q3 shows no overcharge or over-refund) | A-7's debit half is verified; its dry-run half (P-008) stays a code test | the fleet |
-| Q1–Q3b show mismatches, overcharges, over-refunds or orphan debits | a remediation batch, plus a refund measurement | the fleet, after measuring |
+| Q1–Q3c all clean (Q3 shows no overcharge or over-refund; Q3c only the expected 21 August solution rows) | A-7's debit half is verified; its dry-run half (P-008) stays a code test | the fleet |
+| Q1–Q3c show mismatches, overcharges, over-refunds, orphan debits or unmatched refunds | a remediation batch, plus a refund measurement | the fleet, after measuring |
 | Q4 exposure | narrowed per tool, then a drain plan | the fleet |
 | Refunds themselves | the capped server-side refund function under a founder DEC (moonlighter-ab/wow-core#348). No refund runs from this job. | the founder's DEC first |
 | Q5 | written as the B-5 rate receipt | the fleet |
