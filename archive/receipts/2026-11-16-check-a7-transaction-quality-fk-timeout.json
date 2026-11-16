@@ -1,0 +1,28 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "apps/api/src/routes/ops-read.ts",
+    "commit": "b4a0d328897e094fc76f738d48cf99319d1dd4e5"
+  },
+  "at": "2026-11-16T05:10:02.249Z",
+  "inputs": {
+    "endpoint": "GET https://api.strale.io/v1/ops-read/transaction-quality-fk",
+    "deployed_commit": "f0ad687b5484",
+    "run_at": "2026-11-16T04:53:18Z",
+    "http_status": 500,
+    "seconds": 7.1,
+    "route_statement_timeout": "5s (routes/ops-read.ts)",
+    "transactions_rows_approx": "about 899k (production estimate, not measured by this run)"
+  },
+  "summary": {
+    "http_200": false,
+    "http_status": 500,
+    "error_code": "internal_error",
+    "foreign_key_answer_returned": false
+  },
+  "topic": "a7-transaction-quality-fk-timeout",
+  "raw": {
+    "error_code": "internal_error",
+    "message": "The check failed."
+  }
+}

@@ -209,6 +209,7 @@ const OUTPUT_FIELDS: Record<string, Shape | Vocabulary> = {
   orphaned_with_debit: "count",
   orphaned_without_debit: "count",
   orphaned_soft_deleted: "count",
+  orphan_counts_complete: "boolean",
 };
 
 export class OpsReadOutputError extends Error {
@@ -1157,7 +1158,9 @@ export const OPS_READ_CHECKS: Record<string, CheckDef<unknown>> = {
    * as Postgres stores them; an empty list means the key is absent in this
    * database. `orphaned_*`: transaction_quality rows with no transactions
    * row, split by whether a purchase debit references the same id, and how
-   * many carry the soft-delete marker. Catalog flags and counts only: no id,
+   * many carry the soft-delete marker; `orphan_counts_complete` is false,
+   * and the counts null, when that count hit the statement timeout. Catalog
+   * flags and counts only: no id,
    * constraint name, month or user.
    */
   "transaction-quality-fk": check({
@@ -1177,7 +1180,35 @@ export const OPS_READ_CHECKS: Record<string, CheckDef<unknown>> = {
            AND c.confkey = ARRAY[fa.attnum]
          ORDER BY 1, 2, 3
       `));
-      const [orphaned] = rowsOf(await tx.execute(sql`
+      // The count reads every quality row against the calls table. In
+      // production it outran the 5 s statement timeout (2026-11-16) and the
+      // whole check failed, losing the catalog answer above. It now runs in
+      // a savepoint: a timeout rolls back only the count, which then reads
+      // as nulls with orphan_counts_complete false. Any other error still
+      // fails the check.
+      await tx.execute(sql`SAVEPOINT orphan_count`);
+      let orphaned: Record<string, unknown> | undefined;
+      let complete = true;
+      try {
+        [orphaned] = rowsOf(await tx.execute(ORPHANED_QUALITY_COUNT));
+        await tx.execute(sql`RELEASE SAVEPOINT orphan_count`);
+      } catch (err) {
+        if (!isStatementTimeout(err)) throw err;
+        await tx.execute(sql`ROLLBACK TO SAVEPOINT orphan_count`);
+        complete = false;
+      }
+      return {
+        foreign_key_exists: fks.length > 0,
+        foreign_keys: fks.map((r) => pick(r, FOREIGN_KEY_FIELDS)),
+        orphan_counts_complete: complete,
+        // A missing row reads as nulls, not as a confident zero.
+        ...pick(orphaned ?? {}, ORPHANED_QUALITY_FIELDS),
+      };
+    },
+  }),
+};
+
+const ORPHANED_QUALITY_COUNT = sql`
         SELECT COUNT(*)::int AS orphaned_rows,
                COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM wallet_transactions w
                                                WHERE w.type = 'purchase' AND w.reference_id = q.transaction_id))::int AS orphaned_with_debit,
@@ -1186,16 +1217,20 @@ export const OPS_READ_CHECKS: Record<string, CheckDef<unknown>> = {
                COUNT(*) FILTER (WHERE q.deleted_at IS NOT NULL)::int AS orphaned_soft_deleted
           FROM transaction_quality q
          WHERE NOT EXISTS (SELECT 1 FROM transactions t WHERE t.id = q.transaction_id)
-      `));
-      return {
-        foreign_key_exists: fks.length > 0,
-        foreign_keys: fks.map((r) => pick(r, FOREIGN_KEY_FIELDS)),
-        // A missing row reads as nulls, not as a confident zero.
-        ...pick(orphaned ?? {}, ORPHANED_QUALITY_FIELDS),
-      };
-    },
-  }),
-};
+      `;
+
+/**
+ * Postgres query_canceled (57014); drizzle wraps it as `cause`. A statement
+ * timeout raises it, and so does an operator cancel (pg_cancel_backend) or a
+ * client-side cancel: each of those also reads as an incomplete count, which
+ * is the honest answer for a count that did not finish.
+ */
+function isStatementTimeout(err: unknown): boolean {
+  for (let e: unknown = err, depth = 0; e && depth < 3; e = (e as { cause?: unknown }).cause, depth++) {
+    if ((e as { code?: unknown }).code === "57014") return true;
+  }
+  return false;
+}
 
 export function isOpsReadCheck(name: string): boolean {
   return Object.prototype.hasOwnProperty.call(OPS_READ_CHECKS, name);

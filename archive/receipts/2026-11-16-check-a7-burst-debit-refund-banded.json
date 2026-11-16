@@ -1,0 +1,49 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "apps/api/src/lib/ops-read.ts",
+    "commit": "f010480238ff4cfec7a1b3c6cc7691a71baa3d7e"
+  },
+  "at": "2026-11-16T05:01:26.224Z",
+  "inputs": {
+    "endpoint": "GET https://api.strale.io/v1/ops-read/burst-debit-refund",
+    "deployed_commit": "f0ad687b5484",
+    "seconds": 1,
+    "run_at": "2026-11-16T04:53:17Z",
+    "privacy": "docs/lanes/pc/a7-bundle-queries-brief.md Q3b rule: no months; counts 1-4 shown as <5; groups smaller than 5 given as cents only; omitted because a small count follows from them: bursts_without_excess (with bursts), debits_in_multi_debit_bursts and the matched-completed debit count (with no_reference_debits in archive/receipts/2026-11-16-check-a7-orphan-debit-trace-banded.json)"
+  },
+  "summary": {
+    "http_200": true,
+    "excess_cents_total": "150",
+    "excess_refunded_cents": "150",
+    "excess_unrefunded_cents": "0",
+    "shortfall_cents_total": "0",
+    "excess_refunded_is_upper_bound": false,
+    "refund_owed_cents": "0"
+  },
+  "topic": "a7-burst-debit-refund-banded",
+  "raw": {
+    "burst_totals": {
+      "bursts": 14,
+      "multi_debit_bursts": 6,
+      "bursts_with_excess": "<5",
+      "bursts_with_shortfall": 0,
+      "excess_cents_total": "150",
+      "excess_refunded_cents": "150",
+      "excess_unrefunded_cents": "0",
+      "shortfall_cents_total": "0",
+      "refunds_attributed_to_several_bursts": 0,
+      "refunds_also_near_other_debits": 0,
+      "excess_refunded_is_upper_bound": false
+    },
+    "matched_completed_totals": {
+      "debited_cents": "5390",
+      "distinct_matched_completed_solution_calls": 23,
+      "recorded_cents": "5240",
+      "net_excess_cents": "150",
+      "net_shortfall_cents": "0",
+      "refunded_nearby_cents": "150",
+      "debits_matching_several_solutions": 0
+    }
+  }
+}
