@@ -231,7 +231,7 @@ export const walletTransactions = pgTable(
       .references(() => wallets.id),
     apiKeyId: uuid("api_key_id").references(() => apiKeys.id),
     amountCents: integer("amount_cents").notNull(), // positive = top-up, negative = purchase
-    type: varchar("type", { length: 20 }).notNull(), // 'top_up' | 'purchase' | 'refund' | 'trial_credit'
+    type: varchar("type", { length: 20 }).notNull(), // 'top_up' | 'purchase' | 'refund' | 'trial_credit' | 'operator_credit' | 'closure_forfeit'
     referenceId: uuid("reference_id"), // links to transactions.id if purchase
     stripeSessionId: varchar("stripe_session_id", { length: 255 }),
     description: text("description"),

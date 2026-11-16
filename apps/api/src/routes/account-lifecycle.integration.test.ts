@@ -1540,6 +1540,150 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     expect(forfeits).toHaveLength(1);
   });
 
+  it("credits an account once and leaves its balance unchanged on an identical retry", async () => {
+    const email = `wp11-${RUN}-operator-credit@customer.test`;
+    const created = await register({ email });
+    const { user_id } = (await created.json()) as { user_id: string };
+    const wallet = await walletOf(user_id);
+    const before = wallet!.balanceCents;
+    const url = "http://localhost/v1/admin/wallets/credit";
+    const headers = {
+      Authorization: `Bearer ${process.env.ADMIN_SECRET}`,
+      "Content-Type": "application/json",
+    };
+    const body = JSON.stringify({
+      email,
+      confirm_email: email,
+      amount_cents: 115,
+      reason: `TKT-${RUN}-operator-credit`,
+    });
+
+    const credited = await app.request(url, { method: "POST", headers, body });
+    expect(credited.status).toBe(200);
+    expect(await credited.json()).toMatchObject({
+      status: "credited",
+      user_id,
+      amount_cents: 115,
+      balance_cents: before + 115,
+      ledger_type: "operator_credit",
+    });
+
+    const entriesAfterFirst = await db
+      .select({ amountCents: walletTransactions.amountCents })
+      .from(walletTransactions)
+      .where(
+        and(
+          eq(walletTransactions.walletId, wallet!.id),
+          eq(walletTransactions.type, "operator_credit"),
+        ),
+      );
+    expect(entriesAfterFirst).toEqual([{ amountCents: 115 }]);
+    expect((await walletOf(user_id))!.balanceCents).toBe(before + 115);
+
+    const duplicate = await app.request(url, { method: "POST", headers, body });
+    expect(duplicate.status).toBe(409);
+    const entriesAfterDuplicate = await db
+      .select({ amountCents: walletTransactions.amountCents })
+      .from(walletTransactions)
+      .where(
+        and(
+          eq(walletTransactions.walletId, wallet!.id),
+          eq(walletTransactions.type, "operator_credit"),
+        ),
+      );
+    expect(entriesAfterDuplicate).toEqual([{ amountCents: 115 }]);
+    expect((await walletOf(user_id))!.balanceCents).toBe(before + 115);
+  });
+
+  it("does not restore a balance when closure commits while credit waits for the wallet lock", async () => {
+    const email = `wp11-${RUN}-operator-credit-race@customer.test`;
+    const created = await register({ email });
+    const { user_id } = (await created.json()) as { user_id: string };
+    const wallet = await walletOf(user_id);
+    const blocker = postgres(DATABASE_URL_TEST!, { max: 1 });
+    let closePromise!: Promise<unknown>;
+    let creditPromise!: Promise<Response>;
+    const waitUntil = async (probe: () => Promise<boolean>) => {
+      const deadline = Date.now() + 10_000;
+      while (!(await probe())) {
+        if (Date.now() >= deadline) throw new Error("Timed out arranging operator-credit lock race");
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+    };
+
+    try {
+      await blocker.begin(async (blocked) => {
+        const [{ pid: blockerPid }] = await blocked<{ pid: number }[]>`SELECT pg_backend_pid()::int AS pid`;
+        await blocked`SELECT id FROM users WHERE id = ${user_id} FOR UPDATE`;
+        const { closeAccount } = await import("../lib/close-account.js");
+        const { getDb } = await import("../db/index.js");
+        closePromise = closeAccount(getDb(), { userId: user_id, reason: "operator-credit race" });
+
+        // Closure takes the wallet lock, then waits for this transaction's
+        // user lock. Observe that wait through pg_blocking_pids rather than
+        // guessing with a sleep: at this point closure necessarily owns the
+        // wallet before credit starts.
+        await waitUntil(async () => {
+          const [row] = await db.execute(sql`
+            SELECT EXISTS (
+              SELECT 1 FROM pg_stat_activity a
+              WHERE ${blockerPid} = ANY(pg_blocking_pids(a.pid))
+                AND a.wait_event_type = 'Lock'
+                AND lower(a.query) LIKE '%users%'
+            ) AS ready
+          `);
+          return row?.ready === true;
+        });
+
+        creditPromise = app.request("http://localhost/v1/admin/wallets/credit", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${process.env.ADMIN_SECRET}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email,
+            confirm_email: email,
+            amount_cents: 115,
+            reason: `TKT-${RUN}-operator-credit-race`,
+          }),
+        });
+
+        // Now observe credit waiting for closure's wallet lock. Releasing the
+        // user blocker commits closure first, after credit's outside read but
+        // before its in-transaction recheck.
+        await waitUntil(async () => {
+          const [row] = await db.execute(sql`
+            SELECT EXISTS (
+              SELECT 1 FROM pg_stat_activity a
+              WHERE cardinality(pg_blocking_pids(a.pid)) > 0
+                AND a.wait_event_type = 'Lock'
+                AND lower(a.query) LIKE '%wallets%'
+            ) AS ready
+          `);
+          return row?.ready === true;
+        });
+      });
+
+      await closePromise;
+      const creditResponse = await creditPromise;
+      expect(creditResponse.status).toBe(409);
+      expect((await walletOf(user_id))!.balanceCents).toBe(0);
+      const operatorCredits = await db
+        .select({ id: walletTransactions.id })
+        .from(walletTransactions)
+        .where(
+          and(
+            eq(walletTransactions.walletId, wallet!.id),
+            eq(walletTransactions.type, "operator_credit"),
+          ),
+        );
+      expect(operatorCredits).toHaveLength(0);
+    } finally {
+      await blocker.end();
+    }
+  });
+
   it("two closures at once close the account once", async () => {
     // The route's "is it still open?" read is outside the transaction, so two
     // concurrent closures both pass it. The row lock taken as the closure
