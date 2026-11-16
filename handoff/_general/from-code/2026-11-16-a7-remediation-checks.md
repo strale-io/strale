@@ -1,0 +1,7 @@
+Intent: add two read-only ops-read checks for the A-7 follow-ups that the first orphan-debit-trace run raised.
+
+- `burst-debit-refund` measures whether the no-reference solution debits that exceed their completed calls' prices were refunded. It reuses orphan-debit-trace's matching rule verbatim (the shared `NO_REFERENCE_DEBITS` CTEs) and its refunded-nearby rule (`REFUNDED_NEARBY`). It groups matched completed debits into bursts: same user, same solution, overlapping ±60 s candidate windows. It returns aggregates only: bursts with and without excess, the excess, how much of it was refunded nearby, and any shortfall. It also returns the same totals over all matched completed debits, to reconcile with the 5390 and 5240 cent figures.
+- `transaction-quality-fk` reads `pg_constraint` for a foreign key from `transaction_quality(transaction_id)` to `transactions(id)`, matched by its columns, and returns confdeltype, convalidated and condeferrable. It also counts `transaction_quality` rows with no `transactions` row, split by whether a purchase debit references that id, plus how many are soft-deleted.
+- Both are covered in `apps/api/src/lib/ops-read.test.ts`, including a drift test that fails if the burst rule stops matching orphan-debit-trace's. Both were also run against a local scratch Postgres with synthetic rows. Neither has run in production yet.
+
+Next authorised action: master reviews, pushes and merges; after deploy, run both checks and write a banded receipt | Owner: Strale master | Blocker: none
