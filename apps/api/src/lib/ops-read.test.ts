@@ -10,6 +10,7 @@ import {
   isOpsReadCheck,
   isValidOpsReadAuth,
   parseDateRange,
+  SWALLOWED_FAILURE_SLUGS,
   type ReadExecutor,
 } from "./ops-read.js";
 import { PAID_CALL_QUARANTINE_MARKER } from "./paid-call-guard.js";
@@ -119,7 +120,16 @@ describe("parseDateRange", () => {
 
 describe("checks", () => {
   it("only the named checks exist", () => {
-    expect(Object.keys(OPS_READ_CHECKS).sort()).toEqual(["build", "parked-suites", "test-call-cost"]);
+    expect(Object.keys(OPS_READ_CHECKS).sort()).toEqual([
+      "build",
+      "capability-debits",
+      "fx-error-rate",
+      "kept-charges",
+      "parked-suites",
+      "solution-debits",
+      "swallowed-failure-exposure",
+      "test-call-cost",
+    ]);
     expect(isOpsReadCheck("toString")).toBe(false);
     expect(isOpsReadCheck("__proto__")).toBe(false);
   });
@@ -177,5 +187,299 @@ describe("checks", () => {
     const tx = recordingExecutor([[{ test_suite_id: "6b7c1f8e-2f3a-4b5c-9d8e-1f2a3b4c5d6e", input: "pep-check: Jane Doe" }]]);
     const result = await OPS_READ_CHECKS["parked-suites"].run(tx, null);
     expect(() => assertSafeOutput({ check: "parked-suites", result })).toThrow(OpsReadOutputError);
+  });
+});
+
+// ─── Money-path checks (A-7, B-6, B-5) ──────────────────────────────────────
+
+const MONEY_CHECKS = [
+  "capability-debits",
+  "solution-debits",
+  "kept-charges",
+  "swallowed-failure-exposure",
+  "fx-error-rate",
+] as const;
+type MoneyCheck = (typeof MONEY_CHECKS)[number];
+
+/** Canned rows per check, one list per statement, in the order the check runs them. */
+function canned(): Record<MoneyCheck, Record<string, unknown>[][]> {
+  return {
+    "capability-debits": [[
+      { is_total: 1, slug: null, calls: 120, no_debit: 1, debit_ne_recorded: 2, recorded_ne_listed: 3, refunded: 4, debited_cents: "2400" },
+      { is_total: 0, slug: "vat-validate", calls: 7, no_debit: 1, debit_ne_recorded: 0, recorded_ne_listed: 2, refunded: 0, debited_cents: "35" },
+    ]],
+    "solution-debits": [
+      [
+        { is_total: 1, slug: null, calls: 9, no_debit: 0, debit_ne_recorded: 1, no_longer_listed: 2, recorded_ne_listed: 0, refunded: 1, debited_cents: "2250" },
+        { is_total: 0, slug: "kyb-essentials-se", calls: 9, no_debit: 0, debit_ne_recorded: 1, no_longer_listed: 2, recorded_ne_listed: 0, refunded: 1, debited_cents: "2250" },
+      ],
+      [{ calls: 40, recorded_cents: "6000", first_day: "2026-03-10", last_day: "2026-08-21" }],
+    ],
+    "kept-charges": [
+      [{ status: "failed", payment_method: "wallet", is_solution: true, debited_calls: 5, overcharged_calls: 0, overcharged_cents: "0", overrefunded_calls: 1, overrefunded_cents: "150" }],
+      [{ month: "2026-07", no_reference: true, debits: 12, debited_cents: "1800" }],
+      [{ pre_wp3: true, is_solution: true, refunds: 2, refunded_cents: "300" }],
+    ],
+    "swallowed-failure-exposure": [
+      [{ slug: "whois-lookup", payment_method: "x402", completed_paid_calls: 6, recorded_cents: "30", first_day: "2026-09-01", last_day: "2026-11-01" }],
+      [{ completed_paid_calls: 6, distinct_payers: 2, payers_unknown: 1, recorded_cents: "30", first_day: "2026-09-01", last_day: "2026-11-01" }],
+    ],
+    "fx-error-rate": [
+      [
+        { source: "calls", slug: "exchange-rate", outcome: "completed", n: 14 },
+        { source: "tests", slug: "currency-convert", outcome: "passed", n: 30 },
+      ],
+      [{ oldest_result_day: "2026-10-18" }],
+    ],
+  };
+}
+
+const EXPECTED: Record<MoneyCheck, unknown> = {
+  "capability-debits": {
+    total: { calls: 120, no_debit: 1, debit_ne_recorded: 2, recorded_ne_listed: 3, refunded: 4, debited_cents: "2400" },
+    slugs: [{ slug: "vat-validate", calls: 7, no_debit: 1, debit_ne_recorded: 0, recorded_ne_listed: 2, refunded: 0, debited_cents: "35" }],
+  },
+  "solution-debits": {
+    total: { calls: 9, no_debit: 0, debit_ne_recorded: 1, no_longer_listed: 2, recorded_ne_listed: 0, refunded: 1, debited_cents: "2250" },
+    slugs: [{ slug: "kyb-essentials-se", calls: 9, no_debit: 0, debit_ne_recorded: 1, no_longer_listed: 2, recorded_ne_listed: 0, refunded: 1, debited_cents: "2250" }],
+    before_wp3: { calls: 40, recorded_cents: "6000", first_day: "2026-03-10", last_day: "2026-08-21" },
+  },
+  "kept-charges": {
+    groups: [{ status: "failed", payment_method: "wallet", is_solution: true, debited_calls: 5, overcharged_calls: 0, overcharged_cents: "0", overrefunded_calls: 1, overrefunded_cents: "150" }],
+    orphan_debits: [{ month: "2026-07", no_reference: true, debits: 12, debited_cents: "1800" }],
+    unmatched_refunds: [{ pre_wp3: true, is_solution: true, refunds: 2, refunded_cents: "300" }],
+  },
+  "swallowed-failure-exposure": {
+    total: { completed_paid_calls: 6, distinct_payers: 2, payers_unknown: 1, recorded_cents: "30", first_day: "2026-09-01", last_day: "2026-11-01" },
+    slugs: [{ slug: "whois-lookup", payment_method: "x402", completed_paid_calls: 6, recorded_cents: "30", first_day: "2026-09-01", last_day: "2026-11-01" }],
+  },
+  "fx-error-rate": {
+    from: "2026-11-09",
+    to: "2026-11-15",
+    oldest_result_day: "2026-10-18",
+    rows: [
+      { source: "calls", slug: "exchange-rate", outcome: "completed", n: 14 },
+      { source: "tests", slug: "currency-convert", outcome: "passed", n: 30 },
+    ],
+  },
+};
+
+const FORBIDDEN_KEYS = ["user_id", "wallet_id", "api_key_id", "id", "input", "output", "error", "key_prefix", "email"];
+
+function allKeys(value: unknown, out: Set<string> = new Set()): Set<string> {
+  if (Array.isArray(value)) value.forEach((v) => allKeys(v, out));
+  else if (value && typeof value === "object") {
+    for (const [k, v] of Object.entries(value)) {
+      out.add(k);
+      allKeys(v, out);
+    }
+  }
+  return out;
+}
+
+async function runMoney(name: MoneyCheck, answers: unknown[][] = canned()[name]) {
+  const tx = recordingExecutor(answers);
+  const result = await OPS_READ_CHECKS[name].run(tx, OPS_READ_CHECKS[name].prepare({}));
+  return { tx, result };
+}
+
+/** The 36 paid slugs of the 2026-11-06 swallowed-upstream-failures audit, copied once from Q4 of the a7 brief. */
+const EXPECTED_SWALLOWED_SLUGS = [
+  "vasp-verify", "vasp-non-compliant-check", "insolvency-check", "mx-lookup",
+  "pricing-page-extract", "gdpr-fine-lookup", "package-security-audit", "dependency-audit",
+  "cookie-scan", "email-auth-check", "email-deliverability-check", "domain-reputation",
+  "company-tech-stack", "tech-stack-detect", "barcode-lookup", "backlink-check",
+  "business-day-check", "cz-company-data", "eori-validate", "company-fundamentals",
+  "github-repo-analyze", "customs-duty-lookup", "seo-audit", "startup-domain-check",
+  "email-pattern-discover", "country-trade-data", "domain-age-check", "whois-lookup",
+  "page-exists", "port-check", "og-image-check", "domain-contact-extract",
+  "protocol-fees-lookup", "container-track", "ens-reverse-lookup", "email-reputation-score",
+];
+
+const PAID_COMPLETED = ["t.status = 'completed'", "t.is_free_tier = false", "t.price_cents > 0"];
+const WP3 = "TIMESTAMPTZ '2026-08-22 00:00:00+00'";
+
+/**
+ * Rule 5's reviewed filters, per check and per statement, in run order. Each
+ * entry is checked against that statement's own SQL text only, so one
+ * statement carrying a filter cannot satisfy it for another.
+ */
+const REVIEWED_FILTERS: Record<MoneyCheck, string[][]> = {
+  "capability-debits": [[
+    ...PAID_COMPLETED, "t.payment_method = 'wallet'", "t.solution_slug IS NULL",
+    "w.reference_id = t.id AND w.type = 'purchase'", "w.reference_id = t.id AND w.type = 'refund'",
+  ]],
+  "solution-debits": [
+    [...PAID_COMPLETED, "t.payment_method = 'wallet'", "t.solution_slug IS NOT NULL", `t.created_at >= ${WP3}`,
+      "w.reference_id = t.id AND w.type = 'purchase'", "w.reference_id = t.id AND w.type = 'refund'"],
+    [...PAID_COMPLETED, "t.payment_method = 'wallet'", "t.solution_slug IS NOT NULL", `t.created_at < ${WP3}`],
+  ],
+  "kept-charges": [
+    ["t.created_at < now() - interval '1 day'", "CASE WHEN t.status = 'completed' THEN t.price_cents ELSE 0 END",
+      "type = 'purchase' AND reference_id IS NOT NULL", "type = 'refund' AND reference_id IS NOT NULL"],
+    ["w.type = 'purchase'", "t.id IS NULL"],
+    [`(w.created_at < ${WP3})`, "w.type = 'refund'", "w.reference_id IS NOT NULL",
+      "NOT EXISTS (SELECT 1 FROM wallet_transactions p", "p.type = 'purchase' AND p.reference_id = w.reference_id"],
+  ],
+  "swallowed-failure-exposure": [
+    [...PAID_COMPLETED, "c.slug IN ("],
+    [...PAID_COMPLETED, "c.slug IN ("],
+  ],
+  "fx-error-rate": [
+    ["t.receipt_rail IS DISTINCT FROM 'internal'", "ts.test_type <> 'piggyback'",
+      "c.slug IN ('exchange-rate', 'currency-convert', 'forex-history')",
+      "tr.capability_slug IN ('exchange-rate', 'currency-convert', 'forex-history')"],
+    ["MIN(executed_at)", "FROM test_results"],
+  ],
+};
+
+/** Every leaf key ending in `_cents` in a value. */
+function centsKeys(value: unknown): string[] {
+  return [...allKeys(value)].filter((k) => k.endsWith("_cents"));
+}
+
+describe("money-path checks", () => {
+  it.each(MONEY_CHECKS)("%s takes no caller input", (name) => {
+    expect(OPS_READ_CHECKS[name].prepare({ from: "2026-01-01", to: "not a date" })).toBeNull();
+  });
+
+  it.each(MONEY_CHECKS)("%s returns its exact shape and passes the output contract", async (name) => {
+    const { result } = await runMoney(name);
+    expect(result).toEqual(EXPECTED[name]);
+    expect(() => assertSafeOutput({ check: name, result })).not.toThrow();
+  });
+
+  it("no Date reaches a query", async () => {
+    for (const name of MONEY_CHECKS) {
+      const { tx } = await runMoney(name);
+      expect(tx.queries.length).toBeGreaterThan(0);
+      for (const q of tx.queries) for (const p of q.params) expect(p instanceof Date, `${name}: ${String(p)}`).toBe(false);
+    }
+  });
+
+  it("no id or content key is returned, checked on run()'s own result before the output contract", async () => {
+    for (const name of MONEY_CHECKS) {
+      const planted = canned()[name].map((rows) => rows.map((r) => ({
+        ...r,
+        user_id: "6b7c1f8e-2f3a-4b5c-9d8e-1f2a3b4c5d6e",
+        wallet_id: "6b7c1f8e-2f3a-4b5c-9d8e-1f2a3b4c5d6f",
+        api_key_id: "6b7c1f8e-2f3a-4b5c-9d8e-1f2a3b4c5d70",
+        id: "6b7c1f8e-2f3a-4b5c-9d8e-1f2a3b4c5d71",
+        input: { name: "Jane Doe" },
+        output: { ok: true },
+        error: "upstream said no",
+        key_prefix: "sk_live_abcd",
+        email: "jane.doe@example.com",
+      })));
+      const { result } = await runMoney(name, planted);
+      const keys = allKeys(result);
+      for (const k of FORBIDDEN_KEYS) expect(keys.has(k), `${name} returned ${k}`).toBe(false);
+      expect(() => assertSafeOutput({ check: name, result })).not.toThrow();
+    }
+  });
+
+  it.each(MONEY_CHECKS)("reviewed filters are present in each statement of %s", async (name) => {
+    const { tx } = await runMoney(name);
+    const expected = REVIEWED_FILTERS[name];
+    expect(tx.queries.length).toBe(expected.length);
+    expected.forEach((filters, i) => {
+      for (const f of filters) expect(tx.queries[i].sql, `${name} statement ${i + 1}: ${f}`).toContain(f);
+    });
+  });
+
+  it("fx-error-rate binds its window as text, on both calls and tests", async () => {
+    const { tx } = await runMoney("fx-error-rate");
+    const [q] = tx.queries;
+    expect(q.sql).toMatch(/t\.created_at >= \(\$\d+::date\)::timestamp AT TIME ZONE 'UTC'/);
+    expect(q.sql).toMatch(/t\.created_at <\s+\(\(\$\d+::date\) \+ 1\)::timestamp AT TIME ZONE 'UTC'/);
+    expect(q.sql).toMatch(/tr\.executed_at >= \(\$\d+::date\)::timestamp AT TIME ZONE 'UTC'/);
+    expect(q.sql).toMatch(/tr\.executed_at <\s+\(\(\$\d+::date\) \+ 1\)::timestamp AT TIME ZONE 'UTC'/);
+    expect(q.params).toEqual(["2026-11-09", "2026-11-15", "2026-11-09", "2026-11-15"]);
+  });
+
+  it("the slug list binds as one array or as 36 separate parameters, never as a row constructor", async () => {
+    const { tx } = await runMoney("swallowed-failure-exposure");
+    for (const q of tx.queries) {
+      expect(q.sql).not.toContain("ANY(($");
+      const oneArray = /ANY\(\$\d+::text\[\]\)/.test(q.sql) && q.params.length === 1 && Array.isArray(q.params[0]);
+      const expanded = /c\.slug IN \(\$1, \$2,/.test(q.sql) && q.params.length === 36;
+      expect(oneArray || expanded, q.sql).toBe(true);
+      expect(oneArray ? q.params[0] : q.params).toEqual([...SWALLOWED_FAILURE_SLUGS]);
+    }
+  });
+
+  it.each(MONEY_CHECKS)("a database error propagates from %s", async (name) => {
+    const tx: ReadExecutor = {
+      execute: () => Promise.reject(new Error("canceling statement due to statement timeout")),
+    };
+    await expect(OPS_READ_CHECKS[name].run(tx, null)).rejects.toThrow("canceling statement due to statement timeout");
+  });
+
+  it.each(["solution-debits", "kept-charges", "swallowed-failure-exposure", "fx-error-rate"] as const)(
+    "a database error in a later statement of %s propagates too",
+    async (name) => {
+      let i = 0;
+      const tx: ReadExecutor = {
+        execute: () => (i++ === 0 ? Promise.resolve([]) : Promise.reject(new Error("canceling statement due to statement timeout"))),
+      };
+      await expect(OPS_READ_CHECKS[name].run(tx, null)).rejects.toThrow("canceling statement due to statement timeout");
+    },
+  );
+
+  it("swallowed-failure slug list is exactly the 36 audited paid slugs", () => {
+    expect(SWALLOWED_FAILURE_SLUGS).toHaveLength(36);
+    expect(new Set(SWALLOWED_FAILURE_SLUGS).size).toBe(36);
+    expect([...SWALLOWED_FAILURE_SLUGS]).toEqual(EXPECTED_SWALLOWED_SLUGS);
+  });
+
+  it("payers never per slug: the per-slug SQL computes none and run() drops any that arrive", async () => {
+    const answers = canned()["swallowed-failure-exposure"];
+    answers[0][0] = { ...answers[0][0], distinct_payers: 1, payers_unknown: 0 };
+    const { tx, result } = await runMoney("swallowed-failure-exposure", answers);
+    const out = result as { total: Record<string, unknown>; slugs: Record<string, unknown>[] };
+    expect(out.slugs[0]).not.toHaveProperty("distinct_payers");
+    expect(out.slugs[0]).not.toHaveProperty("payers_unknown");
+    expect(out.total).toMatchObject({ distinct_payers: 2, payers_unknown: 1 });
+    for (const col of ["distinct_payers", "payers_unknown", "user_id", "x402_payer_hash"]) expect(tx.queries[0].sql).not.toContain(col);
+    expect(tx.queries[1].sql).toContain("AS distinct_payers");
+  });
+
+  it("totals carry no fake '(total)' slug", async () => {
+    for (const name of MONEY_CHECKS) {
+      const { tx, result } = await runMoney(name);
+      for (const q of tx.queries) expect(q.sql).not.toContain("(total)");
+      const total = (result as { total?: Record<string, unknown> }).total;
+      if (total) expect(total).not.toHaveProperty("slug");
+    }
+  });
+
+  it("counts are cast to int and every returned cents column to bigint text", async () => {
+    // A COUNT(...) [FILTER (...)] followed straight by AS has no ::int cast.
+    const uncastCount = /COUNT\((?:[^()]|\([^()]*\))*\)(?:\s+FILTER\s+\((?:[^()]|\([^()]*\))*\))?\s+AS\s/;
+    for (const name of MONEY_CHECKS) {
+      const { tx } = await runMoney(name);
+      const all = tx.queries.map((q) => q.sql).join("\n");
+      expect(all).not.toMatch(uncastCount);
+      for (const key of centsKeys(EXPECTED[name])) expect(all, `${name}: ${key}`).toContain(`::bigint::text AS ${key}`);
+    }
+  });
+
+  it("planted text in a vocabulary column is refused", async () => {
+    const answers = canned()["swallowed-failure-exposure"];
+    answers[0][0] = { ...answers[0][0], payment_method: "refund to jane.doe@example.com" };
+    const { result } = await runMoney("swallowed-failure-exposure", answers);
+    expect(() => assertSafeOutput({ check: "swallowed-failure-exposure", result })).toThrow(OpsReadOutputError);
+  });
+
+  it.each([
+    ["a month with a day", { month: "2026-07-01" }],
+    ["a status outside the vocabulary", { status: "refunded" }],
+    ["an outcome outside the vocabulary", { outcome: "jane" }],
+    ["a payment method outside the vocabulary", { payment_method: "card" }],
+    ["a source outside the vocabulary", { source: "customers" }],
+    ["negative cents", { debited_cents: "-35" }],
+    ["a string count", { calls: "7" }],
+  ])("the output contract refuses %s", (_label, row) => {
+    expect(() => assertSafeOutput({ check: "kept-charges", result: { groups: [row] } })).toThrow(OpsReadOutputError);
   });
 });
