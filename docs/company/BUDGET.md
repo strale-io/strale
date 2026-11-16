@@ -4,6 +4,18 @@
 that invoices). Set by Petter 2026-08-15. Compute rides the Claude plan and is
 optimized, not billed here.
 
+## Week of 2026-11-09 → 2026-11-15 (read 2026-11-16)
+
+| line | committed/spent | source of truth | note |
+|---|---|---|---|
+| Test-harness external API spend | ~€1.83 | `externalSpend()` via the CEO dashboard, trailing 7 days to 2026-11-16 07:09Z | declared test costs, not invoices |
+| Payment processing (CDP settlement) | ~€1.00 | same | cross-check: about 1,300 x402 settlements in the week against 1,000/month free at $0.001 each gives the same order |
+| Vendor overage / new commitments | €0 | vendor tower 2026-11-16 (Serper 48,947/50,000, OpenRegister 499/500) | no new recurring cost |
+| **Total vs envelope** | **≈ €2.83 / €50** | | comfortable; the Serper renewal (USD 62.50) was last week's line |
+
+Against €62.63 of revenue in the same week that is about 5 cents of external
+spend per euro earned.
+
 ## Week of 2026-11-02 → 2026-11-08 (in progress, read 2026-11-05)
 
 | line | committed/spent | source of truth | note |
