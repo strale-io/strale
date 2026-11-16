@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // wow-core — the ONE hook dispatcher for Claude Code and Codex. Source of truth: wow-core
 // scripts/wow-hook.mjs; consumers receive it by sync as .claude/scripts/wow-hook.mjs, and
-// scripts/install.ps1 copies it (with the thin scripts/codex-hook.mjs wrapper) to
-// ~/.codex/wow-core/ for the user-level Codex hooks. Edit it HERE; never in a consumer or
-// in the installed copy.
+// scripts/install.ps1 copies it (with the thin scripts/codex-hook.mjs wrapper and hooks/guard-bash-policy.mjs, which that
+// copy loads from its own folder) to ~/.codex/wow-core/ for the user-level Codex hooks. Edit it HERE; never in a consumer
+// or in the installed copy.
 //
 //   node wow-hook.mjs session-start | session-end | pre-tool-use | post-tool-use |
 //                     post-tool-use-failure | stop   [--tool claude|codex]   < hook JSON
@@ -37,6 +37,14 @@
 //                   but the few to go quiet; fail open, PACE_CORE §2a "The old-account fence").
 //                   mcp__*: DENY a tool that matches a hard-stop entry of permissions.deny on any instance of
 //                   its connector (a -<hex> instance suffix or claude_ai_ prefix on the server; hardStopEntry).
+//                   Then the mail guard on every tool (mailGuard; SECURITY_CORE §1a): a Gmail or Microsoft 365 tool marks
+//                   the session `mail`, a shell command naming BWS_PROD_TOKEN marks it `prod` (markers are never removed);
+//                   DENY either kind in a session holding the other marker or, in Claude Code, whose transcript shows an
+//                   earlier call of the other kind (a resumed or forked session). The token command fails CLOSED (no
+//                   session id, a state store or transcript it cannot use, a deadline or an internal error); the mail tool
+//                   never does, and one let through by a deadline or an error still marks the session. A session that
+//                   used mail is also DENIED a cross-session tool whose input names BWS_PROD (handsTokenOn) and a shell
+//                   command that dumps the whole environment (environmentDump); neither marks it. It never allows.
 //                   Bash: a lease write must name WOW_ACCOUNT_LABEL; hooks/guard-bash-policy.mjs, then the shared-tree commit guard
 //                   (BLOCK `git commit` in the PRIMARY checkout while another live session
 //                   holds it; worktrees and solo sessions are never blocked), then the push
@@ -46,7 +54,8 @@
 //                   line when the label is unset or the bus cannot be read in 5 s). Deny JSON.
 //                   Bash, last of all (no deny above is overridden): ALLOW a routine read the grammar parsed completely: one
 //                   `gh api` GET of a fleet repository or search (readCommandDecision; no `node` allow: a hook allow skips the
-//                   classifier). Anything else, and any bash-policy failure: no decision (design 2026-11-06).
+//                   classifier). Anything else: no decision (design 2026-11-06). A missing, unloadable or throwing shell policy where
+//                   the hook's install ships one (a full consumer, wow-core): DENY Bash (review on #340).
 //                   mcp__claude-code-remote__add_repo: ALLOW when the call is exactly {owner,
 //                   repo} or {repo: "owner/name"} naming the repository in WOW_BUS_REPO; also exactly
 //                   {owner: <WOW_BUS_REPO's owner>, repo: "wow-core"} with no other key (read-only,
@@ -82,14 +91,22 @@
 // also wire <parent>/.claude/settings.json (`--via-parent`) for turns that start in the checkout's parent folder; see
 // "Parent-folder wiring" below and templates/cloud-runner/README.md.
 //
-// The dispatcher's own errors fail open too (exit 0, stderr note), and every child and the
-// dispatcher itself run under a deadline below the host's hook timeout.
+// Once running, the dispatcher's own errors fail open (exit 0, stderr note; only confirm_repository_trust, a command that
+// names BWS_PROD_TOKEN (usesProdToken) and a Bash push or merge command are denied: isGitPush, isMergeCommand), and every child and the dispatcher itself run under a
+// deadline below the host's hook timeout: its 8 s watchdog and its internal catch ALLOW every other call and DENY those.
+// A push or merge command is denied only until the shell policy (the merge and send stops) has decided. After it, the
+// shared-tree guard refuses on its own failures (synchronous, own deadline) and the push check's lease read is fail-open
+// by contract, so a bus outage that runs out the deadline there still allows an ordinary push (the push check also reuses
+// a fence read that failed in this call instead of waiting a second time; a failure served from the cache does not count).
+// What blocks otherwise is the host's `"onFailure": "block"` on the wired PreToolUse entry (Claude Code 2.1.295+): a dispatcher that cannot start (the script or node is missing, a syntax error; a script cut
+// short at a statement boundary can still parse and pass silently, see README "If every tool call is blocked"), that reaches
+// the host's hook timeout, or that exits other than 0 or 2. finish() always exits 0, so a normal allow is never blocked.
 //
 // Environment (tests): WOW_HOOK_CHILD_TIMEOUT_MS (alias WOW_CODEX_HOOK_CHILD_TIMEOUT_MS)
 // overrides every child timeout; WOW_SESSION_MARKER_TTL_HOURS bounds peer-marker age.
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import {
-  closeSync, existsSync, linkSync, mkdirSync, openSync, readFileSync, readSync, readdirSync, realpathSync, renameSync, rmSync, statSync, utimesSync, writeFileSync,
+  closeSync, constants as fsConstants, existsSync, fstatSync, linkSync, mkdirSync, openSync, readFileSync, readSync, readdirSync, realpathSync, renameSync, rmSync, statSync, utimesSync, writeFileSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
 import os from "node:os";
@@ -200,6 +217,21 @@ function isLane(root) {
 }
 
 const has = (root, rel) => existsSync(path.join(root, rel));
+// A settings file is read only if it is a regular file of at most 1 MB (follow-up to #342 "Not done"; the same pattern as
+// workflowText in hooks/guard-bash-policy.mjs). A checkout's .claude/settings.json is attacker-influenced input to this hook,
+// and a sibling checkout's is read on every turn that starts in the parent folder: a FIFO there would block readFileSync in
+// open(), so the event loop would stop and not even the 8 s watchdog could fire. The file is opened non-blocking (a FIFO opens at
+// once) and checked on the open descriptor, so swapping it in after the check does not help either. Throws what readFileSync
+// would (ENOENT stays ENOENT), or an error for a file that is not a regular file or is too big.
+const SETTINGS_MAX_BYTES = 1_000_000;
+function readSettings(file) {
+  const fd = openSync(file, fsConstants.O_RDONLY | (fsConstants.O_NONBLOCK ?? 0));
+  try {
+    const info = fstatSync(fd);
+    if (!info.isFile() || info.size > SETTINGS_MAX_BYTES) throw Object.assign(new Error(`${file} is not a regular file of at most ${SETTINGS_MAX_BYTES} bytes`), { code: "EWOWSETTINGS" });
+    return readFileSync(fd, "utf8");
+  } finally { try { closeSync(fd); } catch { /* nothing to close */ } }
+}
 const isWowCore = (root) =>
   has(root, "consumers.json") && has(root, "core/WAYS_OF_WORKING_CORE.md") && has(root, "scripts/sync-to-project.ps1");
 // The checkout root when this hook runs from wow-core's own layout (<root>/scripts/wow-hook.mjs), else null: a consumer's
@@ -248,7 +280,7 @@ export function hostProjectDir(env = process.env, self = SELF) {
   if (!(dir && own && sameDir(path.dirname(own), dir))) return dir;
   if (!ownCheckoutRoot(self)) return own;
   let owner = null;
-  try { owner = JSON.parse(readFileSync(path.join(dir, ".claude", "settings.json"), "utf8"))?.[PARENT_OWNER_KEY]?.checkout ?? null; } catch { /* no parent file */ }
+  try { owner = JSON.parse(readSettings(path.join(dir, ".claude", "settings.json")))?.[PARENT_OWNER_KEY]?.checkout ?? null; } catch { /* no parent file */ }
   return typeof owner === "string" && consumerCheckoutsIn(dir).some((checkout) => sameDir(checkout, owner)) ? dir : own;
 }
 // The host project is wow-core AND this hook is wow-core's own copy: the only test for the master's exemptions.
@@ -266,7 +298,8 @@ const isWowCoreHost = (projectDir) => Boolean(projectDir && ownCheckoutRoot() &&
 // timeout; derived from it on every call in the owning checkout or a parent turn, so they cannot drift), by the absolute path of this hook and with
 // `--via-parent`, plus the checkout's permissions.deny list exactly, joined by the deny lists of the other wired primary
 // checkouts under the same parent (deny only: it can only narrow; parentDenyFor, parentDenyUnion). Nothing
-// else is copied: no allow, ask or defaultMode, status line or project-owned hook. Ownership: the file carries PARENT_OWNER_KEY naming the checkout; a file without it is never touched
+// else is copied: no allow, ask or defaultMode or status line; the checkout's other `type: "command"` hooks are carried
+// only when their command can be rewritten safely and guarded (rewriteProjectDirCommand, carriedCommand). Ownership: the file carries PARENT_OWNER_KEY naming the checkout; a file without it is never touched
 // (one warning line per container). First checkout wins: a file owned by another checkout is left alone, silently, so a
 // second repository in the same session never replaces the first's wiring; only the owning checkout rewrites it, and
 // only when its derived entries change. One exception (review 2026-11-06, M2): a consumer's seeding call takes over a
@@ -275,12 +308,174 @@ const isWowCoreHost = (projectDir) => Boolean(projectDir && ownCheckoutRoot() &&
 // would decide a consumer master's turns. A failure prints one line and the hook carries on.
 export const PARENT_OWNER_KEY = "$wow-core-parent-hooks";
 export const VIA_PARENT = "--via-parent";
-const DISPATCHER_COMMAND = /^node\s+(?:"\$CLAUDE_PROJECT_DIR\/((?:\.claude\/)?scripts\/wow-hook\.mjs)"|((?:\.claude\/)?scripts\/wow-hook\.mjs))\s+([a-z-]+)(?:\s+--tool\s+claude)?$/;
+// A dispatcher command in the three forms a checkout's wiring may carry: the project-dir form, braced (what the sync writes
+// now) or bare (an older wiring), or the repo-relative script. Groups: 1 = the path after the quoted project-dir reference,
+// 2 = the bare relative path, 3 = the mode.
+const DISPATCHER_COMMAND = /^node\s+(?:"\$(?:CLAUDE_PROJECT_DIR|\{CLAUDE_PROJECT_DIR\})\/((?:\.claude\/)?scripts\/wow-hook\.mjs)"|((?:\.claude\/)?scripts\/wow-hook\.mjs))\s+([a-z-]+)(?:\s+--tool\s+claude)?$/;
 const SAFE_PATH = /^[A-Za-z0-9._@+~/: -]+$/; // the path goes inside double quotes in a shell command: no $, `, ", \ or !
 const toPosix = (p) => p.replace(/\\/g, "/");
 
-// The parent's hooks object for the checkout's settings text: only this hook's own entries, rewritten by absolute path.
-export function parentHooksFor(settingsText, root, self = SELF) {
+// A literal repo-relative script path (the working directory of a checkout-turn hook is the project directory, so
+// `.claude/hooks/x.mjs` and `./x.mjs` are the checkout's files): returns it without a leading `./`, or null when it has a
+// `..` segment, a glob, `$`, a backtick, a backslash, a leading `/` or `~`, or any character outside the safe set.
+const RELATIVE_SCRIPT = /^(?:\.\/)?[A-Za-z0-9._@+-]+(?:\/[A-Za-z0-9._@+-]+)*$/;
+function relativeScript(word) {
+  if (!RELATIVE_SCRIPT.test(word)) return null;
+  const rel = word.replace(/^\.\//, "");
+  return rel.split("/").some((part) => part === ".." || part === ".") ? null : rel;
+}
+
+// The command of another hook of the checkout, with its `$CLAUDE_PROJECT_DIR` reference rewritten to the checkout's
+// absolute path, or null when that cannot be done safely. The rewrite secures the PATH only: the rest of the command's
+// syntax is carried verbatim, which is what a checkout turn already runs. A reference is rewritten when it is the
+// executable (first word of a simple command) or the first argument after an interpreter (node, bash, sh, pwsh, python,
+// python3), at the start of its word, as `$CLAUDE_PROJECT_DIR/<path>`, `${CLAUDE_PROJECT_DIR}/<path>` or
+// `"$CLAUDE_PROJECT_DIR"/<path>`, bare or inside double quotes, or as a literal repo-relative script (`.claude/hooks/x.mjs`,
+// `./x.sh`: a checkout-turn hook runs from the project directory, so it is the checkout's file; a bare word with no `/` is
+// a script only as the first argument after an interpreter, so `ls` or `echo` stay as written): it becomes the checkout's
+// absolute path, quoted where it is not already inside double quotes. A word in the executable or interpreter position that
+// starts with `/` or `~` is left as written (it is not a repo-relative reference), a literal one in a command that also
+// runs `cd` or `pushd` is refused (it would name another directory's file), and the command is carried only when at
+// least one reference was rewritten. Refused (null): a checkout path outside SAFE_PATH (it goes into a shell command),
+// a reference inside single quotes or after an unquoted `#`, a reference elsewhere in a command (a later argument, a
+// `--flag=` value), a path with no segment, a `..` segment or a glob character (`*?[`), any other `$`, command
+// substitution, a backtick, a backslash, a newline, unbalanced quotes, a command with no reference (a relative path would
+// resolve against the parent's cwd) and any command that mentions wow-hook.mjs (its own entries come only from the
+// dispatcher branch of parentHooksFor).
+const INTERPRETER = /^(?:node|bash|sh|pwsh|python3?)$/;
+const CHANGES_DIR = /(?:^|[\s;&|()])(?:cd|pushd)(?=[\s;&|()]|$)/;
+const MAX_HOOK_COMMAND = 4096; // a longer hook command is not carried (the rewrite re-slices the text at every word)
+export function rewriteProjectDirCommand(command, root) {
+  const abs = toPosix(root);
+  if (typeof command !== "string" || command.length > MAX_HOOK_COMMAND || !SAFE_PATH.test(abs) || /[`\\\r\n]/.test(command) || command.includes("$(") || /wow-hook\.mjs/.test(command)) return null;
+  let out = "";
+  let quote = null;
+  let refs = 0;
+  let words = [];
+  let word = "";
+  let inWord = false;
+  const endWord = () => { if (inWord) words.push(word); word = ""; inWord = false; };
+  for (let i = 0; i < command.length;) {
+    const ch = command[i];
+    if (ch === "$") {
+      const ref = /^\$(?:CLAUDE_PROJECT_DIR(?![A-Za-z0-9_])|\{CLAUDE_PROJECT_DIR\})/.exec(command.slice(i));
+      if (!ref || quote === "'" || word !== "") return null;
+      const first = words[0]?.split("/").pop();
+      if (words.length > 1 || (words.length === 1 && !INTERPRETER.test(first))) return null;
+      // Inside double quotes the path runs to the closing quote; a closing quote right after the reference ends the word.
+      const rest = command.slice(i + ref[0].length);
+      const tail = (quote === '"' ? /^(?:\/([^"]+)|"\/([^\s"';&|<>()]+))/ : /^\/([^\s"';&|<>()]+)/).exec(rest);
+      const tailPath = tail && (tail[1] ?? tail[2]);
+      if (!tailPath || tailPath.split("/").includes("..") || /[*?[]/.test(tailPath)) return null;
+      out += quote === '"' ? abs : `"${abs}"`;
+      refs += 1;
+      inWord = true;
+      word = "\u0001";
+      i += ref[0].length;
+      continue;
+    }
+    if (!quote && !inWord) {
+      // A literal repo-relative script path in script position (the executable, or the first argument after an interpreter).
+      const pos = words.length;
+      const scriptPos = pos === 0 || (pos === 1 && INTERPRETER.test(words[0].split("/").pop()));
+      const lit = scriptPos ? /^(?:"([^"$`\\]+)"|'([^'$`\\]+)'|([^\s"';&|<>()$`\\#]+))(?=[\s;&|<>()]|$)/.exec(command.slice(i)) : null;
+      const w = lit && (lit[1] ?? lit[2] ?? lit[3]);
+      if (w && !w.startsWith("-") && !w.startsWith("/") && !w.startsWith("~") && (pos === 1 || w.includes("/") || /[*?[]/.test(w))) {
+        if (CHANGES_DIR.test(command)) return null; // after a cd the relative word names another directory's file
+        const rel = relativeScript(w);
+        if (!rel) return null; // `..`, a glob or an odd character where a script path stands: not placeable
+        out += `"${abs}/${rel}"`;
+        refs += 1;
+        inWord = true;
+        word = "\u0001";
+        i += lit[0].length;
+        continue;
+      }
+    }
+    out += ch;
+    i += 1;
+    if (quote) { if (ch === quote) quote = null; else word += ch; continue; }
+    if (ch === "'" || ch === '"') { quote = ch; inWord = true; continue; }
+    if (ch === "#" && !inWord) { if (command.slice(i).includes("$")) return null; out += command.slice(i); break; }
+    if (ch === " " || ch === "\t") { endWord(); continue; }
+    if (ch === "<" || ch === ">" || (ch === "&" && /[<>]/.test(command[i - 2] ?? ""))) { endWord(); continue; }
+    if (";&|()".includes(ch)) { endWord(); words = []; continue; }
+    inWord = true;
+    word += ch;
+  }
+  return quote || !refs ? null : out;
+}
+
+// The cloud setup hook: the WHOLE command is the script, with optional plain arguments and plain output redirections
+// (`> file`, `>>`, `2>&1`, `>/dev/null`), an optional trailing `|| true`, `|| :` or `|| exit 0`, one line, and no other shell operator, so a compound command that runs it and something
+// else is judged like any other hook (never carried: not a parent-turn hook). A linear tokenizer, not a regex: this runs
+// before every PreToolUse, so a padded settings line must not cost more than its length (a longer command is not it).
+const CLOUD_SESSION_SCRIPT = /^(?:"?\$\{?CLAUDE_PROJECT_DIR\}?"?\/|\.\/)?(?:\.claude\/)?scripts\/cloud-session\.sh"?$/;
+const CLOUD_SESSION_MAX = 512;
+export function isCloudSessionHook(command) {
+  if (typeof command !== "string" || command.length > CLOUD_SESSION_MAX || /[\r\n]/.test(command)) return false;
+  const tokens = command.split(/\s+/).filter(Boolean);
+  // A trailing `|| true`, `|| :` or `|| exit 0` only keeps a failed setup from failing the session: still the setup hook.
+  const tail = tokens.slice(-3).join(" ");
+  if (/^\S+ \|\| (?:true|:)$/.test(tail) || tokens.slice(-3).join(" ") === "|| exit 0") tokens.splice(tokens.lastIndexOf("||"));
+  let i = tokens[0] === "bash" || tokens[0] === "sh" ? 1 : 0;
+  if (!CLOUD_SESSION_SCRIPT.test(tokens[i] ?? "")) return false;
+  const target = (word) => word !== undefined && (/^&\d$/.test(word) || /^[\w./-]+$/.test(word));
+  let redirecting = false;
+  for (i += 1; i < tokens.length; i += 1) {
+    const redirect = /^\d?>>?/.exec(tokens[i]);
+    if (redirect) {
+      redirecting = true;
+      const rest = tokens[i].slice(redirect[0].length);
+      if (rest) { if (!target(rest)) return false; } else if (!target(tokens[++i])) return false;
+    } else if (redirecting || /[;&|<>`$()]/.test(tokens[i])) return false;
+  }
+  return true;
+}
+
+// The shell-form equivalent of an exec-form hook (`command` plus an `args` array: Claude Code spawns the executable with
+// the argument vector and no shell, and substitutes the `${CLAUDE_PROJECT_DIR}` placeholder, not `$CLAUDE_PROJECT_DIR`,
+// into `command` and each element). Carried only when the script is a literal repo-relative or `${CLAUDE_PROJECT_DIR}/`
+// path, either as `command` or as the first argument of an interpreter, and every other argument is a plain literal
+// (no space, quote, `$`, `;`, glob or backslash); each is single-quoted. Null otherwise.
+const ARG_PLAIN = /^[A-Za-z0-9._@+:=,/-]+$/;
+function scriptToken(word, needsSlash) {
+  if (typeof word !== "string") return null;
+  const placeholder = /^\$\{CLAUDE_PROJECT_DIR\}\/(.+)$/.exec(word);
+  const rel = relativeScript(placeholder ? placeholder[1] : word);
+  if (!rel || (!placeholder && needsSlash && !/^\.?\//.test(word) && !rel.includes("/"))) return null;
+  return placeholder ? `"$CLAUDE_PROJECT_DIR/${rel}"` : needsSlash && !rel.includes("/") ? `./${rel}` : rel;
+}
+function execFormCommand(hook) {
+  const { command, args } = hook;
+  if (typeof command !== "string" || command.length > 256 || !Array.isArray(args) || args.length > 64 || !args.every((arg) => typeof arg === "string" && arg.length <= 256)) return null;
+  const interpreter = INTERPRETER.test(command);
+  const script = interpreter ? scriptToken(args[0], false) : scriptToken(command, true);
+  const rest = interpreter ? args.slice(1) : args;
+  if (!script || !rest.every((arg) => ARG_PLAIN.test(arg))) return null;
+  return [interpreter ? command : null, script, ...rest.map((arg) => `'${arg}'`)].filter(Boolean).join(" ");
+}
+
+// A carried hook's command for the parent file: the rewritten command behind a guard that makes it a no-op unless the
+// host's project is the parent folder (mirroring parentWiringApplies, so it never runs twice), and that sets
+// CLAUDE_PROJECT_DIR to the checkout and runs the hook from the checkout, as a checkout turn does. Both paths are quoted and must pass SAFE_PATH. Null when the
+// command cannot be rewritten.
+function carriedCommand(command, root) {
+  const rewritten = rewriteProjectDirCommand(command, root);
+  const parent = toPosix(path.dirname(root));
+  if (!rewritten || !SAFE_PATH.test(parent)) return null;
+  return `[ "$CLAUDE_PROJECT_DIR" != "${parent}" ] && [ "$CLAUDE_PROJECT_DIR" != "${parent}/" ] && exit 0; export CLAUDE_PROJECT_DIR="${toPosix(root)}"; cd "${toPosix(root)}" || exit 0; ${rewritten}`;
+}
+
+// The parent's hooks object for the checkout's settings text: this hook's own dispatcher entries, rewritten by absolute
+// path and marked --via-parent, and the checkout's other `type: "command"` hooks whose command carriedCommand can
+// rewrite (consumer-owned hooks, such as a spawn cap or a copy gate, must also run in a turn that starts in the parent).
+// `report` collects what the caller needs: `own` counts the dispatcher entries written (only those make a checkout an
+// owner) and `dropped` lists the hooks that could not be carried (a command that cannot be rewritten, or any non-`command`
+// hook type such as http or prompt) and were left out. The cloud setup hook
+// is never carried and not reported. A dispatcher-shaped entry of another checkout, or of an unknown mode, is left out
+// silently.
+export function parentHooksFor(settingsText, root, self = SELF, report = { dropped: [], own: 0 }) {
   const settings = JSON.parse(settingsText);
   const out = {};
   for (const [event, groups] of Object.entries(settings?.hooks ?? {})) {
@@ -288,9 +483,28 @@ export function parentHooksFor(settingsText, root, self = SELF) {
     for (const group of groups) {
       const hooks = [];
       for (const hook of Array.isArray(group?.hooks) ? group.hooks : []) {
-        const m = hook?.type === "command" && typeof hook.command === "string" ? hook.command.trim().match(DISPATCHER_COMMAND) : null;
-        if (!m || !MODES.includes(m[3]) || !sameDir(path.resolve(root, m[1] ?? m[2]), self)) continue;
-        hooks.push({ type: "command", command: `node "${toPosix(self)}" ${m[3]} --tool claude ${VIA_PARENT}`, ...(Number.isFinite(hook.timeout) ? { timeout: hook.timeout } : {}) });
+        if (hook?.type !== "command" || typeof hook.command !== "string") {
+          if (hook?.type) report.dropped.push(`${hook.type} hook${typeof hook.url === "string" ? ` ${hook.url}` : ""}`);
+          continue;
+        }
+        const exec = hook.args !== undefined;
+        if (!exec && hook.command.length > MAX_HOOK_COMMAND) { report.dropped.push(`${hook.command.slice(0, 120)}... (${hook.command.length} characters)`); continue; }
+        const trimmed = exec ? (execFormCommand(hook) ?? "") : hook.command.trim();
+        if (exec && !trimmed) { report.dropped.push(`${hook.command} ${JSON.stringify(hook.args)}`.slice(0, 160)); continue; }
+        const m = exec ? null : trimmed.match(DISPATCHER_COMMAND);
+        if (m) {
+          if (!MODES.includes(m[3]) || !sameDir(path.resolve(root, m[1] ?? m[2]), self)) continue;
+          // onFailure is carried too, so the parent copy of the PreToolUse entry fails closed like the checkout's own.
+          hooks.push({ type: "command", command: `node "${toPosix(self)}" ${m[3]} --tool claude ${VIA_PARENT}`, ...(Number.isFinite(hook.timeout) ? { timeout: hook.timeout } : {}), ...(hook.onFailure === "block" || hook.onFailure === "continue" ? { onFailure: hook.onFailure } : {}) });
+          report.own += 1;
+          continue;
+        }
+        if (isCloudSessionHook(trimmed)) continue;
+        const command = carriedCommand(trimmed, root);
+        if (command) {
+          const { args: _args, ...rest } = hook; // the carried command is shell form: the args are folded into it
+          hooks.push({ ...rest, command });
+        } else report.dropped.push(exec ? `${hook.command} ${JSON.stringify(hook.args)}`.slice(0, 160) : trimmed);
       }
       if (hooks.length) (out[event] ??= []).push({ ...(typeof group.matcher === "string" && group.matcher ? { matcher: group.matcher } : {}), hooks });
     }
@@ -314,16 +528,28 @@ export function parentDenyFor(settingsText) {
 // mcpRuleParts reduces a name to { server, tool }, lower case, the server without a leading claude_ai_ and a trailing
 // -<hex> instance suffix; a server-only entry (mcp__X) or mcp__X__* covers every tool of X. The patterns are the
 // checkout's own permissions.deny (no second, hand-kept list), so only a tool that matches an entry is ever refused.
-export function mcpRuleParts(name) {
+// An MCP tool name split into { server, tool }, lower case, the server without a leading claude_ai_ and plugin_<plugin>_ prefix
+// but with any instance suffix kept; tool is "*" for a server-only name; null for a name that is not an MCP tool. Shared by the
+// hard stops (mcpRuleParts) and the mail guard (isMailTool), which read instance suffixes differently.
+function mcpNameParts(name) {
   if (typeof name !== "string" || !name.startsWith("mcp__")) return null;
   const rest = name.slice("mcp__".length);
   const cut = rest.indexOf("__");
   // Plugin servers are mcp__plugin_<plugin>_<server> (plugin names are kebab-case, so the lazy match stops at the first
-  // underscore after the plugin name). Only the -<hex> instance suffix has been seen live; other shapes (_2, (2)) are not
-  // covered, and an over-strip can only add a deny, never remove one.
-  const server = (cut < 0 ? rest : rest.slice(0, cut)).toLowerCase().replace(/^plugin_[a-z0-9-]+?_/, "").replace(/^claude_ai_/, "").replace(/-[0-9a-f]+$/, "");
+  // underscore after the plugin name).
+  const server = (cut < 0 ? rest : rest.slice(0, cut)).toLowerCase().replace(/^plugin_[a-z0-9-]+?_/, "").replace(/^claude_ai_/, "");
   const tool = cut < 0 ? "*" : rest.slice(cut + 2).toLowerCase();
-  return server && tool ? { server, tool } : null;
+  return { server, tool };
+}
+
+export function mcpRuleParts(name) {
+  const parts = mcpNameParts(name);
+  if (!parts) return null;
+  // Only the -<hex> instance suffix has been seen live; other shapes (_2, (2)) are not covered, and an over-strip can only
+  // add a deny, never remove one, except where the server's own name ends in -<hex>: a hyphenated `microsoft-365` reduces to
+  // `microsoft` and so matches no Microsoft_365 entry (the mail guard reads that name itself, isMailTool).
+  const server = parts.server.replace(/-[0-9a-f]+$/, "");
+  return server && parts.tool ? { server, tool: parts.tool } : null;
 }
 
 // The deny entry that a call to `toolName` matches on another instance of its connector, or null.
@@ -339,17 +565,21 @@ export function hardStopEntry(toolName, deny) {
 
 // The hard-stop patterns for this call: the permissions.deny list of the hook's own checkout and of the payload's
 // repository (in a parent-folder turn, the union with every wired sibling checkout, as the parent file carries). A
-// settings file that cannot be read or parsed adds nothing.
+// settings file that cannot be parsed adds nothing, and so does one that does not exist (ENOENT). One that exists but cannot
+// be read (a FIFO, a device, a directory, a file over the size cap, any other read error) is reported in `unreadable`, and the
+// caller refuses the call: "adds nothing" would turn a hard-stop tool into an allow (round 1 of the #342 follow-up, D).
 function hardStopDeny({ own, repoRoot, parentTurn }) {
-  const deny = [];
+  const deny = [], unreadable = [];
   for (const root of [...new Set([own, repoRoot].filter(Boolean))]) {
-    try {
-      const text = readFileSync(path.join(root, ".claude", "settings.json"), "utf8");
-      deny.push(...(parentTurn && root === own ? parentDenyUnion(text, own) : parentDenyFor(text)));
-    } catch { /* adds nothing */ }
+    const file = path.join(root, ".claude", "settings.json");
+    let text;
+    try { text = readSettings(file); } catch (error) { if (error?.code !== "ENOENT") unreadable.push(file); continue; }
+    try { deny.push(...(parentTurn && root === own ? parentDenyUnion(text, own, unreadable) : parentDenyFor(text))); } catch { /* not parseable: adds nothing */ }
   }
-  return deny;
+  return { deny, unreadable };
 }
+
+export const unreadableSettingsReason = (toolName, file) => `wow-core: ${toolName} is refused because the hard-stop list could not be read: ${file} exists but is not a readable regular file of at most ${SETTINGS_MAX_BYTES} bytes (a FIFO, a device, a directory, an oversize file or a read error), so this call cannot be checked against the founder's hard stops (never send, post or invite; never pay or accept terms; never delete or publish without his yes). Fix or remove that file and retry; it is not a decision about this tool.`;
 
 export const hardStopReason = (toolName, entry) => `wow-core: ${toolName} is a hard stop: it matches the deny entry ${entry}, which covers every account and instance of that connector (permissions.deny; the founder's hard stops, 2026-11-05: never send, post or invite, never pay or accept terms, never delete or publish without his yes). The founder does this himself: prepare a draft or the exact step and ask him.`;
 
@@ -357,8 +587,9 @@ export const hardStopReason = (toolName, entry) => `wow-core: ${toolName} is a h
 // under the parent that has wow-core wiring (a consumer's .claude/scripts/wow-hook.mjs or wow-core's scripts/wow-hook.mjs),
 // in folder order, each once. Several checkouts share one container's parent folder, and a parent turn must keep every
 // one's hard stops (review 2026-11-06, Strale orchestrator, for #262). A union can only narrow; the hook entries stay
-// the owner's. A sibling whose settings cannot be read or parsed adds nothing.
-export function parentDenyUnion(ownText, root) {
+// the owner's. A sibling whose settings cannot be parsed, or does not exist, adds nothing; one that exists but cannot be read is
+// pushed on `unreadable` (when given) for the caller to refuse on.
+export function parentDenyUnion(ownText, root, unreadable = []) {
   const deny = parentDenyFor(ownText); // exactly, as before: a single checkout's parent file is unchanged
   const seen = new Set(deny);
   let names = [];
@@ -366,11 +597,10 @@ export function parentDenyUnion(ownText, root) {
   for (const name of names) {
     const dir = path.join(path.dirname(root), name);
     if (sameDir(dir, root) || !(has(dir, ".claude/scripts/wow-hook.mjs") || (has(dir, "scripts/wow-hook.mjs") && isWowCore(dir)))) continue;
+    try { if (!statSync(path.join(dir, ".git")).isDirectory()) continue; } catch { continue; }
+    const file = path.join(dir, ".claude", "settings.json");
     let list;
-    try {
-      if (!statSync(path.join(dir, ".git")).isDirectory()) continue;
-      list = parentDenyFor(readFileSync(path.join(dir, ".claude", "settings.json"), "utf8"));
-    } catch { continue; }
+    try { list = parentDenyFor(readSettings(file)); } catch (error) { if (error?.code !== "ENOENT" && error?.name !== "SyntaxError") unreadable.push(file); continue; }
     for (const entry of list) if (!seen.has(entry)) { seen.add(entry); deny.push(entry); }
   }
   return deny;
@@ -420,7 +650,7 @@ export function ensureParentHooks({ root, self = SELF, env = process.env, create
     if (sameDir(parent, os.homedir()) || path.dirname(parent) === parent || !SAFE_PATH.test(toPosix(self))) return { status: "skipped", file };
     let existing = null;
     let takeover = null;
-    try { existing = readFileSync(file, "utf8"); } catch (error) { if (error?.code !== "ENOENT") throw error; }
+    try { existing = readSettings(file); } catch (error) { if (error?.code !== "ENOENT") throw error; }
     if (existing === null && !create) return { status: "skipped", file };
     if (existing !== null) {
       let owner;
@@ -439,12 +669,15 @@ export function ensureParentHooks({ root, self = SELF, env = process.env, create
         }
       }
     }
-    const checkoutText = readFileSync(path.join(root, ".claude", "settings.json"), "utf8");
-    const hooks = parentHooksFor(checkoutText, root, self);
+    const checkoutText = readSettings(path.join(root, ".claude", "settings.json"));
+    const report = { dropped: [], own: 0 };
+    const hooks = parentHooksFor(checkoutText, root, self, report);
+    const dropped = report.dropped;
     const deny = parentDenyUnion(checkoutText, root);
-    if (existing === null && !Object.keys(hooks).length) return { status: "skipped", file };
-    // A consumer whose settings wire no wow-hook entry would take over and leave the parent with no hook at all.
-    if (takeover && !Object.keys(hooks).length) return { status: "other-checkout", file };
+    if (dropped.length) noteOnce("dropped-hooks", file, `${dropped.length} hook(s) of ${root}/.claude/settings.json are not carried to ${file}: a command must reference the checkout as "$CLAUDE_PROJECT_DIR/<path>" with nothing else the hook cannot rewrite (first: ${dropped[0].slice(0, 120)}). A turn that starts in ${parent} does not run them (only type "command" hooks are carried).`, env);
+    if (existing === null && !report.own) return { status: "skipped", file };
+    // A consumer whose settings wire no wow-hook entry would take over and leave the parent with no wow-core hook at all.
+    if (takeover && !report.own) return { status: "other-checkout", file };
     const text = `${JSON.stringify({
       [PARENT_OWNER_KEY]: { checkout: toPosix(root), note: `Written by ${toPosix(self)} for cloud turns that start in this folder; it is rewritten from ${toPosix(path.join(root, ".claude/settings.json"))}. Remove this file to unwire.` },
       ...(deny.length ? { permissions: { deny } } : {}),
@@ -530,57 +763,188 @@ export function touchMarker(root, sid) {
 
 // A command start (line start, ; & | or a subshell paren), optionally prefixed by `env`/`command`
 // and VAR=value assignments (`GIT_EDITOR=true git commit`), then `git ... commit`.
-const GIT_COMMIT = /(?:^|[;&|(])\s*(?:(?:env|command)\s+)?(?:[A-Za-z_]\w*=(?:"[^"\r\n]*"|'[^'\r\n]*'|\S*)\s+)*git(?:\.exe)?(?<args>\s[^\r\n;&|]*\bcommit\b[^\r\n;&|]*)/ims;
+const GIT_COMMIT = /(?:^|[;&|(])\s*(?:(?:env|command)\s+)?(?:[A-Za-z_]\w*=(?:"[^"\r\n]*"|'[^'\r\n]*'|\\.|[^\s"'\\;&|()<>])*\s+)*git(?:\.exe)?(?<args>\s[^\r\n;&|]*\bcommit\b[^\r\n;&|]*)/gims;
+// An assignment value is any run of quoted parts, backslash escapes and plain characters (`A='x'y`, `N='O'\''Brien'`).
+// A plain character excludes the shell's word ends (; & | ( ) < >), so a value never runs into the next command and each
+// command start is scanned once. Each alternative starts with a different character, so a run of `A='x' ` assignments cannot backtrack exponentially:
+// an earlier `\S*` alternative also matched a quoted value, and 173 characters took 13 s.
 
-// The directory the command's `git ... commit` actually targets (`git -C <path>` resolved
-// against the payload cwd), or null when the command has no git commit.
-export function commitProbeDir(command, cwd) {
-  const match = GIT_COMMIT.exec(String(command ?? ""));
-  if (!match) return null;
-  let before = match.groups.args;
-  const at = before.search(/commit/i);
-  if (at >= 0) before = before.slice(0, at);
-  let probe = path.resolve(cwd);
-  for (const found of before.matchAll(/(?:^|\s)-C(?:\s+|=)(?:"([^"]+)"|'([^']+)'|(\S+))/g)) {
+// Every literal `cd <target>` or `pushd <target>` in `text`, wherever it appears (a heredoc line, a quote, a group, `eval`,
+// `sh -c`, `builtin cd`, `\cd` all count): an extra candidate directory can only add a block, never remove one. Targets the
+// hook cannot resolve (`cd` with no argument, `cd -`, `~`, `$`, a backtick, a backslash, a glob) are skipped; the payload
+// cwd is always a candidate anyway.
+const CD_TARGET = /(?<![\w./-])(?:cd|pushd)[ \t]+(?:-[A-Za-z]+[ \t]+)*(?:--[ \t]+)?(?:"([^"\r\n]*)"|'([^'\r\n]*)'|([^\s;&|()<>"'`]+))/g;
+const EXACT_CANDIDATES = 512; // every combination of succeeding and failing cds, up to this many directories (as before)
+const MAX_DIRS = 8192; // directories one command may ask the guard to look up; past it the guard refuses (fail closed)
+const MAX_COMMITS = 100; // more git commits than this in one command: refused (fail closed), never probed partially
+const MAX_CDS = 200; // more literal cd/pushd targets before the last commit than this: refused (fail closed)
+const MAX_MOVES = 16; // more `-C` flags than this on one commit: refused (fail closed)
+const RESOLVE_BUDGET = 300_000; // path resolutions per command (about 0.2 s); past it the guard refuses (fail closed)
+const MAX_PATH = 4096; // a candidate directory longer than this (Linux PATH_MAX) cannot be opened: refused (fail closed)
+export const GUARD_DEADLINE_MS = 2000; // wall-clock time the whole guard may take; past it the guard refuses (fail closed)
+// Thrown when the guard runs out of time or meets a path past MAX_PATH; guardSharedTree turns it into a refusal.
+class GuardOverrun extends Error {}
+const deadlineCheck = (deadline) => () => { if (performance.now() > deadline) throw new GuardOverrun("deadline"); };
+
+// The directories one `git ... commit` may target: the payload cwd, plus every literal cd or pushd target that appears
+// before this commit, and then `git -C <path>` of this commit applied to each (a -C moves the probe for that commit, as it
+// always has: so `git -C ../wt commit` from a busy primary probes the worktree only). The cwd is never dropped for a cd.
+// Each cd target is resolved against the cwd and against the earlier candidates: every combination of cds that succeed
+// or fail, while that stays within EXACT_CANDIDATES. Past that the exact set is kept and the rest is followed as chains:
+// every run of consecutive cds that all succeed, starting from the cwd at any cd (so a chain whose first cds fail is
+// followed; a cd that fails in the middle of a long chain is the one shape not followed). A -C is applied to EVERY candidate, existing or not (the directory may
+// be created in the same command: `mkdir out && cd out && git -C .. commit`), which can over-block a cd that fails.
+// The work is bounded whatever the input: a hook that runs out of time is non-blocking in Claude Code, so a slow probe
+// would switch off every hard stop. Returns { dirs, overflow }: overflow is true (and dirs null) past MAX_COMMITS commits,
+// MAX_CDS cds before the last commit, MAX_MOVES -C flags on one commit, MAX_DIRS directories or RESOLVE_BUDGET path
+// resolutions: the guard refuses rather than probe part of it. Path cost grows with length, so a count alone does not bound
+// the time: `check` throws GuardOverrun past the guard's deadline, and so does a candidate longer than MAX_PATH.
+function probe(command, cwd, check = () => {}) {
+  const text = String(command ?? "");
+  const matches = [...text.matchAll(GIT_COMMIT)];
+  if (!matches.length) return { dirs: null, overflow: false };
+  const OVER = { dirs: null, overflow: true };
+  const cds = [];
+  const lastCommit = matches[matches.length - 1].index;
+  for (const found of text.matchAll(CD_TARGET)) {
+    if (found.index >= lastCommit) break;
     const target = found[1] ?? found[2] ?? found[3];
-    probe = path.isAbsolute(target) ? path.resolve(target) : path.resolve(probe, target);
+    if (!target || target === "-" || target.startsWith("~") || /[$\\*?[]/.test(target)) continue;
+    cds.push({ at: found.index, target });
   }
-  return probe;
+  if (matches.length > MAX_COMMITS || cds.length > MAX_CDS) return OVER;
+  let budget = RESOLVE_BUDGET;
+  const resolve = (from, target) => {
+    budget -= 1;
+    if ((budget & 63) === 0) check();
+    const dir = path.isAbsolute(target) ? path.resolve(target) : path.resolve(from, target);
+    if (dir.length > MAX_PATH) throw new GuardOverrun("path");
+    return dir;
+  };
+  const start = path.resolve(cwd);
+  const all = new Set([start]);
+  let exact = true; // still every combination; false once only the chains are followed
+  let heads = new Set(); // where each run of consecutive succeeding cds ending at the latest cd has reached
+  const dirs = new Set();
+  let next = 0;
+  for (const match of matches) {
+    while (next < cds.length && cds[next].at < match.index) {
+      const { target } = cds[next++];
+      const moved = new Set([resolve(start, target)]);
+      for (const from of heads) moved.add(resolve(from, target));
+      heads = moved;
+      if (exact) {
+        const added = [...all].map((from) => resolve(from, target));
+        const grown = new Set([...all, ...moved, ...added]);
+        if (grown.size <= EXACT_CANDIDATES) { for (const dir of grown) all.add(dir); continue; }
+        exact = false; // keep the exact set built so far; from here on only the chains are added
+      }
+      for (const dir of heads) all.add(dir);
+      if (all.size > MAX_DIRS || budget < 0) return OVER;
+    }
+    let flags = match.groups.args;
+    const at = flags.search(/commit/i);
+    if (at >= 0) flags = flags.slice(0, at);
+    const moves = [...flags.matchAll(/(?:^|\s)-C(?:\s+|=)(?:"([^"]+)"|'([^']+)'|(\S+))/g)].map((found) => found[1] ?? found[2] ?? found[3]);
+    if (moves.length > MAX_MOVES) return OVER;
+    let here = [...all];
+    for (const target of moves) here = [...new Set(here.map((dir) => resolve(dir, target)))];
+    for (const dir of here) dirs.add(dir);
+    if (dirs.size > MAX_DIRS || budget < 0) return OVER;
+  }
+  return { dirs: [...dirs], overflow: false };
 }
 
-export function guardSharedTree({ command, sid, cwd, env = process.env, now = Date.now() }) {
-  const result = { reason: null, warnings: [] };
-  const probe = commitProbeDir(command, cwd);
-  if (!probe) return result;
-  const root = findRoot(probe, env);
-  if (!root || isLinkedWorktree(root)) return result; // not a repo, or a worktree: the safe path
-  const dir = sessionsDir(root);
-  if (!existsSync(dir)) return result;
-  touchMarker(root, sid);
+// The directories the command's `git ... commit` commands may target (every commit in the command is probed), or null
+// when the command has no git commit. Not followed: `cd` with no argument, `cd -`, `~`, `$`, backtick and glob targets
+// (the payload cwd stays a candidate), `--git-dir` and GIT_DIR. Past a limit the guard refuses (guardSharedTree); this
+// function then returns null.
+export function commitProbeDirs(command, cwd) {
+  try { return probe(command, cwd).dirs; } catch (error) { if (error instanceof GuardOverrun) return null; throw error; }
+}
+
+// findRoot for many directories at once: each directory walked up is remembered, so the lookups cost at most one
+// existence check per distinct directory (MAX_DIRS candidates share most of their ancestors).
+function rootFinder(env, check = () => {}) {
+  const known = new Map();
+  const ceilings = String(env.GIT_CEILING_DIRECTORIES || "").split(path.delimiter).filter(Boolean).map(normDir);
+  return (start) => {
+    const walked = [];
+    let dir = path.resolve(start);
+    let root = null;
+    for (;;) {
+      if (known.has(dir)) { root = known.get(dir); break; }
+      walked.push(dir);
+      check();
+      if (existsSync(path.join(dir, ".git"))) { root = dir; break; }
+      const parent = path.dirname(dir);
+      if (parent === dir || ceilings.includes(normDir(parent))) break;
+      dir = parent;
+    }
+    for (const seen of walked) known.set(seen, root);
+    return root;
+  };
+}
+
+// The first PRIMARY checkout among `dirs` that another live session shares, as { root, peers, ttlHours }, plus warnings.
+function peersIn(dirs, sid, env, now, warnings, rootOf = rootFinder(env)) {
   let ttlHours = 4;
   const configured = env.WOW_SESSION_MARKER_TTL_HOURS;
   if (configured !== undefined && String(configured).trim() !== "") {
     const value = Number(configured);
     if (Number.isFinite(value) && value > 0) ttlHours = value;
-    else result.warnings.push(`WARNING (multi-session safeguard): invalid WOW_SESSION_MARKER_TTL_HOURS='${configured}'; using default 4 h.`);
+    else warnings.push(`WARNING (multi-session safeguard): invalid WOW_SESSION_MARKER_TTL_HOURS='${configured}'; using default 4 h.`);
   }
   const mine = safeId(sid);
-  const peers = [];
-  let names = [];
-  try { names = readdirSync(dir).filter((name) => name.endsWith(".lock")).sort(); } catch { return result; }
-  for (const name of names) {
-    const id = name.slice(0, -".lock".length);
-    if (id === mine) continue;
-    let ageHours;
-    try { ageHours = (now - statSync(path.join(dir, name)).mtimeMs) / 3_600_000; } catch { continue; }
-    if (ageHours >= ttlHours) {
-      result.warnings.push(`WARNING (multi-session safeguard): stale marker '${name}' in '${root}' is older than the ${ttlHours} h TTL; ignoring it and allowing the commit.`);
-      continue;
+  for (const root of [...new Set(dirs.map(rootOf).filter(Boolean))]) {
+    if (isLinkedWorktree(root)) continue; // a worktree: the safe path
+    const dir = sessionsDir(root);
+    if (!existsSync(dir)) continue;
+    touchMarker(root, sid);
+    const peers = [];
+    let names = [];
+    try { names = readdirSync(dir).filter((name) => name.endsWith(".lock")).sort(); } catch { continue; }
+    for (const name of names) {
+      const id = name.slice(0, -".lock".length);
+      if (id === mine) continue;
+      let ageHours;
+      try { ageHours = (now - statSync(path.join(dir, name)).mtimeMs) / 3_600_000; } catch { continue; }
+      if (ageHours >= ttlHours) {
+        warnings.push(`WARNING (multi-session safeguard): stale marker '${name}' in '${root}' is older than the ${ttlHours} h TTL; ignoring it and allowing the commit.`);
+        continue;
+      }
+      peers.push(id);
     }
-    peers.push(id);
+    if (peers.length) return { root, peers, ttlHours };
   }
-  if (peers.length) {
-    result.reason = `BLOCKED (multi-session safeguard): another agent session is active in this PRIMARY checkout (${root}). Peer session(s): ${peers.join(", ")}. Two sessions sharing one tree clobber each other's commits and swap HEAD (GLES-016). Isolate: create a worktree (git worktree add ../<name> -b <branch>) and commit there. Stale markers are ignored after ${ttlHours} h (WOW_SESSION_MARKER_TTL_HOURS).`;
+  return null;
+}
+
+// `cwd` is the payload cwd, which every `cd` and `-C` target resolves against; `workDir` is where the hook's checkout
+// is (the checkout in a parent-folder turn). The commit is probed at the payload-cwd candidates first; only when none
+// of them is inside a repository (a plain `git commit` in a parent folder) are the candidates computed again from workDir.
+// Either probe past a limit refuses: a null set never reaches peersIn. Any overrun or exception refuses too: a hook that
+// throws or runs out of time is non-blocking, so the guard fails closed itself rather than switch the hard stops off.
+const OVERFLOW_REASON = `BLOCKED (multi-session safeguard): the command has more git commit commands, cd commands, -C flags or directories than the guard checks one by one (${MAX_COMMITS} commits, ${MAX_CDS} cds, ${MAX_MOVES} -C flags, ${MAX_DIRS} directories), so it refuses rather than guess (GLES-016). Split it into smaller commands.`;
+export function guardSharedTree({ command, sid, cwd, workDir = cwd, env = process.env, now = Date.now(), deadlineMs = GUARD_DEADLINE_MS }) {
+  const result = { reason: null, warnings: [] };
+  const check = deadlineCheck(performance.now() + deadlineMs);
+  let found;
+  try {
+    const rootOf = rootFinder(env, check);
+    let { dirs, overflow } = probe(command, cwd, check);
+    if (!overflow && dirs && !dirs.some(rootOf) && path.resolve(workDir) !== path.resolve(cwd)) ({ dirs, overflow } = probe(command, workDir, check));
+    if (overflow) { result.reason = OVERFLOW_REASON; return result; }
+    if (!dirs) return result;
+    found = peersIn(dirs, sid, env, now, result.warnings, rootOf);
+  } catch (error) {
+    result.reason = error instanceof GuardOverrun
+      ? `BLOCKED (multi-session safeguard): the command's cd and -C paths take longer than ${deadlineMs} ms or run longer than ${MAX_PATH} characters, so the guard refuses rather than guess (GLES-016). Split it into smaller commands with shorter paths.`
+      : `BLOCKED (multi-session safeguard): the guard failed (${String(error?.message ?? error).slice(0, 200)}), so it refuses rather than let the commit through unchecked (GLES-016). Report this; commit from a worktree meanwhile.`;
+    return result;
+  }
+  if (found) {
+    result.reason = `BLOCKED (multi-session safeguard): another agent session is active in this PRIMARY checkout (${found.root}). Peer session(s): ${found.peers.join(", ")}. Two sessions sharing one tree clobber each other's commits and swap HEAD (GLES-016). Isolate: create a worktree (git worktree add ../<name> -b <branch>), then run cd <worktree> as its own command (the Bash tool keeps that directory) or use git -C <worktree> commit; a cd inside the same command still probes this checkout. Stale markers are ignored after ${found.ttlHours} h (WOW_SESSION_MARKER_TTL_HOURS).`;
   }
   return result;
 }
@@ -726,6 +1090,10 @@ export function rosterRepos(text) {
 // ... from the real wow-core project directory's working tree (the spawn rule only refuses with it).
 const rosterReposAt = (wowCore) => rosterRepos(readFileSync(path.join(wowCore, "docs", "fleet-roster.md"), "utf8"));
 
+// The per-session state directory of the spawn cap and the mail guard (outside every checkout, so no repository's files
+// can reset it; WOW_SPAWN_DIR for tests).
+const stateBase = (env = process.env) => env.WOW_SPAWN_DIR || path.join(os.homedir(), ".wow-core", "spawn");
+
 // Claim the first free numbered slot in dir, atomically (O_EXCL); null when all limit are taken.
 function claimSlot(dir, limit) {
   mkdirSync(dir, { recursive: true });
@@ -759,7 +1127,17 @@ function pruneOldDays(base, today) {
 const TIER_RANK = Object.freeze({ mechanical: 0, fast: 1, strong: 2, frontier: 3 });
 const FAMILIES = ["fable", "opus", "sonnet", "haiku"]; // top families first
 const FALLBACK_FAMILY = Object.freeze({ mechanical: "haiku", fast: "sonnet", strong: "sonnet", frontier: "opus" });
-const TOP_MODEL_LINE = /^Top model:[ \t]*.*\w.*$/m;
+// Line matchers are linear: a regex like `^Top model:[ \t]*.*\w.*$` backtracks quadratically over a long line with no word character.
+const hasWord = (text) => /\w/.test(text);
+const topModelLine = (prompt) => prompt.split("\n").some((line) => line.startsWith("Top model:") && hasWord(line.slice("Top model:".length)));
+const frontierLaneLine = (prompt) => {
+  for (const line of prompt.split("\n")) {
+    if (!line.startsWith("Frontier lane:")) continue;
+    const parts = /^[ \t]*(\S+)[ \t]+(\S[^\r\n]*)$/.exec(line.slice("Frontier lane:".length));
+    if (parts && hasWord(parts[2])) return parts;
+  }
+  return null;
+};
 export function modelFamily(model) {
   const name = typeof model === "string" ? model.toLowerCase().replace(/\[1m\]/g, "") : "";
   return FAMILIES.find((family) => name.includes(family)) ?? null;
@@ -813,17 +1191,44 @@ export function aboveFrontierNote(model, here = hookDir()) {
   const pin = resolve ? ` (\`${resolve} resolve --role orchestration\`)` : "";
   return `MODEL NOTE: this session runs on the ${family} family, above the ${frontier} frontier tier. A master, dispatcher or sub-orchestrator starts on the frontier tier${pin}, not above it (MODEL_ROUTING, founder 2026-11-11): if that is your role, say so to the founder in your next report and keep working. A one-off heavy-thinking child started with a \`Top model: <reason>\` line needs no action.`;
 }
-export function modelCeilingDenial(input, here = hookDir()) {
-  const { ceiling, families, known, resolve, hasRouting } = allowedModelFamilies(here);
+// A consumer-owned frontier floor for named lanes (founder-ratified by the project, recorded in its overlay): the file
+// `<project>/.claude/wow-core.local.json` is outside the sync manifest, so a sync never writes or prunes it (GLES-095), and
+// declares {"frontierLanes": {"decision": "<id>", "founder": "<YYYY-MM-DD>"}}. With it, a create_session prompt with one
+// line `Frontier lane: <decision id> <reason>` may start at the FRONTIER tier, never above it. Without the file, with a
+// different id or without the line, nothing changes. `Top model:` is a separate rule and is untouched.
+export const LOCAL_FILE = path.join(".claude", "wow-core.local.json");
+export function frontierLanesDeclaration(projectDir) {
+  if (!projectDir) return null;
+  try {
+    // readSettings, not readFileSync: a FIFO planted here would freeze the hook. A rejection lands in the catch below, the same
+    // path as an unreadable file always took (no declaration).
+    const declared = JSON.parse(readSettings(path.join(projectDir, LOCAL_FILE)))?.frontierLanes;
+    const ok = declared && typeof declared.decision === "string" && /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(declared.decision)
+      && typeof declared.founder === "string" && /^\d{4}-\d{2}-\d{2}$/.test(declared.founder);
+    return ok ? { decision: declared.decision, founder: declared.founder } : null;
+  } catch { return null; }
+}
+export function modelCeilingDenial(input, here = hookDir(), { projectDir = null } = {}) {
+  const { ceiling, families, known, frontier, resolve, hasRouting } = allowedModelFamilies(here);
   const model = typeof input.model === "string" ? input.model.trim() : "";
   const family = modelFamily(model);
   if (family && families.has(family)) return null;
-  if (TOP_MODEL_LINE.test(String(input.prompt ?? "").replace(/```[\s\S]*?```/g, ""))) return null;
+  const prompt = String(input.prompt ?? "").replace(/```[\s\S]*?```/g, "");
+  if (topModelLine(prompt)) return null;
+  const declared = frontierLanesDeclaration(projectDir);
+  const lane = frontierLaneLine(prompt);
+  let laneNote = "";
+  if (lane) {
+    if (!declared) laneNote = ` The \`Frontier lane:\` line was ignored: this project declares no frontierLanes decision in ${LOCAL_FILE}.`;
+    else if (lane[1] !== declared.decision) laneNote = ` The \`Frontier lane:\` line was ignored: its decision id ${lane[1]} is not the one ${LOCAL_FILE} declares.`;
+    else if (family && known.has(family) && frontier && FAMILIES.indexOf(family) >= FAMILIES.indexOf(frontier)) return null;
+    else laneNote = " A frontier lane runs at the frontier tier only, never above it.";
+  } else if (declared) laneNote = ` This project declares frontier lanes (decision ${declared.decision}): a named lane may instead put one line \`Frontier lane: ${declared.decision} <reason>\` in the prompt and start at the frontier tier.`;
   const what = !model ? `this start names no model, so the child would inherit this session's, possibly the top one (a child gets the ${ceiling} tier)`
     : family && known.has(family) ? `model ${model} is above the ${ceiling} tier the routing table gives a child`
     : `model ${model} is not a model the registry knows`;
   const pin = resolve ? ` Pin \`model\` to the ${ceiling} tier (\`${resolve} resolve --role sub-orchestrator\`)` : ` Pin \`model\` to the ${ceiling} tier (${[...families].join(" or ")})`;
-  return `wow-core: create_session ${what}${hasRouting ? " (MODEL_ROUTING, sub-orchestrator row)" : ""}.${pin}, or put one line \`Top model: <reason>\` in the prompt (tier-2 final verification and the Codex dispatcher's orchestration role only).`;
+  return `wow-core: create_session ${what}${hasRouting ? " (MODEL_ROUTING, sub-orchestrator row)" : ""}.${pin}, or put one line \`Top model: <reason>\` in the prompt (tier-2 final verification and the Codex dispatcher's orchestration role only).${laneNote}`;
 }
 
 export function spawnDecision(payload, env = process.env, now = Date.now()) {
@@ -858,9 +1263,9 @@ export function spawnDecision(payload, env = process.env, now = Date.now()) {
     if (childDepth > SPAWN_LIMITS.maxDepth) {
       return denyResponse(`wow-core: session depth ${depth} may not start sessions (master → lane → reviewer, no deeper; founder 2026-11-01). Use a subagent instead.`);
     }
-    const modelDenial = modelCeilingDenial(input);
+    const modelDenial = modelCeilingDenial(input, undefined, { projectDir });
     if (modelDenial) return denyResponse(modelDenial);
-    const base = env.WOW_SPAWN_DIR || path.join(os.homedir(), ".wow-core", "spawn");
+    const base = stateBase(env);
     const container = safeId(env.CLAUDE_CODE_CONTAINER_ID) || safeId(os.hostname()) || "local";
     const today = new Date(now).toISOString().slice(0, 10);
     pruneOldDays(base, today);
@@ -885,6 +1290,338 @@ export function spawnDecision(payload, env = process.env, now = Date.now()) {
       updatedInput } };
   } catch (error) {
     return denyResponse(`wow-core: the session-start cap could not check this call (${error?.message ?? error}), so it is refused (fail closed). Use a subagent, or retry once the cause is fixed (COMMS_CORE §3).`);
+  }
+}
+
+// ---- mail guard: mail and BWS_PROD_TOKEN never meet in one session (SECURITY_CORE §1a; review 2026-11-06 of #277, H2) ----
+// claude.ai connectors are per account, not per environment, and the founder keeps his mail connected on every cloud account
+// (2026-11-16), so a cloud session on `fleet` can hold mail tools next to BWS_PROD_TOKEN, the store token that opens the
+// production platform tokens, and an injected email could make it send the token out over the open network. Each session
+// records, in the spawn cap's state directory, `mail` when a mail connector tool is about to run and `prod` when a command
+// that names the token is about to run; a call of either kind in a session that holds the other marker is refused.
+// Races (review of #278, M1): a marker is NEVER removed. Each call (1) looks for the other side and is refused, creating
+// nothing, when it is there; (2) creates its own marker (O_EXCL, as claimSlot; EEXIST is fine); (3) looks again and is
+// refused, keeping its own marker, when the other appeared meanwhile. For a mail call and a token call to both pass, each
+// would have to create its marker before the other's final look and look before the other created its marker, which is
+// impossible; when two calls cross, both are refused and the session keeps both markers (it loses both sides, the safe one).
+// A marker only narrows: a call that a later rule refuses keeps its marker.
+// Sessions outlive containers (review of #278, H1): a cloud session resumed on a fresh container, or a forked session (a
+// new session id), keeps its transcript, and the email's text with it, but not ~/.wow-core. So in Claude Code, step (1)
+// also reads the session's transcript (transcript_path, with its subagents' transcripts) when the other marker is absent:
+// an earlier tool_use of the other kind records that marker and refuses the call. A token command whose transcript is
+// missing, unreadable or has no line that parses is refused (fail closed); a mail call then goes on as if none was found.
+// A tool_use that this guard, the fence or a hard stop refused (its tool_use_id recorded as `refused-<id>`) ran nothing and
+// is not counted; on a fresh container those records are gone, so such a call then counts (it only narrows). Codex payloads
+// carry no Claude Code transcript (Codex environments hold neither the token nor mail): markers only.
+// Fail closed for the token only: no usable session id, a state store it cannot read or write, or an unreadable transcript
+// refuses the token command, and so does a hook that hits its deadline or an internal error on that call (run()); the mail
+// tool then gets no decision, so a broken store never cuts a session off from mail it may need (a mail call let through by a
+// deadline or an error still records its marker when it can, run()). The marker directories are never pruned: a pruned
+// marker would reopen the pair (each is an empty file per session).
+// A speed bump, not a boundary (docs/reviews/2026-11-05-security-rollback.md T5: hooks are speed bumps): only a command
+// whose text names the variable counts (BWS_PROD as a prefix, any case, quotes, backslashes and backticks removed, so
+// `${!x}` with x=BWS_PROD_TOKEN set in the same command is caught), and any mention counts as use (a grep, a commit message).
+// After mail, a hand-off that names the token to another session and the listed environment-dump forms are refused too
+// (handsTokenOn, environmentDump; review of #362, M1, M2). A command that reaches the variable some other way (a dump form
+// not on that list, a script file, a name built in an earlier command), a hand-off that does not name it, or a dump before
+// the first mail call is not caught, nor a session that deletes its own markers, edits its transcript or points
+// WOW_SPAWN_DIR elsewhere; SECURITY_CORE §1a says so.
+
+// The connectors whose every tool counts as mail, read and draft included (reading is the exposure: the content an
+// injected email puts into the session). The server name is reduced as for the hard stops (mcpNameParts: lower case,
+// without the claude_ai_ and plugin_<name>_ prefixes), hyphens and spaces read as underscores, and it counts when it
+// starts with a mail connector's name followed by nothing or by a non-alphanumeric character, so every instance shape
+// counts: Gmail, gmail_2, Gmail-1a2b3c4d, Gmail (2), Gmail_Personal, microsoft-365, microsoft365, Microsoft_365_hotmail,
+// Microsoft_365_2-fe0a0ef2, Office_365, Outlook (review of #362, L1; each is a mail product's own name, so no other
+// connector matches). Not covered: a mail tool served under another connector's name (a Google Workspace connector's
+// Gmail tools, a bare `Microsoft` or `Microsoft_Outlook`, Hotmail). A name the list misses is not mail to this guard; SECURITY_CORE §1a still binds.
+const MAIL_SERVER = /^(?:gmail|microsoft_?365|office_?365|outlook)(?![a-z0-9])/;
+export function isMailTool(name) {
+  const parts = mcpNameParts(name);
+  return Boolean(parts) && MAIL_SERVER.test(parts.server.replace(/[-\s]/g, "_"));
+}
+
+const PROD_TOKEN = /BWS_PROD/i;
+// Quotes, backticks and backslashes removed, so a name split by them reads whole (`$BWS_""PROD_TOKEN`, `os.env""iron`).
+const unsplit = (text) => text.replace(/["'`\\]/g, "");
+// A shell command's text, unsplit: Bash, PowerShell, Monitor, Codex's nameless shell payload, a string or an argv array.
+// An MCP tool's `command` runs elsewhere, without this environment's variables, so it has none.
+function shellText(toolName, input) {
+  if (typeof toolName === "string" && toolName.startsWith("mcp__")) return null;
+  const command = input?.command;
+  const text = typeof command === "string" ? command
+    : Array.isArray(command) ? command.filter((part) => typeof part === "string").join(" ") : null;
+  return text === null ? null : unsplit(text);
+}
+export function usesProdToken(toolName, input) {
+  const text = shellText(toolName, input);
+  return text !== null && PROD_TOKEN.test(text);
+}
+
+// Two ways a mail session could hand the token on without naming it in its own shell (review of #362, M1, M2). Neither
+// marks the session: each is only refused in a session that has used mail, so a session without mail sees no change.
+// (M1) A tool that starts work in another session, whose environment holds the token, with an input that names it: the
+// Claude Code remote tools that start or wake a session (any instance form, read as for mail) and SendMessage.
+const HANDOFF_SERVER = /^claude_code_remote(?![a-z0-9])/;
+const HANDOFF_TOOLS = new Set(["create_session", "send_message", "send_later", "create_trigger", "update_trigger", "fire_trigger"]);
+export function handsTokenOn(toolName, input) {
+  if (typeof toolName !== "string") return false;
+  const parts = mcpNameParts(toolName);
+  const handoff = parts ? HANDOFF_SERVER.test(parts.server.replace(/[-\s]/g, "_")) && HANDOFF_TOOLS.has(parts.tool)
+    : toolName.toLowerCase() === "sendmessage";
+  if (!handoff) return false;
+  let text;
+  try { text = JSON.stringify(input ?? null) ?? ""; } catch { return true; }
+  return PROD_TOKEN.test(unsplit(text));
+}
+// (M2) A shell command that prints or passes on the whole environment (or runs bws, which loads secrets into one), read
+// on the unsplit text. A single variable read by name (`$HOME`, process.env.HOME, os.environ['HOME'], $env:HOME) is not
+// a dump. Only these forms are covered; any other way to dump the environment still gets past (SECURITY_CORE §1a, limit 4).
+// The bare-command forms (env, set, export, declare) count only as a whole command segment: at the start, after a
+// separator, or after a wrapper that runs its argument (sudo, xargs, `sh -c`), so `git commit -m "set the env"` is not one.
+// SEG ends in `[ \t]*`, not `\s*`: a newline is itself a separator, so `\s*` would let every newline of a run of them
+// rescan the rest of the run (quadratic: 200,000 newlines took 90 s on every Bash command). `-c` counts only after a
+// shell that takes it (`bash -lc env`), so `wc -c env` is not a dump.
+const SEG = String.raw`(?:^|[;&|(){}\n]|(?:^|\s)(?:sudo|exec|command|nohup|time|nice|xargs|watch|eval|then|do|else)|(?:^|[\s/])(?:sh|bash|zsh|dash)\s+-[a-z]*c)[ \t]*`;
+const SEG_END = String.raw`\s*(?=$|[;&|(){}\n])`;
+const ENV_DUMPS = [
+  ["/proc/<pid>/environ", /\/proc\/(?:[^\s;&|/]+\/){1,3}environ\b/i],
+  ["os.environ", /\bos\.environ\b(?!\s*\[\s*[A-Za-z_]|\.get\(\s*[A-Za-z_])/],
+  ["os.getenv without a name", /\bos\.getenv\(\s*(?![A-Za-z_])/],
+  ["process.env", /\bprocess\.env\b(?!\s*\??\.\s*[A-Za-z_$]|\s*\[\s*[A-Za-z_$])/],
+  ["%ENV", /%ENV\b/],
+  // Ruby: ENV.to_h, ENV.each and the like; a read by name (ENV["HOME"], ENV.fetch("HOME")) is not a dump.
+  ["ENV (Ruby)", /\bENV\.(?!(?:fetch|dig|values_at|slice|assoc|delete|store)\b|(?:key|has_key|include|member)\?)[a-z_]/],
+  ["set", new RegExp(`${SEG}set${SEG_END}`)],
+  ["printenv", /\bprintenv\b/],
+  ["env", new RegExp(`${SEG}(?:(?:/[\\w.-]+)*/)?env(?:\\s+-[-\\w]*)*${SEG_END}`)],
+  ["export", new RegExp(`${SEG}export(?:\\s+-p)?${SEG_END}`)],
+  ["declare", new RegExp(`${SEG}(?:declare|typeset)(?:\\s+-[a-zA-Z]+)*${SEG_END}`)],
+  // PowerShell: the env: drive listed (Get-ChildItem env:, gci env:, dir env:, ls env:) or a bare $env:, not text that
+  // happens to contain `env:` (grep -n "env:" ci.yml, a YAML `env:` key).
+  ["env: (PowerShell)", /\$env:(?![A-Za-z_{])|(?<![\w$.-])(?:Get-ChildItem|Get-Item|gci|gi|dir|ls)\s+(?:-Path\s+)?env:(?![A-Za-z_])/i],
+  ["GetEnvironmentVariables", /\bGetEnvironmentVariables\b/i],
+];
+// Forms read as a command and its later words within one segment (so `bws project list | grep run` is not one), each
+// segment once from the command word on, which keeps the scan linear on a long command (no regex backtracking per word).
+const SEGMENT_DUMPS = [
+  ["compgen -e", /\bcompgen\b/, /\s-(?:[a-zA-Z]*e\b|A\s*(?:export|variable)\b)/],
+  ["bws run", /\bbws\b/, /\srun\b/],
+  ["bws --access-token", /\bbws\b/, /\s(?:--access-token|-t)\b/],
+];
+// The dump form a shell command matches, or null.
+export function environmentDump(toolName, input) {
+  const text = shellText(toolName, input);
+  if (text === null) return null;
+  for (const [form, pattern] of ENV_DUMPS) if (pattern.test(text)) return form;
+  for (const segment of text.split(/[;&|\n]/)) {
+    for (const [form, command, words] of SEGMENT_DUMPS) {
+      const at = segment.search(command);
+      if (at >= 0 && words.test(segment.slice(at))) return form;
+    }
+  }
+  return null;
+}
+
+const NEVER_MEET = "mail and the production token never meet in one session, since an injected email could send the token out (SECURITY_CORE §1a)";
+const TOKEN_INSTEAD = "Ask your master to make the change from a session that has never opened mail (a master starts a fresh session for it); never paste or print the token.";
+export const MAIL_THEN_TOKEN = `wow-core: this session has used a mail tool (Gmail or Microsoft 365), so it may not run a command that names BWS_PROD_TOKEN (any mention counts, a grep or a commit message too): ${NEVER_MEET}. ${TOKEN_INSTEAD}`;
+export const tokenThenMail = (toolName) => `wow-core: this session has run a command that uses BWS_PROD_TOKEN, so it may not use the mail connector tool ${toolName}: ${NEVER_MEET}. Ask your master to have the mail read from a session that has never used the token (a master starts a fresh session for it); never paste or print the token.`;
+export const handoffAfterMail = (toolName) => `wow-core: this session has used a mail tool (Gmail or Microsoft 365), so it may not hand BWS_PROD_TOKEN to another session (${toolName} with an input that names it; any mention counts): ${NEVER_MEET}. ${TOKEN_INSTEAD} Leave the token's name out of what this session sends.`;
+export const dumpAfterMail = (form) => `wow-core: this session has used a mail tool (Gmail or Microsoft 365), so it may not print or pass on the whole environment, which holds BWS_PROD_TOKEN (${form}): ${NEVER_MEET}. Read the one variable you need by name instead ($HOME, process.env.HOME, os.environ['HOME'], $env:HOME); for bws or the store, ask your master for a session that has never opened mail.`;
+export const tokenFailClosed = (why) => `wow-core: the mail guard could not check this command that uses BWS_PROD_TOKEN (${why}), so it is refused (fail closed): ${NEVER_MEET}. ${TOKEN_INSTEAD}`;
+
+// ENOENT is "no marker"; any other error is a store the guard cannot read, and throws.
+function markerSet(file) {
+  try { statSync(file); return true; }
+  catch (error) { if (error?.code === "ENOENT") return false; throw error; }
+}
+function createMarker(file) {
+  try { closeSync(openSync(file, "wx")); }
+  catch (error) { if (error?.code !== "EEXIST") throw error; }
+}
+const guardDir = (sid, env) => path.join(stateBase(env), `mailguard-${sid}`);
+const isGuardedCall = (payload) => isMailTool(payload?.tool_name) || usesProdToken(payload?.tool_name, payload?.tool_input)
+  || handsTokenOn(payload?.tool_name, payload?.tool_input) || environmentDump(payload?.tool_name, payload?.tool_input) !== null;
+
+// Record that this mail or token call was refused (it ran nothing), so a transcript read does not count its tool_use.
+// Best effort: a record that cannot be written only narrows (the tool_use then counts).
+export function recordRefusedCall(payload, env = process.env) {
+  try {
+    const sid = safeId(payload?.session_id);
+    const id = safeId(payload?.tool_use_id);
+    if (!sid || !id || !isGuardedCall(payload)) return;
+    mkdirSync(guardDir(sid, env), { recursive: true });
+    createMarker(path.join(guardDir(sid, env), `refused-${id}`));
+  } catch { /* only narrows */ }
+}
+
+// A mail call that a deadline or an internal error lets through unchecked still marks the session, when it can.
+export function markMailUnchecked(payload, env = process.env) {
+  try {
+    const sid = safeId(payload?.session_id);
+    if (!sid || !isMailTool(payload?.tool_name)) return;
+    mkdirSync(guardDir(sid, env), { recursive: true });
+    createMarker(path.join(guardDir(sid, env), "mail"));
+  } catch (error) { note(`mail guard could not mark this unchecked mail call: ${error?.message ?? error}`); }
+}
+
+// Each line of a JSONL file, read once in fixed-size chunks (a transcript can be large); onLine returning true stops early.
+const SCAN_CHUNK_BYTES = 1024 * 1024;
+function eachLine(file, onLine) {
+  const fd = openSync(file, "r");
+  try {
+    const buffer = Buffer.alloc(SCAN_CHUNK_BYTES);
+    let carry = Buffer.alloc(0);
+    for (;;) {
+      const read = readSync(fd, buffer, 0, buffer.length, null);
+      if (read === 0) break;
+      const data = carry.length ? Buffer.concat([carry, buffer.subarray(0, read)]) : buffer.subarray(0, read);
+      let start = 0;
+      for (let nl = data.indexOf(10); nl >= 0; nl = data.indexOf(10, start)) {
+        if (onLine(data.toString("utf8", start, nl)) === true) return true;
+        start = nl + 1;
+      }
+      carry = Buffer.from(data.subarray(start));
+    }
+    return carry.length > 0 && onLine(carry.toString("utf8")) === true;
+  } finally { closeSync(fd); }
+}
+
+// Any object in a parsed entry that is a tool_use matching `match` and not refused (assistant message content, or one
+// nested deeper, as older hosts wrote subagent progress). Finding more only refuses more, so a deep walk cannot loosen.
+function hasToolUse(value, match, refused) {
+  const stack = [value];
+  while (stack.length) {
+    const item = stack.pop();
+    if (!item || typeof item !== "object") continue;
+    if (Array.isArray(item)) { for (const part of item) stack.push(part); continue; }
+    if (item.type === "tool_use" && typeof item.name === "string" && !(typeof item.id === "string" && refused.has(item.id))
+      && match(item.name, item.input)) return true;
+    for (const key of Object.keys(item)) stack.push(item[key]);
+  }
+  return false;
+}
+
+// Whether a Claude Code transcript (JSONL), or a transcript of one of its subagents (<transcript without .jsonl>/subagents/
+// *.jsonl), holds a tool_use for which match(name, input) holds, other than the refused ones. A line that does not parse
+// is skipped (the last one may be half written); a transcript path that is missing, a file that cannot be read, or a main
+// transcript with no line that parses throws.
+export function transcriptHasToolUse(transcriptPath, match, refused = new Set()) {
+  if (typeof transcriptPath !== "string" || !transcriptPath) {
+    throw new Error("the hook payload has no transcript_path, so earlier calls in this session cannot be checked");
+  }
+  const scan = (file, main) => {
+    let parsedAny = false;
+    let found;
+    try {
+      found = eachLine(file, (text) => {
+        const line = text.trim();
+        // Once the file is known to parse, only a line that names a tool_use needs parsing.
+        if (!line || (parsedAny && !line.includes('"tool_use"'))) return false;
+        let entry;
+        try { entry = JSON.parse(line); } catch { return false; }
+        parsedAny = true;
+        return hasToolUse(entry, match, refused);
+      });
+    } catch (error) {
+      throw new Error(`the transcript ${file} could not be read (${error?.code ?? error?.message ?? error})`);
+    }
+    if (!found && main && !parsedAny) throw new Error(`no line of the transcript ${file} parses`);
+    return found;
+  };
+  if (scan(transcriptPath, true)) return true;
+  const subagents = path.join(transcriptPath.replace(/\.jsonl$/i, ""), "subagents");
+  let names;
+  try { names = readdirSync(subagents); }
+  catch (error) {
+    if (error?.code === "ENOENT" || error?.code === "ENOTDIR") return false;
+    throw new Error(`the subagent transcripts ${subagents} could not be listed (${error?.code ?? error?.message ?? error})`);
+  }
+  return names.filter((name) => name.endsWith(".jsonl")).sort().some((name) => scan(path.join(subagents, name), false));
+}
+
+// The guard's steps for one call, as a generator so a test can interleave several calls exactly: the first next() checks
+// the other side (step 1), the second creates this call's marker (step 2), the third checks again (step 3). The value
+// is the refusal reason, or null (no decision: the host's normal flow runs; the guard never allows). It throws on a store
+// it cannot use, a missing session id, or (token command) a transcript it cannot read; mailGuard maps that.
+export function* mailGuardSteps(payload, env = process.env, { tool = "claude" } = {}) {
+  const toolName = payload?.tool_name;
+  const mail = isMailTool(toolName);
+  if (!mail && !usesProdToken(toolName, payload?.tool_input)) return null;
+  const [own, other] = mail ? ["mail", "prod"] : ["prod", "mail"];
+  const sid = safeId(payload?.session_id);
+  if (!sid) throw new Error("no usable session id in the hook payload");
+  const dir = guardDir(sid, env);
+  mkdirSync(dir, { recursive: true });
+  const refuse = () => { recordRefusedCall(payload, env); return mail ? tokenThenMail(toolName) : MAIL_THEN_TOKEN; };
+  // Step 1: the other marker, or (Claude Code) the other kind of call in the session's transcript.
+  if (markerSet(path.join(dir, other))) return refuse();
+  if (tool !== "codex") {
+    const refused = new Set(readdirSync(dir).filter((name) => name.startsWith("refused-")).map((name) => name.slice("refused-".length)));
+    let earlier = false;
+    if (mail) {
+      try { earlier = transcriptHasToolUse(payload?.transcript_path, usesProdToken, refused); }
+      catch (error) { note(`mail guard could not read the transcript for an earlier token command, so it relies on the markers: ${error?.message ?? error}`); }
+    } else {
+      earlier = transcriptHasToolUse(payload?.transcript_path, isMailTool, refused);
+    }
+    if (earlier) {
+      try { createMarker(path.join(dir, other)); }
+      catch (error) { note(`mail guard could not record the ${other} marker it found in the transcript: ${error?.message ?? error}`); }
+      return refuse();
+    }
+  }
+  yield "checked";
+  // Step 2: this call's own marker, never removed afterwards.
+  createMarker(path.join(dir, own));
+  yield "created";
+  // Step 3: the other side again, in case a racing call created it after step 1.
+  return markerSet(path.join(dir, other)) ? refuse() : null;
+}
+
+// A hand-off or dump (handsTokenOn, environmentDump) in a session that has used mail: the mail marker, or (Claude Code)
+// a mail tool_use in the transcript, which then records the marker. It creates no marker of its own, so it has no race
+// guarantee: a mail call that starts while it runs is not seen (limit 4). It never fails closed (no decision when the
+// store or transcript cannot be read), since it is not a token command.
+function mailOnlyRefusal(payload, env, { tool = "claude" } = {}, reason) {
+  try {
+    const sid = safeId(payload?.session_id);
+    if (!sid) return null;
+    const dir = guardDir(sid, env);
+    const refuse = () => { recordRefusedCall(payload, env); return reason; };
+    if (markerSet(path.join(dir, "mail"))) return refuse();
+    if (tool === "codex") return null;
+    let refused = new Set();
+    try { refused = new Set(readdirSync(dir).filter((name) => name.startsWith("refused-")).map((name) => name.slice("refused-".length))); }
+    catch (error) { if (error?.code !== "ENOENT") throw error; }
+    if (!transcriptHasToolUse(payload?.transcript_path, isMailTool, refused)) return null;
+    try { mkdirSync(dir, { recursive: true }); createMarker(path.join(dir, "mail")); }
+    catch (error) { note(`mail guard could not record the mail marker it found in the transcript: ${error?.message ?? error}`); }
+    return refuse();
+  } catch (error) {
+    note(`mail guard could not check this call for an earlier mail use, giving no decision: ${error?.message ?? error}`);
+    return null;
+  }
+}
+
+// The refusal reason for this call, or null.
+export function mailGuard(payload, env = process.env, options = {}) {
+  const mail = isMailTool(payload?.tool_name);
+  if (!mail && !usesProdToken(payload?.tool_name, payload?.tool_input)) {
+    if (handsTokenOn(payload?.tool_name, payload?.tool_input)) return mailOnlyRefusal(payload, env, options, handoffAfterMail(payload.tool_name));
+    const form = environmentDump(payload?.tool_name, payload?.tool_input);
+    return form ? mailOnlyRefusal(payload, env, options, dumpAfterMail(form)) : null;
+  }
+  try {
+    const steps = mailGuardSteps(payload, env, options);
+    let step = steps.next();
+    while (!step.done) step = steps.next();
+    return step.value;
+  } catch (error) {
+    if (!mail) return tokenFailClosed(error?.message ?? String(error));
+    note(`mail guard could not record this mail call, giving no decision (a later token command is still checked): ${error?.message ?? error}`);
+    return null;
   }
 }
 
@@ -935,41 +1672,230 @@ export function noProgress({ root, sid, command, failed }) {
 const PUSH_TIMEOUT_MS = 5_000;
 const ACCOUNT_NAME = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const GIT_GLOBAL_WITH_VALUE = new Set(["-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path", "--super-prefix", "--config-env"]);
-// Words that may stand before `git` in a command position: shell keywords and launchers.
-const LAUNCHER = new Set(["env", "command", "sudo", "exec", "nohup", "time", "timeout", "nice", "ionice", "xargs", "if", "elif", "while", "until",
-  "then", "do", "else", "!", "bash", "sh", "zsh", "dash", "-c", "-lc", "-ec", "-e"]);
-const launcherMaterial = (word) => LAUNCHER.has(word) || /^[A-Za-z_]\w*=/.test(word) || /^-/.test(word) || /^\d+(?:\.\d+)?[smhd]?$/.test(word);
+const GH_GLOBAL_WITH_VALUE = new Set(["-R", "--repo"]);
+// Words that may stand before `git` or `gh` in a command position: the launchers, each with the options that take a separate
+// value (so `sudo -u x git push` is read as the push it is), and the shell keywords and shells (`bash -c '...'`). Follow-up to
+// #342 "Not done". The same words, for gh only and without the shells, are LAUNCHER_OPTS in hooks/guard-bash-policy.mjs: a
+// launcher added here is added there. A launcher written with a path (`/usr/bin/sudo`) is not recognised, as before.
+const LAUNCHER_OPTS = new Map([
+  ["env", ["-u", "--unset", "-C", "--chdir", "-a", "--argv0"]], ["command", []], ["exec", ["-a"]], ["nohup", []], ["setsid", []], ["unbuffer", []],
+  ["sudo", ["-u", "--user", "-g", "--group", "-p", "--prompt", "-C", "--close-from", "-D", "--chdir", "-R", "--chroot", "-r", "--role", "-t", "--type", "-T", "--command-timeout", "-U", "--other-user"]],
+  ["time", ["-f", "--format", "-o", "--output"]], ["timeout", ["-s", "--signal", "-k", "--kill-after"]], ["nice", ["-n", "--adjustment"]],
+  ["ionice", ["-c", "--class", "-n", "--classdata", "-p", "--pid", "-P", "--pgid", "-u", "--uid"]], ["stdbuf", ["-i", "--input", "-o", "--output", "-e", "--error"]],
+  // No -I here: its value is usually `{}`, which is a blank to the tokenizer, so `xargs -I {} git push` would lose its `git`.
+  ["xargs", ["-L", "-n", "-P", "-s", "-d", "-E", "-a", "--max-args", "--max-procs", "--max-lines", "--max-chars", "--delimiter", "--arg-file"]],
+  ["if", []], ["elif", []], ["while", []], ["until", []], ["then", []], ["do", []], ["else", []], ["!", []], ["bash", []], ["sh", []], ["zsh", []], ["dash", []],
+].map(([name, opts]) => [name, new Set(opts)]));
+const ASSIGNMENT = /^[A-Za-z_]\w*=/;
+const DURATION = /^\d+(?:\.\d+)?[smhd]?$/;
+const GIT_WORD = /^(?:.*[\\/])?git(?:\.exe)?$/i;
+const GH_WORD = /^(?:.*[\\/])?gh(?:\.exe)?$/i;
+// The GraphQL mutations that merge a pull request, now or when its checks pass.
+const GRAPHQL_MERGE = /(?<![A-Za-z0-9])(?:mergePullRequest|enablePullRequestAutoMerge|enqueuePullRequest)(?![A-Za-z0-9])/;
+// The GraphQL endpoint as `graphql`, a path (`/graphql`) or a URL (`https://api.github.com/graphql`).
+// A trailing slash, query string or fragment is the same endpoint (`graphql/`, `graphql?x=1`).
+const GRAPHQL_ENDPOINT = /(?:^|\/)graphql\/?(?:[?#].*)?$/i;
+// gh's persistent options before the subcommand and between `pr` and `merge` (`-R o/r`, `--repo o/r`, `-Ro/r`, `--repo=o/r`):
+// the index of the first word that is not one of them. -R and --repo take a separate value when written bare.
+const skipGhOptions = (tokens, j) => {
+  while (j < tokens.length && tokens[j].startsWith("-")) j += GH_GLOBAL_WITH_VALUE.has(tokens[j]) ? 2 : 1;
+  return j;
+};
 
-// True when any segment of the command runs `git [global options] push`. Quotes are dropped first, so
-// `bash -c "cd x && git push"` is seen; every word before `git` must be a launcher, a keyword, an
-// option, a duration or an assignment, so a commit message that mentions "git push" is not. A quoted
-// value of git's `-c` (`-c k='a b'`) is squeezed into one word first.
-export function isGitPush(command) {
-  if (typeof command !== "string" || !/push/.test(command)) return false;
-  const squeezed = command
-    .replace(/=(["'])((?:(?!\1)[^])*)\1/g, (_, q, inner) => `=${inner.replace(/\s+/g, "_")}`)
-    .replace(/(\s-c\s+)(["'])((?:(?!\2)[^])*)\2/g, (whole, lead, q, inner) =>
-      /^[\w.-]+=/.test(inner) && !/\bgit\b/.test(inner) ? `${lead}${inner.replace(/\s+/g, "_")}` : whole);
-  const flat = squeezed.replace(/\$\(|[`"'(){}]/g, " ");
-  for (const segment of flat.split(/[;&|\r\n]+/)) {
-    const tokens = segment.split(/\s+/).filter(Boolean);
-    for (let i = 0; i < tokens.length; i++) {
-      if (!/^(?:.*[\\/])?git(?:\.exe)?$/i.test(tokens[i])) continue;
-      if (!tokens.slice(0, i).every(launcherMaterial)) continue;
-      let j = i + 1;
-      while (j < tokens.length && tokens[j].startsWith("-")) {
-        j += GIT_GLOBAL_WITH_VALUE.has(tokens[j]) ? 2 : 1;
-      }
-      if (tokens[j] === "push") return true;
+// The end of the quoted string that opens at `open`, or -1 when it never closes. A backslash escapes the next character in
+// double quotes (`"a \" b"`); single quotes take no escape. One forward scan from `open`.
+const DOUBLE_QUOTE_STOP = /[\\"]/g;
+function closingQuote(text, open) {
+  if (text[open] === "'") return text.indexOf("'", open + 1);
+  DOUBLE_QUOTE_STOP.lastIndex = open + 1;
+  for (let m = DOUBLE_QUOTE_STOP.exec(text); m; m = DOUBLE_QUOTE_STOP.exec(text)) {
+    if (m[0] === '"') return m.index;
+    DOUBLE_QUOTE_STOP.lastIndex = m.index + 2;
+  }
+  return -1;
+}
+
+// A backslash-newline is gone before the shell reads a word (inside a word too: `pu\<LF>sh` is `push`), but only after an ODD run
+// of backslashes, and never at the end of a comment (`# note\<LF>gh pr merge 5` is a comment and a command). Deciding which is
+// which needs a full shell parse, so both readings are checked (round 1 of the #342 follow-up): the text as written, where the
+// newline always separates, and the text with every backslash-newline removed. A command found in either one counts; the cost of
+// a wrong reading is a refusal on the failure path only. The first two readings alone missed a command with both kinds of
+// newline, so the third reading follows the shell (shellJoin, round 2).
+// The text as the shell joins it: a backslash-newline is removed only where the backslash is a live escape (outside single quotes,
+// not itself escaped by a backslash before it) and never inside a `#` comment, which ends at the newline. One forward pass.
+// Round 2 of the #342 follow-up: the raw and the fully joined readings both missed a command that has one real continuation and
+// one that is not (`echo a\\<LF>gh pr mer\<LF>ge 5`, `# c\<LF>git \<LF>push`). The same function is in the other file
+// (scripts/wow-hook.mjs and hooks/guard-bash-policy.mjs); a test pins that both give the same text.
+// `$'` opens ANSI-C quoting only at an unescaped `$` that is not the second of `$$` (`\$'a\'` and `$$'a\'` are plain quotes); with
+// ansiC false the text is read as the round-2 reading did, and both readings are checked (final check of #344).
+export function shellJoin(text, ansiC = true) {
+  let out = "", quote = "", wordStart = true, comment = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (comment) { out += c; if (c === "\n") { comment = false; wordStart = true; } continue; }
+    if (quote === "'") { out += c; if (c === "'") quote = ""; continue; }
+    // `$'..'` (ANSI-C quoting) takes backslash escapes, so `$'\''` is one string; nothing in it is a continuation.
+    if (quote === "$") { out += c; if (c === "\\") { out += text[i + 1] ?? ""; i += 1; } else if (c === "'") quote = ""; continue; }
+    if (c === "\\") {
+      if (text[i + 1] === "\n") { i += 1; continue; }
+      if (text[i + 1] === "\r" && text[i + 2] === "\n") { i += 2; continue; }
+      out += c + (text[i + 1] ?? ""); i += 1; wordStart = false; continue;
     }
+    if (quote === '"') { out += c; if (c === '"') quote = ""; continue; }
+    if (c === "$" && (text[i + 1] === "$" || (ansiC && text[i + 1] === "'"))) {
+      if (text[i + 1] === "'") quote = "$";
+      out += c + text[i + 1]; i += 1; wordStart = false; continue;
+    }
+    if (c === "'" || c === '"') { quote = c; out += c; wordStart = false; continue; }
+    if (c === "#" && wordStart) { comment = true; out += c; continue; }
+    wordStart = /[\s;&|()<>]/.test(c);
+    out += c;
+  }
+  return out;
+}
+const joinContinuations = (command) => command.replace(/\\\r?\n/g, "");
+// Three readings, and a command found in any one counts: as written, with every continuation removed, and as the shell joins it
+// (with and without ANSI-C quoting, so a misread `$'` can only add a refusal).
+const readings = (command) => [...new Set([command, joinContinuations(command), shellJoin(command), shellJoin(command, false)])];
+
+// The words of each shell segment of a command, shared by isGitPush and isMergeCommand so both read quoting the same way.
+// One left-to-right pass, so it is linear in the command's length (every quote is looked up at most once, and a quote with no
+// partner is skipped). Words split at whitespace; segments at `;`, `&`, `|` and newlines; `$(`, backticks, parentheses and braces
+// are blanks. A quoted string is ONE word (data: the spaces and separators inside it do not split) in exactly two places: right
+// after `=` (`A="x;y" git push`, `--git-dir="a b"`) and as the value of an option that takes one (`git -C "a b" push`,
+// `sudo -u "x y"`, `gh -R "o/r"`). Anywhere else the quote characters are blanks and the inside is read as code, so
+// `bash -c "cd x && git push"` is seen. A double-quoted string that holds a command substitution (`A="$(git push)" true`) is read
+// as code in both places, because it runs. `$'..'` and an escaped quote outside a quoted string are not understood (habit
+// forms only, as in the policy).
+function commandSegments(text) {
+  const segments = [];
+  // `eq` is whether the word being built ends in `=`. It is tracked, not asked of `cur` (cur.endsWith("=") flattened the growing
+  // string on every quote: 600 KB of `A="` took 8 s, round 1 of the #342 follow-up).
+  let words = [], cur = null, eq = false, valueOptions = null;
+  const endWord = () => {
+    if (cur === null) return;
+    eq = false;
+    words.push(cur);
+    if (LAUNCHER_OPTS.has(cur)) valueOptions = LAUNCHER_OPTS.get(cur);
+    else if (GIT_WORD.test(cur)) valueOptions = GIT_GLOBAL_WITH_VALUE;
+    else if (GH_WORD.test(cur)) valueOptions = GH_GLOBAL_WITH_VALUE;
+    cur = null;
+  };
+  const endSegment = () => { endWord(); if (words.length) segments.push(words); words = []; valueOptions = null; };
+  const PLAIN = /[^\s;&|"'`(){}$]+|\$(?!\()/y;
+  for (let i = 0; i < text.length;) {
+    const ch = text[i];
+    if (ch === '"' || ch === "'") {
+      const dataPlace = cur === null ? valueOptions !== null && words.length > 0 && valueOptions.has(words[words.length - 1]) : eq;
+      const close = dataPlace ? closingQuote(text, i) : -1;
+      if (close > i) {
+        const inner = text.slice(i + 1, close);
+        if (ch === "'" || !(inner.includes("$(") || inner.includes("`"))) {
+          cur = (cur ?? "") + inner.replace(/\s+/g, "_");
+          if (inner) eq = inner.endsWith("=");
+          i = close + 1;
+          continue;
+        }
+      }
+      endWord(); i++;
+    } else if (ch === ";" || ch === "&" || ch === "|" || ch === "\n" || ch === "\r") {
+      endSegment(); i++;
+    } else if (ch === "$" && text[i + 1] === "(") {
+      endWord(); i += 2;
+    } else {
+      PLAIN.lastIndex = i;
+      const run = PLAIN.exec(text);
+      if (run) { cur = (cur ?? "") + run[0]; eq = run[0].endsWith("="); i += run[0].length; } else { endWord(); i++; }
+    }
+  }
+  endSegment();
+  return segments;
+}
+
+// One pass over a segment: `runs(tokens, i)` says whether the command that starts at word i is the one looked for. A command
+// counts only while every word before it is launcher material (a launcher, a launcher option and its value, an assignment, an
+// option, a duration), and the first word that is not ends the scan of this segment (a later command could never pass that
+// test), so a long command stays linear and a commit message that mentions "git push" is not a push.
+function commandInChain(tokens, runs) {
+  let valueOptions = null;
+  for (let i = 0; i < tokens.length;) {
+    const word = tokens[i];
+    if (runs(tokens, i)) return true;
+    if (LAUNCHER_OPTS.has(word)) { valueOptions = LAUNCHER_OPTS.get(word); i++; }
+    else if (ASSIGNMENT.test(word) || DURATION.test(word)) i++;
+    else if (word.startsWith("-")) i += valueOptions?.has(word) ? 2 : 1;
+    else return false;
   }
   return false;
 }
 
+function runsGitPush(tokens, i) {
+  if (!GIT_WORD.test(tokens[i])) return false;
+  let j = i + 1;
+  while (j < tokens.length && tokens[j].startsWith("-")) j += GIT_GLOBAL_WITH_VALUE.has(tokens[j]) ? 2 : 1;
+  return tokens[j] === "push";
+}
+
+// True when any segment of the command runs `git [global options] push`.
+export function isGitPush(command) {
+  if (typeof command !== "string") return false;
+  return readings(command).some((text) => /push/.test(text) && commandSegments(text).some((tokens) => commandInChain(tokens, runsGitPush)));
+}
+
+function runsGhMerge(tokens, i, mutationInText = () => false) {
+  if (!GH_WORD.test(tokens[i])) return false;
+  // gh's repository option may come before the subcommand, and between `pr` and `merge`, and takes a separate value
+  // (`gh -R o/r pr merge 5`, `gh pr -R o/r merge 5`).
+  const j = skipGhOptions(tokens, i + 1);
+  const sub = (tokens[j] ?? "").toLowerCase();
+  if (sub === "pr") return (tokens[skipGhOptions(tokens, j + 1)] ?? "").toLowerCase() === "merge";
+  // No `--help` exemption: on the failure path a refused help request costs nothing, and the exemption let real merges through
+  // (`gh pr merge 5 -b "--help"`, `gh pr merge 5 > --help`; round 2 of the #342 follow-up).
+  if (sub !== "api") return false;
+  let graphql = false, mutation = false;
+  for (let k = j + 1; k < tokens.length; k++) {
+    if (/\/pulls\/\d+\/merge$/i.test(tokens[k])) return true;
+    if (GRAPHQL_ENDPOINT.test(tokens[k])) graphql = true;
+    if (GRAPHQL_MERGE.test(tokens[k])) mutation = true;
+  }
+  // A quoted argument that holds a newline (`-f 'query=mutation {<LF> mergePullRequest(...)'`) is split into segments by this
+  // tokenizer, so the mutation may sit in a later segment: when this segment names the endpoint, the whole text is read.
+  return graphql && (mutation || mutationInText());
+}
+
+// True when any segment of the command runs `gh pr merge`, an API merge (`gh api .../pulls/<n>/merge`) or a GraphQL merge
+// mutation (`gh api graphql` naming mergePullRequest or enablePullRequestAutoMerge): the merge commands
+// hooks/guard-bash-policy.mjs refuses. That policy is not loaded on the failure path (the hook may be the thing that broke), so
+// this is a deliberately narrow copy of its shapes, with the same tokenizer and launcher handling as isGitPush. It runs only to
+// decide fail-closed, so a miss costs nothing the policy would not also have caught in a healthy run. A plain local `git merge`
+// is an ordinary operation, not a hard stop. Left out (follow-up to #342): gh aliases, `$'..'`, a query read from a file
+// (`-F query=@file`, `--input`).
+export function isMergeCommand(command) {
+  if (typeof command !== "string") return false;
+  return readings(command).some((text) => {
+    if (!/merge|enqueuePullRequest/i.test(text)) return false;
+    let anyMutation; // GRAPHQL_MERGE over the whole text, once (a long run of `gh api graphql` segments must not rescan it)
+    const mutationInText = () => anyMutation ??= GRAPHQL_MERGE.test(text);
+    return commandSegments(text).some((tokens) => commandInChain(tokens, (words, i) => runsGhMerge(words, i, mutationInText)));
+  });
+}
+
+// A shell call that carries a hard stop (the push and merge stops: AGENTS.md rule 3 and the reserved actions). When the
+// hook fails after it started (deadline, internal error), these are DENIED instead of allowed; every other call stays fail-open.
+export function isHardStopShell(payload) {
+  const name = payload?.tool_name;
+  const input = payload?.tool_input;
+  const shell = name === "Bash" || ((name === undefined || name === null) && typeof input?.command === "string");
+  return shell && typeof input?.command === "string" && (isGitPush(input.command) || isMergeCommand(input.command));
+}
+
 // The newest lease as bus.mjs prints it (`lease --json`: {account, sessions: [{project, session}]} or
 // null for no lease), read under PUSH_TIMEOUT_MS. Throws a one-line reason when it cannot be read; the
-// push check fails open on that. (The trust gate reads the lease authority instead, below, and fails closed.)
-async function readLease(cwd, run = runChild) {
+// push check fails open on that. (The trust gate reads the lease authority instead, below, and fails closed.) The bus
+// repository must come from the environment, exactly as in readAuthority: the project's .claude/bus.json and the user bus
+// config are files the session can edit, so a lease that bus.mjs would read through them is no lease (fail-open here).
+async function readLease(cwd, env = process.env, run = runChild) {
+  if (!trustedBusRepo(env)) throw new Error("the trusted bus repository (WOW_BUS_REPO) is not set, so the account lease could not be read");
   const bus = path.join(path.dirname(SELF), "bus.mjs");
   if (!existsSync(bus)) throw new Error("bus.mjs is not next to this hook");
   const result = await run(cwd, bus, ["lease", "--json"], "", PUSH_TIMEOUT_MS);
@@ -982,7 +1908,7 @@ async function readLease(cwd, run = runChild) {
 }
 
 // The deny reason, or null to allow. `run` is injectable for tests.
-export async function pushCheck({ command, cwd, env = process.env, run = runChild, fresh = false, transcriptPath, leaseAccount }) {
+export async function pushCheck({ command, cwd, env = process.env, run = runChild, fresh = false, transcriptPath, leaseAccount, leaseFailed = false }) {
   if (!isGitPush(command)) return null;
   // Only a weekly Patrol started after the switch may push from another account (founder 2026-11-05, Patrols kept on
   // their own account); any other fresh session there (an old master's routine, an old lane's child) is still refused.
@@ -994,9 +1920,12 @@ export async function pushCheck({ command, cwd, env = process.env, run = runChil
   const label = typeof env.WOW_ACCOUNT_LABEL === "string" ? env.WOW_ACCOUNT_LABEL : "";
   if (!label) return null;
   if (!ACCOUNT_NAME.test(label)) { note(`push check skipped: WOW_ACCOUNT_LABEL '${label}' is not a valid account label; allowing the push (fail-open)`); return null; }
+  // This call's fence read already failed (a bus outage): reading the lease again would wait out a second timeout and could
+  // push the whole hook past its deadline. The outage's contract is to allow, so reuse the failure.
+  if (leaseFailed && typeof leaseAccount !== "string") { note("push check skipped: this call's lease read already failed; allowing the push (fail-open)"); return null; }
   let lease;
   try {
-    lease = typeof leaseAccount === "string" ? { account: leaseAccount } : await readLease(cwd, run);
+    lease = typeof leaseAccount === "string" ? { account: leaseAccount } : await readLease(cwd, env, run);
   } catch (error) {
     note(`push check skipped: ${String(error?.message ?? error).split("\n")[0]}; allowing the push (fail-open)`);
     return null;
@@ -1062,10 +1991,11 @@ async function cachedAuthority(cwd, env, run, now) {
     const cached = JSON.parse(readFileSync(file, "utf8"));
     const age = typeof cached?.at === "number" ? now - cached.at : -1;
     // A failed read is cached for a minute too, so a bus outage costs one 5 s wait per minute, not one per tool call.
-    if (cached?.error && age >= 0 && age < FENCE_FAIL_CACHE_MS) throw new Error(`${cached.error} (cached)`);
+    // Tagged by property, not by text: a planted error string (one with a newline, say) cannot pass for a fresh failure.
+    if (cached?.error && age >= 0 && age < FENCE_FAIL_CACHE_MS) throw Object.assign(new Error(`${cached.error} (cached)`), { cached: true });
     if (!cached?.error && age >= 0 && age < FENCE_CACHE_MS) return cached.authority;
   } catch (error) {
-    if (/\(cached\)$/.test(String(error?.message))) throw error;
+    if (error?.cached === true) throw error;
   }
   let authority;
   try {
@@ -1090,8 +2020,12 @@ export async function fenceCheck({ toolName, transcriptPath, cwd, env = process.
   try {
     authority = await cachedAuthority(cwd, env, run, now);
   } catch (error) {
-    note(`old-account fence skipped: ${String(error?.message ?? error).split("\n")[0]}; allowing (fail-open)`);
-    return { fenced: false, fresh: false };
+    const why = String(error?.message ?? error).split("\n")[0];
+    note(`old-account fence skipped: ${why}; allowing (fail-open)`);
+    // Only a read this call waited out to its timeout counts: the push check skips its own read just to avoid a second
+    // timeout. A failure served from the minute-long cache, or a fast failure (bus.mjs exits 1), cost no time, so the push
+    // check still reads the lease itself (a stale or planted cache file must not switch both checks off).
+    return { fenced: false, fresh: false, leaseFailed: error?.timedOut === true && error?.cached !== true };
   }
   const account = authority && typeof authority === "object" ? authority.account : null;
   if (typeof account !== "string" || !ACCOUNT_NAME.test(account)) return { fenced: false, fresh: false };
@@ -1155,7 +2089,8 @@ async function readAuthority(cwd, env, run) {
     if (result.error || result.timedOut || result.code !== 0) throw new Error(result.timedOut ? "timed out" : result.error?.message ?? `bus.mjs exit ${result.code}`);
     return JSON.parse(result.stdout.trim());
   } catch (error) {
-    throw new Error(`the account lease could not be read (${String(error?.message ?? error).split("\n")[0]})`);
+    throw Object.assign(new Error(`the account lease could not be read (${String(error?.message ?? error).split("\n")[0]})`),
+      { timedOut: result?.timedOut === true });
   }
 }
 
@@ -1673,16 +2608,29 @@ function fleetForReads(env = process.env) {
 // Codex sends its shell payload without a tool_name: a payload with no name and a string command is its Bash.
 const ROUTED_TOOL = (name, input) => name === "Bash" || ((name === undefined || name === null) && typeof input?.command === "string")
   || name === ADD_REPO_TOOL || isCreateSession(name) || isConfirmTrust(name);
-async function preToolUse(root, payload, cwd, workDir = cwd, stops = {}) {
+// How far this call's pre-tool-use got: run()'s watchdog and catch read it (one call per process).
+const STAGE = { shellPolicyDecided: false };
+async function preToolUse(root, payload, cwd, workDir = cwd, stops = {}, tool = "claude") {
   // The settings route every tool here ("*") for the old-account fence; everything else below is per tool.
   const fence = await fenceCheck({ toolName: payload?.tool_name, transcriptPath: payload?.transcript_path, cwd: workDir });
-  if (fence.fenced) return `${JSON.stringify(denyResponse(fence.reason))}\n`;
+  // A refused mail or token call ran nothing: the mail guard does not count its tool_use (recordRefusedCall).
+  if (fence.fenced) { recordRefusedCall(payload); return `${JSON.stringify(denyResponse(fence.reason))}\n`; }
   // Before the hard stops: the deny lists carry this tool too (the static backup), but its own reason says what to do.
   if (isConfirmTrust(payload?.tool_name)) return `${JSON.stringify(denyResponse(TRUST_REFUSAL))}\n`;
   if (typeof payload?.tool_name === "string" && payload.tool_name.startsWith("mcp__")) {
-    const entry = hardStopEntry(payload.tool_name, hardStopDeny(stops));
-    if (entry) return `${JSON.stringify(denyResponse(hardStopReason(payload.tool_name, entry)))}\n`;
+    const { deny, unreadable } = hardStopDeny(stops);
+    const entry = hardStopEntry(payload.tool_name, deny);
+    if (entry) { recordRefusedCall(payload); return `${JSON.stringify(denyResponse(hardStopReason(payload.tool_name, entry)))}\n`; }
+    // A settings file that exists and cannot be read hides entries this call may match: fail closed, naming the file.
+    if (unreadable.length) { recordRefusedCall(payload); return `${JSON.stringify(denyResponse(unreadableSettingsReason(payload.tool_name, unreadable[0])))}\n`; }
   }
+  // The mail guard (SECURITY_CORE §1a): after the fence, the trust refusal and the hard stops (a call they refuse runs
+  // nothing, so it records no marker, only its refused tool_use_id), before every other rule, on every tool (the "*"
+  // wiring) and with no consumer root, so a consumer or comms copy runs it too. Not before the fence's bus read (review of
+  // #278, L4): a marker is never removed, so it may be written only once every earlier refusal has passed; a mail call the
+  // deadline lets through is marked by run() instead.
+  const mailReason = mailGuard(payload, process.env, { tool });
+  if (mailReason) return `${JSON.stringify(denyResponse(mailReason))}\n`;
   if (!ROUTED_TOOL(payload?.tool_name, payload?.tool_input)) return "";
   if (payload?.tool_name === ADD_REPO_TOOL) {
     const decision = busAttachDecision(payload.tool_input) ?? wowCoreAttachDecision(payload.tool_input)
@@ -1698,26 +2646,62 @@ async function preToolUse(root, payload, cwd, workDir = cwd, stops = {}) {
   const authorityWrite = await leaseAuthorityGuard({ command, cwd: workDir });
   if (authorityWrite) return `${JSON.stringify(denyResponse(authorityWrite))}\n`;
   if (root) touchMarker(root, payload.session_id);
-  let policyFailed = false;
-  const policy = root ? firstExisting(root, [".claude/hooks/guard-bash-policy.mjs", "hooks/guard-bash-policy.mjs"]) : null;
+  // The shell policy carries the merge and send stops. It is taken from this hook's own install first (the checkout that
+  // holds this script), then from the cwd's repository: a repository the shell has moved into can neither swap in its own
+  // policy (a no-op copy would switch the stops off) nor lock every Bash call by lacking one (review round 2 on #340, M1).
+  // Where the install ships the policy (a full consumer, stamped .claude/wow-core.version, or wow-core itself), its absence,
+  // an import failure or a throw is a refusal, never a pass (round 1, F3). Only Bash is refused: Edit and Write still work,
+  // so the session can restore the file. A `lessons` consumer ships no policy, and a comms consumer is no consumer here
+  // (root is null): neither is refused. A user-level copy takes the policy copied beside it, never the cwd's repository's (below). The install's
+  // policy applies wherever the shell is, also in a plain folder or an unstamped repository (root is null there; deferred by
+  // the review of #340), so moving out of the consumer cannot switch the merge and send stops off.
+  const POLICY = [".claude/hooks/guard-bash-policy.mjs", "hooks/guard-bash-policy.mjs"];
+  const install = stops.own ?? null;
+  const ships = (dir) => Boolean(dir) && (has(dir, ".claude/wow-core.version") || isWowCore(dir));
+  // An install with no checkout (the user-level Codex copy in ~/.codex/wow-core) has the policy that scripts/install.ps1 copied
+  // beside this script, and only that one: the cwd's repository is attacker-influenced input, so it never supplies the policy
+  // (a planted copy would also run at import). Follow-up to #342 "Not done".
+  const installDir = install ?? path.dirname(SELF);
+  const BESIDE = "guard-bash-policy.mjs";
+  const installPolicy = firstExisting(installDir, install ? POLICY : [BESIDE]);
+  const expected = install ? ships(install) : ships(root);
+  // An install that ships the policy never falls back to the cwd's copy: its own missing file is the refusal below.
+  const rootPolicy = install && !installPolicy && root && !expected ? firstExisting(root, POLICY) : null;
+  const policyBase = installPolicy ? installDir : root;
+  const policy = installPolicy ?? rootPolicy;
+  const policyUnavailable = (why, base, rel) => {
+    const how = !install && base === installDir
+      ? "re-run scripts/install.ps1 from wow-core, which copies the policy beside this hook"
+      : `from a terminal in ${toPosix(base)}, \`git checkout -- ${rel}\`), or re-sync that checkout from wow-core.`;
+    const ending = !install && base === installDir ? `${how}).` : how;
+    return `${JSON.stringify(denyResponse(`wow-core: the shell policy is unavailable (${why}), so this Bash call is refused: the merge and send stops cannot run without it. Restore ${toPosix(path.join(base, rel))} (Edit or Write still work; ${ending}`))}\n`;
+  };
   if (policy) {
     try {
-      const { evaluate, response } = await import(pathToFileURL(path.resolve(root, policy)).href);
+      const { evaluate, response } = await import(pathToFileURL(path.resolve(policyBase, policy)).href);
       const reason = evaluate(command, workDir);
       if (reason) return `${JSON.stringify(response(reason))}\n`;
     } catch (error) {
-      policyFailed = true;
-      note(`bash policy failed, no read allow: ${error?.message ?? error}`);
+      const why = String(error?.message ?? error).split("\n")[0].slice(0, 160);
+      note(`bash policy failed, refusing the call: ${why}`);
+      return policyUnavailable(`${policy} failed: ${why}`, policyBase, policy);
     }
+  } else if (expected) {
+    note("bash policy missing, refusing the call");
+    if (!install) return policyUnavailable("guard-bash-policy.mjs is missing beside this hook", installDir, BESIDE);
+    return policyUnavailable("guard-bash-policy.mjs is missing", install, isWowCore(install) ? "hooks/guard-bash-policy.mjs" : ".claude/hooks/guard-bash-policy.mjs");
   }
-  const guard = guardSharedTree({ command, sid: payload.session_id, cwd });
+  // The merge and send stops have decided (none applied or none was due). What follows is the shared-tree guard, which
+  // refuses on its own failures, and the push check, whose lease read is fail-open by contract: so run()'s failure paths
+  // stop denying push and merge commands from here on.
+  STAGE.shellPolicyDecided = true;
+  const guard = guardSharedTree({ command, sid: payload.session_id, cwd, workDir });
   for (const warning of guard.warnings) note(warning);
   if (guard.reason) return `${JSON.stringify(denyResponse(guard.reason))}\n`;
-  const pushReason = await pushCheck({ command, cwd: workDir, fresh: fence.fresh, transcriptPath: payload?.transcript_path, leaseAccount: fence.account });
+  const pushReason = await pushCheck({ command, cwd: workDir, fresh: fence.fresh, transcriptPath: payload?.transcript_path, leaseAccount: fence.account, leaseFailed: fence.leaseFailed });
   if (pushReason) return `${JSON.stringify(denyResponse(pushReason))}\n`;
   // Last, so no deny above is ever overridden: a routine read the grammar fully parsed is allowed (no decision otherwise).
-  // A failed bash policy must never end in this hook's allow.
-  const read = policyFailed ? null : readCommandDecision(command, { fleet: fleetForReads() });
+  const read = readCommandDecision(command, { fleet: fleetForReads() });
   return read ? `${JSON.stringify(read)}\n` : "";
 }
 
@@ -1740,7 +2724,7 @@ export async function dispatch(mode, raw, tool, { viaParent = false, env = proce
   // turns all start in the parent still follows the checkout's settings (ownership limits that write to this checkout's file).
   const seeding = !viaParent && sameDir(found, own) && sameDir(env.CLAUDE_PROJECT_DIR, own);
   if (tool === "claude" && (mode === "pre-tool-use" || mode === "session-start") && (seeding || viaParent)) ensureParentHooks({ root: own, env, create: seeding });
-  if (mode === "pre-tool-use") return preToolUse(root, payload, cwd, workDir, { own, repoRoot, parentTurn: viaParent || fromParent });
+  if (mode === "pre-tool-use") return preToolUse(root, payload, cwd, workDir, { own, repoRoot, parentTurn: viaParent || fromParent }, tool);
   if (!root) return "";
   switch (mode) {
     case "post-tool-use":
@@ -1764,9 +2748,16 @@ export async function dispatch(mode, raw, tool, { viaParent = false, env = proce
   }
 }
 
-// The one tool whose failure must not fall back to the host's normal flow: if the hook cannot finish in time, or
-// breaks, confirm_repository_trust is DENIED (fail closed; the other tools fail open as before).
+// The calls whose failure must not fall back to the host's normal flow: if the hook cannot finish in time, or breaks,
+// confirm_repository_trust is DENIED (fail closed), and so is a command that names BWS_PROD_TOKEN (the mail guard,
+// SECURITY_CORE §1a), at any stage. So is a Bash git push or merge command, the two shell hard stops (deferred by the review
+// of #340), while the shell policy has not yet decided; the other calls, and the push or merge after the policy has run,
+// fail open as before.
 const denyTrustOnFailure = (why) => `${JSON.stringify(denyResponse(`wow-core: confirm_repository_trust is refused: the trust gate ${why}, so it fails closed (COMMS_CORE §1).`))}\n`;
+
+const denyTokenOnFailure = (why) => `${JSON.stringify(denyResponse(tokenFailClosed(`the hook ${why}`)))}\n`;
+
+const denyShellOnFailure = (why) => `${JSON.stringify(denyResponse(`wow-core: this shell call is refused: the hook ${why}, so a git push or merge command fails closed (the push and merge stops cannot be checked; AGENTS.md rule 3). Retry the call; if it keeps failing, restore the hook (re-sync this checkout from wow-core) or hand the push or merge to the founder. Only push and merge commands are refused this way (a gh api call to a pulls/<n>/merge path included, whatever its method).`))}\n`;
 
 export async function run(forcedTool) {
   const mode = process.argv[2];
@@ -1776,24 +2767,52 @@ export async function run(forcedTool) {
     return;
   }
   // Known limit (review 2026-11-04): the tool name is in the stdin payload, so a hook that hangs before stdin
-  // arrives, or crashes at startup before this line, cannot know it is the trust call and fails open like every
-  // other tool. That outcome is the host's normal permission flow, not an allow: the settings' permissions.deny
-  // refuses the tool there too, and the founder, who answers any card, declines every one (COMMS_CORE §1).
+  // arrives cannot know it is the trust call (or a push or merge) and fails open like every other tool (the watchdog below allows). That
+  // outcome is the host's normal permission flow, not an allow: the settings' permissions.deny refuses the tool there
+  // too, and the founder, who answers any card, declines every one (COMMS_CORE §1). A hook that crashes before this
+  // line (a syntax error) never reaches this code: with onFailure block on the wired PreToolUse entry the host blocks
+  // the call, whatever the tool.
   let trustCall = false;
+  let tokenCall = null;
+  let shellStop = false;
+  let mailCall = null;
+  // A push or merge command is denied on failure only until the shell policy (the merge and send stops) has decided; the
+  // lease checks after it (shared-tree guard, push check) keep their fail-open contract, so a bus outage never refuses a push.
+  const denyShell = () => shellStop && !STAGE.shellPolicyDecided;
+  // A token command is denied on failure at any stage (the mail guard; its refused tool_use is not counted as use). A mail
+  // tool fails open there, so it records the session's mail marker first (review of #278, L4).
+  const failClosed = (why) => {
+    if (trustCall) return denyTrustOnFailure(why);
+    if (tokenCall) { recordRefusedCall(tokenCall); return denyTokenOnFailure(why); }
+    if (denyShell()) return denyShellOnFailure(why);
+    if (mailCall) markMailUnchecked(mailCall);
+    return "";
+  };
+  const failing = () => (trustCall ? "denying the trust call (fail-closed)" : tokenCall ? "denying the token command (fail-closed)"
+    : denyShell() ? "denying the push or merge command (fail-closed)" : "fail-open");
   const watchdog = setTimeout(() => {
-    note(`${mode} exceeded its ${DEADLINE_MS[mode] / 1000} s deadline; ${trustCall ? "denying the trust call (fail-closed)" : "allowing (fail-open)"}`);
-    finish(trustCall ? denyTrustOnFailure(`exceeded its ${DEADLINE_MS[mode] / 1000} s deadline`) : "");
+    note(`${mode} exceeded its ${DEADLINE_MS[mode] / 1000} s deadline; ${failing().replace("fail-open", "allowing (fail-open)")}`);
+    finish(failClosed(`exceeded its ${DEADLINE_MS[mode] / 1000} s deadline`));
   }, DEADLINE_MS[mode]);
   watchdog.unref();
   try {
     const raw = await readStdin();
-    trustCall = mode === "pre-tool-use" && isConfirmTrust(parsePayload(raw)?.tool_name);
-    const tool = forcedTool ?? detectTool(process.argv, process.env, parsePayload(raw));
+    const parsed = parsePayload(raw);
+    trustCall = mode === "pre-tool-use" && isConfirmTrust(parsed?.tool_name);
+    // Known before anything that can hang or throw: a token command and a push or merge command are also refused on failure.
+    tokenCall = mode === "pre-tool-use" && !trustCall && usesProdToken(parsed?.tool_name, parsed?.tool_input) ? parsed : null;
+    shellStop = mode === "pre-tool-use" && !trustCall && isHardStopShell(parsed);
+    mailCall = mode === "pre-tool-use" && isMailTool(parsed?.tool_name) ? parsed : null;
+    const tool = forcedTool ?? detectTool(process.argv, process.env, parsed);
     finish(await dispatch(mode, raw, tool, { viaParent: process.argv.includes(VIA_PARENT) }));
   } catch (error) {
-    note(`internal error, ${trustCall ? "denying the trust call (fail-closed)" : "fail-open"}: ${String(error?.stack ?? error).split("\n")[0]}`);
-    finish(trustCall ? denyTrustOnFailure("hit an internal error") : "");
+    note(`internal error, ${failing()}: ${String(error?.stack ?? error).split("\n")[0]}`);
+    finish(failClosed("hit an internal error"));
   }
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === SELF) await run();
+// Both sides by real path: SELF comes from import.meta.url, which node resolves through symlinks, while argv[1] is only
+// made absolute, so a CLAUDE_PROJECT_DIR that goes through a symlink would never match and run() would be skipped, exit 0
+// with no output, every hard stop off (security review 2026-11-14, F1). realpathSync.native also unifies Windows 8.3 names.
+const realFile = (file) => { try { return realpathSync.native(file); } catch { try { return realpathSync(file); } catch { return path.resolve(file); } } };
+if (process.argv[1] && realFile(process.argv[1]) === realFile(SELF)) await run();

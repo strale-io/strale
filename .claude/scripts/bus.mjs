@@ -12,6 +12,10 @@ const NAME = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const BODY_LIMIT = 60_000;
 const DEFAULT_FROM = 'session';
 const ASK_CHANNEL = 'needs-founder';
+// The founder's reserved list (PACE_CORE §5 "Ask classes", AGENTS.md "North star"): an ask names one of these,
+// or `gap` for work an agent should have been able to do, with the mechanism that would remove it.
+export const RESERVED_CLASSES = ['pay', 'terms', 'account', 'credential', 'signin', 'delete', 'publish', 'send', 'access', 'spend', 'direction'];
+const ASK_CLASSES = [...RESERVED_CLASSES, 'gap'];
 // The account lock (PACE_CORE §2a "Account takeover"): the newest LEASE names the sessions that may act.
 export const LEASE_CHANNEL = 'fleet-lease';
 const CLOUD_SESSION = /^(?:session|cse)_[A-Za-z0-9]+$/;
@@ -32,7 +36,7 @@ function parse(argv) {
     read: new Set(['--channel', '--peek', '--from-now', '--json']),
     channels: new Set(['--json']),
     inbox: new Set(['--config', '--project', '--channel', '--json']),
-    ask: new Set(['--project', '--ask', '--why', '--deadline', '--rec', '--from']),
+    ask: new Set(['--project', '--ask', '--why', '--deadline', '--rec', '--class', '--remove', '--from']),
     done: new Set(['--note', '--from']),
     asks: new Set(['--open', '--project', '--json']),
     digest: new Set(['--channel', '--post', '--now', '--from']),
@@ -75,6 +79,12 @@ function parse(argv) {
     for (const key of ['ask', 'why', 'deadline', 'rec']) if (options[key] === undefined) throw new UsageError(`--${key} is required`);
     for (const key of ['project', 'ask', 'why', 'rec']) validateField(key, options[key]);
     if (options.deadline !== 'none' && !validDate(options.deadline)) throw new UsageError('--deadline must be YYYY-MM-DD or none');
+    if (!ASK_CLASSES.includes(options.class)) throw new UsageError(`--class is required: one of ${ASK_CLASSES.join(', ')} (PACE_CORE §5 "Ask classes")`);
+    if (options.class === 'gap') {
+      if (options.remove === undefined) throw new UsageError('--class gap needs --remove "<the key, automation or rule that would make this agent work>"');
+      validateField('remove', options.remove);
+    } else if (options.remove !== undefined) throw new UsageError('--remove goes only with --class gap');
+    if ([...`[${options.class}] ${options.ask}`].length > 200) throw new UsageError('--ask must be 1-200 characters with its class tag');
   } else if (command === 'done') {
     if (!/^[0-9]+$/.test(options._?.[0] || '')) throw new UsageError('done needs a numeric ask-id');
     if (options.note !== undefined) validateField('note', options.note);
@@ -291,8 +301,10 @@ function malformedRow(comment, body) {
   const first = body.split('\n', 1)[0].replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, '');
   const project = (first.match(/^ASK ([^|]+?) \|/) || first.match(/^DONE ([a-z][a-z0-9-]{0,62})(?: |$)/) || [])[1]?.trim() || '';
   return { id: comment.id, createdAt: comment.created_at, project, ask: [...first].slice(0, 160).join(''), why: '', deadline: 'none',
-    recommendation: 'repost with bus.mjs ask, then close this one with bus.mjs done', state: 'malformed' };
+    recommendation: 'repost with bus.mjs ask, then close this one with bus.mjs done', state: 'malformed', class: 'unclassified' };
 }
+// An ask posted before classes existed (2026-11-15), or by hand, reads as `unclassified`; the digest counts it apart.
+function askClass(text) { const tag = text.match(/^\[([a-z]+)\] /); return tag && ASK_CLASSES.includes(tag[1]) ? tag[1] : 'unclassified'; }
 export function openAsks(comments) {
   const asks = [];
   const ordered = [...comments].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at) || Number(a.id) - Number(b.id));
@@ -307,7 +319,7 @@ export function openAsks(comments) {
     }
     const match = body.match(/^ASK ([^|\r\n]+) \| ([^|\r\n]+) \| ([^|\r\n]+) \| (none|\d{4}-\d{2}-\d{2}) \| ([^|\r\n]+)(?:\n|$)/);
     if (match && (match[4] === 'none' || validDate(match[4]))) asks.push({ id: comment.id, createdAt: comment.created_at, project: match[1].trim(), ask: match[2].trim(),
-      why: match[3].trim(), deadline: match[4], recommendation: match[5].trim(), state: 'open' });
+      why: match[3].trim(), deadline: match[4], recommendation: match[5].trim(), state: 'open', class: askClass(match[2].trim()) });
     else asks.push(malformedRow(comment, body));
   }
   return asks;
@@ -328,9 +340,16 @@ async function sendMessage(to, from, body) {
 
 async function askRows(channel = ASK_CHANNEL) { return openAsks(await channelComments(channel)); }
 function oneLine(error) { return String(error.message || error).split(/[\r\n\u2028\u2029]/, 1)[0]; }
+// A gap ask carries the mechanism that would remove it at the end of its why; every view shows it (PACE_CORE §5 "Ask classes").
+// A hand-posted [gap] without one says so, so the digest never hides a gap that names no mechanism.
+function removeBy(row) {
+  if (row.class !== 'gap') return '';
+  const found = /; remove by: (.+)$/.exec(row.why || '');
+  return ` | remove by: ${found ? found[1] : 'MISSING (repost with bus.mjs ask --class gap --remove)'}`;
+}
 function displayAsk(row) {
   if (row.state === 'malformed') return `MALFORMED #${row.id} ${row.project || '?'} | ${row.ask} | ${row.recommendation}`;
-  return `${row.state.toUpperCase()} #${row.id} ${row.project} | ${row.ask} | ${row.deadline} | rec: ${row.recommendation}`;
+  return `${row.state.toUpperCase()} #${row.id} ${row.project} | ${row.ask}${removeBy(row)} | ${row.deadline} | rec: ${row.recommendation}`;
 }
 function messageLines(channel, row) {
   // Each line is cut to 300 characters: the inbox cap counts lines, so one long line must not flood a hook.
@@ -409,6 +428,18 @@ export function productionChanges(comments, digestSender, now) {
       return `${iso(m.createdAt).slice(0, 16)}Z | ${[...text].slice(0, 300).join('')} | by ${m.sender} | #${m.id}`;
     });
 }
+// The north star's measure (AGENTS.md): how much still reaches the founder that an agent should do.
+// One line per kind, only when asks are open, so an empty digest still reads `DIGEST <day>` alone.
+export function classSummary(rows) {
+  if (!rows.length) return [];
+  const count = (list) => Object.entries(list.reduce((acc, key) => ({ ...acc, [key]: (acc[key] || 0) + 1 }), {}))
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([key, n]) => `${key} ${n}`).join(', ');
+  const reserved = rows.filter((row) => RESERVED_CLASSES.includes(row.class));
+  const gaps = rows.filter((row) => row.class === 'gap'); const other = rows.length - reserved.length - gaps.length;
+  return [`ASKS BY CLASS: reserved ${reserved.length}${reserved.length ? ` (${count(reserved.map((row) => row.class))})` : ''}` +
+    ` | gap ${gaps.length}${gaps.length ? ` (${count(gaps.map((row) => row.project))})` : ''} | unclassified ${other}` +
+    (gaps.length ? ' (a gap is agent work that reached the founder: each needs its mechanism)' : '')];
+}
 function digestText(rows, now, changes = []) {
   const day = now.toISOString().slice(0, 10); const today = Date.parse(`${day}T00:00:00Z`);
   const groups = [['MALFORMED (repost with bus.mjs ask, then bus.mjs done <id>)', []], ['OVERDUE', []], ['DUE WITHIN 7 DAYS', []], ['LATER OR NONE', []],
@@ -419,9 +450,9 @@ function digestText(rows, now, changes = []) {
     const group = deadline !== null && deadline < today ? groups[1][1] : deadline !== null && deadline <= today + 7 * 86400000 ? groups[2][1] : groups[3][1];
     const createdDay = Date.parse(`${String(row.createdAt).slice(0, 10)}T00:00:00Z`);
     const age = Math.max(0, Math.floor((today - createdDay) / 86400000));
-    group.push(`${age}d | ${row.project} | ${row.ask} | rec: ${row.recommendation} | #${row.id}`);
+    group.push(`${age}d | ${row.project} | ${row.ask}${removeBy(row)} | rec: ${row.recommendation} | #${row.id}`);
   }
-  return [`DIGEST ${day}`, ...groups.flatMap(([heading, items]) => items.length ? [heading, ...items] : [])].join('\n');
+  return [`DIGEST ${day}`, ...classSummary(rows), ...groups.flatMap(([heading, items]) => items.length ? [heading, ...items] : [])].join('\n');
 }
 
 function advance(channel, rows) { if (rows.length) writeCursor(channel, rows[rows.length - 1].id); }
@@ -463,7 +494,8 @@ async function main() {
     const rows = (await channels()).map((issue) => ({ channel: issue.title.slice(9), issue: issue.number }));
     console.log(options.json ? JSON.stringify(rows, null, 2) : rows.map((row) => `${row.channel} (#${row.issue})`).join('\n'));
   } else if (options.command === 'ask') {
-    const body = `ASK ${options.project} | ${options.ask} | ${options.why} | ${options.deadline} | ${options.rec}`;
+    const why = options.class === 'gap' ? `${options.why}; remove by: ${options.remove}` : options.why;
+    const body = `ASK ${options.project} | [${options.class}] ${options.ask} | ${why} | ${options.deadline} | ${options.rec}`;
     const comment = await sendMessage(ASK_CHANNEL, options.from, body); console.log(String(comment.id));
   } else if (options.command === 'done') {
     const note = options.note ? ` ${options.note}` : '';
