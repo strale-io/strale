@@ -616,6 +616,12 @@ failed. The same deploy-time route used for the other five corrects it; it
 costs about one supplier credit each time the check runs, against an
 allowance that is almost untouched this month. With that, all six registries
 this entry named are corrected. It stays open until you close it.
+*Update 2026-11-16 (Strale master, evidence; nothing for you to decide).*
+The A-7 query brief (`docs/lanes/pc/a7-bundle-queries-brief.md`, merged in
+#1068) rechecked this entry: no part of it is a read that is still owed, and it
+asks you to choose nothing (no price, term or policy). The only step left is
+yours: reply "close DQ-33" and the next session marks it closed. Per
+DEC-20260822-A part 4 the entry stays `your_call` until you move it.
 
 **DQ-32** · `answered` · owner Petter · raised 2026-09-11T20:00Z · answered 2026-09-11 — **after the switch from Notion, the digest's "action required" means decisions waiting on you**
 *Answered:* Petter, in chat, accepting the recommendation: the repo-native
