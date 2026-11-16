@@ -8,6 +8,7 @@ import { persistCapability } from "../lib/capability-persistence.js";
 import { SYSTEM_ACCOUNT_EMAIL, isInternalAccountEmail } from "../lib/internal-accounts.js";
 import { users } from "../db/schema.js";
 import { AccountAlreadyClosedError, closeAccount } from "../lib/close-account.js";
+import { credit, lockWalletForUser, readBalance } from "../lib/wallet-service.js";
 import { wasDeactivatedDeliberately } from "../lib/solution-activation.js";
 import type { AppEnv } from "../types.js";
 
@@ -1043,4 +1044,139 @@ adminRoute.post("/accounts/close", async (c) => {
     }
     throw err;
   }
+});
+
+// POST /v1/admin/wallets/credit — grant a small, ledgered goodwill credit so
+// an operator can let a customer re-run tools without editing the database.
+//
+// Guards, because this route moves money:
+//   - the email must be entered twice and match after normalisation;
+//   - each credit and the platform-wide rolling seven-day total are capped at
+//     €20. The window stays in SQL so no JavaScript Date reaches a bind;
+//   - the reason is a short operational reference, never personal data;
+//   - unknown, closed, wallet-less and internal accounts are refused;
+//   - the wallet is locked before checking or writing, an identical ledger
+//     description cannot be credited twice, and an advisory transaction lock
+//     serialises the platform-wide cap across different wallets.
+const MAX_OPERATOR_CREDIT_CENTS = 2000;
+const MAX_OPERATOR_CREDIT_CENTS_PER_WEEK = 2000;
+
+adminRoute.post("/wallets/credit", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as
+    | { email?: unknown; confirm_email?: unknown; amount_cents?: unknown; reason?: unknown }
+    | null;
+  const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+  const confirm = typeof body?.confirm_email === "string" ? body.confirm_email.trim().toLowerCase() : "";
+  if (!email || email !== confirm) {
+    return c.json(apiError("invalid_request", "email and confirm_email are required and must match"), 400);
+  }
+  const amountCents = body?.amount_cents;
+  if (typeof amountCents !== "number" || !Number.isInteger(amountCents) || amountCents < 1 || amountCents > MAX_OPERATOR_CREDIT_CENTS) {
+    return c.json(apiError("invalid_request", "amount_cents must be an integer from 1 to 2000"), 400);
+  }
+  const reason = typeof body?.reason === "string" ? body.reason.trim().slice(0, 500) : "";
+  if (!reason) {
+    return c.json(apiError("invalid_request", "reason is required (a reference such as a ticket id or the request date)"), 400);
+  }
+  if (looksPersonal(reason)) {
+    return c.json(
+      apiError(
+        "invalid_request",
+        "reason must be a reference, not personal data: it may not contain an email address, a phone number or another long run of digits such as a personal identity number. Ticket ids (TKT-1234) and dates are fine.",
+      ),
+      400,
+    );
+  }
+
+  const db = getDb();
+  const [account] = await db
+    .select({ id: users.id, email: users.email, deletedAt: users.deletedAt })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+  if (!account) {
+    return c.json(apiError("not_found", "No account with that email address"), 404);
+  }
+  if (account.deletedAt) {
+    return c.json(apiError("invalid_request", "That account is closed"), 409);
+  }
+  if (isInternalAccountEmail(account.email)) {
+    return c.json(apiError("invalid_request", "Internal accounts cannot receive operator credits"), 400);
+  }
+
+  const description = `operator: ${reason}`;
+  const outcome = await db.transaction(async (tx) => {
+    const wallet = await lockWalletForUser(tx, account.id);
+    if (!wallet) return { error: "wallet_not_found" as const };
+
+    // Closure takes locks in wallet-then-user order. Re-read under that same
+    // order so a closure that committed while this request waited cannot be
+    // followed by a credit that revives the closed wallet's balance.
+    const [currentAccount] = await tx
+      .select({ deletedAt: users.deletedAt })
+      .from(users)
+      .where(eq(users.id, account.id))
+      .for("no key update");
+    if (!currentAccount || currentAccount.deletedAt) return { error: "account_closed" as const };
+
+    const duplicate = toRows(await tx.execute(sql`
+      SELECT 1 AS exists
+      FROM wallet_transactions
+      WHERE wallet_id = ${wallet.id}
+        AND type = 'operator_credit'
+        AND description = ${description}
+      LIMIT 1
+    `));
+    if (duplicate.length > 0) return { error: "duplicate" as const };
+
+    // The weekly cap spans every wallet. A per-wallet row lock cannot prevent
+    // two different accounts from passing it concurrently, so serialise this
+    // small admin-only critical section with a transaction-scoped lock.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('operator_credit_weekly_cap'))`);
+    const weeklyRows = toRows(await tx.execute(sql`
+      SELECT COALESCE(SUM(amount_cents), 0)::int AS total_cents
+      FROM wallet_transactions
+      WHERE type = 'operator_credit'
+        AND created_at >= now() - interval '7 days'
+    `));
+    const weeklyCents = Number(weeklyRows[0]?.total_cents ?? 0);
+    if (weeklyCents + amountCents > MAX_OPERATOR_CREDIT_CENTS_PER_WEEK) {
+      return { error: "weekly_cap" as const };
+    }
+
+    await credit(tx, {
+      walletId: wallet.id,
+      amountCents,
+      type: "operator_credit",
+      description,
+    });
+    const balanceCents = await readBalance(tx, account.id);
+    if (balanceCents === null) throw new Error(`Wallet ${wallet.id} disappeared during operator credit`);
+    return { balanceCents };
+  });
+
+  if (outcome.error === "wallet_not_found") {
+    return c.json(apiError("not_found", "That account has no wallet"), 404);
+  }
+  if (outcome.error === "account_closed") {
+    return c.json(apiError("invalid_request", "That account was closed by a concurrent request"), 409);
+  }
+  if (outcome.error === "duplicate") {
+    return c.json(apiError("invalid_request", "That operator credit was already granted"), 409);
+  }
+  if (outcome.error === "weekly_cap") {
+    return c.json(apiError("invalid_request", "The rolling seven-day operator credit cap would be exceeded"), 409);
+  }
+
+  log.info(
+    { label: "admin-wallet-credited", user_id: account.id, amount_cents: amountCents },
+    "admin-wallet-credited",
+  );
+  return c.json({
+    status: "credited",
+    user_id: account.id,
+    amount_cents: amountCents,
+    balance_cents: outcome.balanceCents,
+    ledger_type: "operator_credit",
+  });
 });

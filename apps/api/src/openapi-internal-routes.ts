@@ -68,6 +68,7 @@ const groups: Array<{ reason: string; routes: string[] }> = [
     "POST /v1/admin/reprice",
     "POST /v1/admin/create-solution",
     "POST /v1/admin/accounts/close",
+    "POST /v1/admin/wallets/credit",
   ] },
   { reason: "Shared-router alias blocked by PUBLIC_OPS_ALLOWLIST; returns 404.", routes: [
     "POST /v1/public/ops/tests/run",
