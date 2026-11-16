@@ -434,5 +434,73 @@
       "Open, queued for Petter: whether enforcementtracker.com is also a never item 5 aggregator (CMS reserves rights under § 87c UrhG, the database-maker right), as the adoption table of docs/strategy/2026-10-23-data-access-risk-rule-proposal.md asks. Until that is decided it is not on tos-blocklist.ts, so a customer-directed single fetch of the site is not refused."
     ],
     "decision_ref": "DEC-20261023-A, checks lane condition for per-call reads of public sources Strale chooses (terms must permit automated per-call access) not met; Petter 2026-11-11, withhold gdpr-fine-lookup; never item 5 classification open for Petter"
+  },
+  {
+    "vendor": "Swiss UID register (Federal Statistical Office)",
+    "hosts": [
+      "www.uid-wse.admin.ch"
+    ],
+    "capabilities": [
+      "vat-validate"
+    ],
+    "resale": "permitted",
+    "terms_url": "https://statistik.admin.ch/en/asset/24605175",
+    "accessed": "2026-11-16",
+    "how_read": "Written reply from uid@bfs.admin.ch (ticket 394827) on 2026-11-13 17:02 CET to Petter's email of 2026-10-26 asking whether per-request commercial use with attribution is permitted; read from Petter's mailbox on 2026-11-16 and archived. The service page (bk.admin.ch/de/uid-webservice) is silent on reuse and the general federal terms require written consent for reproduction (DQ-40, read 2026-10-26).",
+    "findings": [
+      "FSO, in writing: what determines the terms for users are the conditions in the published dataset itself (web service specification, OPEN-BY), \"We therefore confirm that your use is permitted.\"",
+      "Condition: per-request lookups of a specific company within the published rate limit (20 requests a minute on the public tier), with the UID register named as the source and any modification indicated (OPEN-BY requires attribution).",
+      "The FSO says its website still has contradictory text on commercial use and new terms-of-use text is being drafted; the dataset's conditions govern meanwhile."
+    ],
+    "decision_ref": "docs/company/DECISION-QUEUE.md DQ-40 (Swiss UID accepted by Petter 2026-11-16); DEC-20261023-A",
+    "basis": "written_permission",
+    "permission": {
+      "received_on": "2026-11-13",
+      "from": "uid@bfs.admin.ch",
+      "evidence_path": "docs/operations/vendor-permissions/2026-11-13-swiss-uid-register.md",
+      "condition": "Per-request lookups of a specific company within the published rate limit, with the UID register (FSO) named as the source and any modification indicated; no bulk download.",
+      "accepted_by": "petter",
+      "accepted_on": "2026-11-16",
+      "decision_ref": "docs/company/DECISION-QUEUE.md DQ-40",
+      "reopen_only_if": [
+        "the FSO revokes or narrows the permission in writing",
+        "the FSO's new terms-of-use text or the dataset's published conditions change to prohibit this use",
+        "Strale's use changes beyond per-request lookups with attribution within the rate limit"
+      ]
+    }
+  },
+  {
+    "vendor": "Zefix (Federal Commercial Registry Office)",
+    "hosts": [
+      "www.zefix.admin.ch"
+    ],
+    "capabilities": [
+      "swiss-company-data"
+    ],
+    "resale": "permitted",
+    "terms_url": "https://www.zefix.admin.ch/ZefixPublicREST/",
+    "accessed": "2026-11-16",
+    "how_read": "Terms stated in writing by zefix@bj.admin.ch on 2026-03-20 09:52 CET when Petter requested Zefix PublicREST access for Strale's company-verification API; the account was opened the same day. Read from Petter's mailbox on 2026-11-16 and archived (the credentials email is not).",
+    "findings": [
+      "Zefix, in writing: \"If the data is further used, its origin must be indicated and any modification of the data must be indicated.\" Use is free of charge.",
+      "No rate limits are defined, but the REST API shares infrastructure with the web and mobile apps; the office may block a user whose use disturbs it.",
+      "Data is without guarantee and has no legal effect; no liability for unavailability."
+    ],
+    "decision_ref": "docs/company/DECISION-QUEUE.md DQ-40 (Zefix accepted by Petter 2026-11-16); DEC-20261023-A",
+    "basis": "written_permission",
+    "permission": {
+      "received_on": "2026-03-20",
+      "from": "zefix@bj.admin.ch",
+      "evidence_path": "docs/operations/vendor-permissions/2026-03-20-zefix.md",
+      "condition": "Name Zefix / the Federal Commercial Registry Office as the origin on every response, indicate any modification, and keep load per customer request; no bulk export.",
+      "accepted_by": "petter",
+      "accepted_on": "2026-11-16",
+      "decision_ref": "docs/company/DECISION-QUEUE.md DQ-40",
+      "reopen_only_if": [
+        "the FOJ revokes or narrows these terms in writing",
+        "the Zefix REST API's published terms change to prohibit this use",
+        "Strale's use changes beyond per-request lookups (for example bulk export)"
+      ]
+    }
   }
 ]

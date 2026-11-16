@@ -188,7 +188,11 @@ describe("recorded vendor terms (DEC-20261023-A: resale terms verified and recor
   // so an explanation that names a host is not mistaken for a call.
   function sourceFile(path: string, src = readFileSync(path, "utf8")) {
     const code = codeOnly(src);
-    return { path, file: rel(path), code, slug: code.match(/registerCapability\(\s*["'`]([a-z0-9-]+)["'`]/)?.[1] };
+    // A provider chain (registerChain({ capabilitySlug })) is the runtime path
+    // for that slug: its own vendor calls belong to the slug. It is not a graph
+    // seed, so its lib imports are not scanned as if it were an executor.
+    const chainSlug = code.match(/registerChain\(\s*\{[\s\S]*?capabilitySlug:\s*["'`]([a-z0-9-]+)["'`]/)?.[1];
+    return { path, file: rel(path), code, slug: code.match(/registerCapability\(\s*["'`]([a-z0-9-]+)["'`]/)?.[1], chainSlug };
   }
   const files = walk(CAPS).map(f => sourceFile(f));
   const withoutMetadata = new Map<string, string>();
@@ -283,7 +287,9 @@ describe("recorded vendor terms (DEC-20261023-A: resale terms verified and recor
     files.some(target => directlyCallsVendor(target.code, record) && reaches(file, target));
 
   function exactCallers(record: (typeof VENDOR_TERMS_RECORDS)[number], candidates = files) {
-    return candidates.filter(f => f.slug && callsVendor(f, record)).map(f => f.slug as string).sort();
+    const executors = candidates.filter(f => f.slug && callsVendor(f, record)).map(f => f.slug as string);
+    const chains = candidates.filter(f => !f.slug && f.chainSlug && directlyCallsVendor(f.code, record)).map(f => f.chainSlug as string);
+    return [...new Set([...executors, ...chains])].sort();
   }
   it("scopes service-specific terms to URL prefixes on a shared host", () => {
     const eurostat = VENDOR_TERMS_RECORDS.find(r => r.vendor === "Eurostat")!;
@@ -337,6 +343,7 @@ describe("recorded vendor terms (DEC-20261023-A: resale terms verified and recor
 
   function unrecordedShared(record: (typeof VENDOR_TERMS_RECORDS)[number], candidates = files) {
     return candidates.filter(f => !f.slug && directlyCallsVendor(f.code, record)
+      && !(f.chainSlug && record.capabilities.includes(f.chainSlug))
       && !candidates.some(caller => caller.slug && record.capabilities.includes(caller.slug) && reaches(caller, f)))
       .map(f => f.file);
   }
@@ -347,6 +354,19 @@ describe("recorded vendor terms (DEC-20261023-A: resale terms verified and recor
     expect(unrecordedShared(record, [...files, orphan])).toEqual([orphan.file]);
     expect(directlyCallsVendor('getDirectExecutor("norwegian-company-data"); source: "data.brreg.no"', record)).toBe(false);
     expect(directlyCallsVendor('fetch("https://dataXbrregYno/")', record)).toBe(false);
+  });
+
+  it("counts a provider chain's own vendor calls against its declared slug, and only that slug", () => {
+    const record = VENDOR_TERMS_RECORDS.find(r => r.vendor === "Brønnøysundregistrene")!;
+    const chain = sourceFile(join(CAPS, "providers/unrecorded-chain-fixture.ts"),
+      'registerChain({ capabilitySlug: "unrecorded-chain-fixture", providers: [] }); fetch("https://data.brreg.no/x");');
+    expect(chain.slug).toBeUndefined();
+    expect(exactCallers(record, [...files, chain])).toContain("unrecorded-chain-fixture");
+    expect(() => assertExactCallers(record, [...files, chain])).toThrow();
+    // Listed under a slug the record does not carry, the chain is still an orphan client.
+    expect(unrecordedShared(record, [...files, chain])).toEqual([chain.file]);
+    const zefix = VENDOR_TERMS_RECORDS.find(r => r.hosts.includes("www.zefix.admin.ch"))!;
+    expect(unrecordedShared(zefix)).toEqual([]);
   });
 
   it.each(["fetchPage", "fetchWithRetry", "browserlessFetch", "gleifFetch", "aliasedFetch", "new Request"])(
