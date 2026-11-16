@@ -1,0 +1,39 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "apps/api/src/lib/ops-read.ts",
+    "commit": "f8ef0ec71c588701d5b8061a78e5af6b5bd7b93c"
+  },
+  "at": "2026-11-16T05:42:46.359Z",
+  "inputs": {
+    "endpoint": "GET https://api.strale.io/v1/ops-read/transaction-quality-fk",
+    "deployed_commit": "f8ef0ec71c58",
+    "run_at": "2026-11-16T05:42:01Z",
+    "seconds": 1.7,
+    "privacy": "docs/lanes/pc/a7-bundle-queries-brief.md Q3b rule: counts 1-4 shown as <5; orphaned_without_debit omitted because orphaned_rows minus it gives the small count"
+  },
+  "summary": {
+    "http_200": true,
+    "foreign_key_exists": true,
+    "on_delete": "cascade",
+    "validated": true,
+    "orphan_counts_complete": true,
+    "orphaned_rows": 103416,
+    "orphaned_with_debit": "<5"
+  },
+  "topic": "a7-transaction-quality-fk-banded",
+  "raw": {
+    "foreign_key_exists": true,
+    "foreign_keys": [
+      {
+        "confdeltype": "c",
+        "convalidated": true,
+        "condeferrable": false
+      }
+    ],
+    "orphan_counts_complete": true,
+    "orphaned_rows": 103416,
+    "orphaned_with_debit": "<5",
+    "orphaned_soft_deleted": 0
+  }
+}
