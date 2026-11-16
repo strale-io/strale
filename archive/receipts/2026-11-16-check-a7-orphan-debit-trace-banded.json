@@ -1,0 +1,61 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "apps/api/src/lib/ops-read.ts",
+    "commit": "888cba968823629dfb020ab1b8762c67c5381aa8"
+  },
+  "at": "2026-11-16T03:55:26.235Z",
+  "inputs": {
+    "endpoint": "GET https://api.strale.io/v1/ops-read/orphan-debit-trace",
+    "deployed_commit": "9bfb7d9117dc",
+    "seconds": 1,
+    "run_at": "2026-11-16T03:47:54Z",
+    "privacy": "docs/lanes/pc/a7-bundle-queries-brief.md Q3b rule: totals per no_reference, no months; counts 1-4 shown as <5; groups smaller than 5 given as cents only, and fields from which such a count could be derived are omitted"
+  },
+  "summary": {
+    "http_200": true,
+    "dangling_debited_cents": "65",
+    "dangling_reference_in_transaction_quality": "all",
+    "dangling_refunded_cents": "0",
+    "no_reference_debits": 27,
+    "no_reference_cents": "5840",
+    "matched_completed_cents": "5390",
+    "distinct_matched_completed_solution_calls": 23,
+    "debits_sharing_a_call": 12,
+    "matched_not_completed_cents": "300",
+    "matched_not_completed_refunded_nearby": "all",
+    "unmatched_cents": "150",
+    "unmatched_refunded_nearby": "all"
+  },
+  "topic": "a7-orphan-debit-trace-banded",
+  "raw": {
+    "dangling_reference_debits": {
+      "debits": "<5",
+      "debited_cents": "65",
+      "reference_in_transaction_quality": "all",
+      "reference_elsewhere": "none",
+      "refunded_cents": "0",
+      "wallet_user_closed": "none",
+      "debit_type": [
+        "capability"
+      ]
+    },
+    "no_reference_debits": {
+      "debits": 27,
+      "debited_cents": "5840",
+      "matched_completed": {
+        "debited_cents": "5390",
+        "distinct_solution_calls": 23,
+        "debits_sharing_a_call": 12
+      },
+      "matched_not_completed": {
+        "debited_cents": "300",
+        "refunded_nearby": "all"
+      },
+      "unmatched": {
+        "debited_cents": "150",
+        "refunded_nearby": "all"
+      }
+    }
+  }
+}
