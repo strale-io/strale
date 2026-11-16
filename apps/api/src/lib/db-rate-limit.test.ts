@@ -171,3 +171,28 @@ describe("rateLimitByIpDb — enforcement (F-0-002)", () => {
     expect(mockCallArgs).toHaveLength(2);
   });
 });
+
+describe("takeUpstreamSlot", () => {
+  it("allows up to max in a window, then refuses with a retry delay", async () => {
+    const { takeUpstreamSlot } = await import("./db-rate-limit.js");
+    mockCountSequence = [3, 4];
+    await expect(takeUpstreamSlot("uid-ch", 15, 3)).resolves.toEqual({ allowed: true, retryAfterSeconds: 0 });
+    const spent = await takeUpstreamSlot("uid-ch", 15, 3);
+    expect(spent.allowed).toBe(false);
+    expect(spent.retryAfterSeconds).toBeGreaterThanOrEqual(1);
+    expect(spent.retryAfterSeconds).toBeLessThanOrEqual(15);
+  });
+
+  it("counts under its own upstream: key, apart from the inbound limiters", async () => {
+    const { takeUpstreamSlot } = await import("./db-rate-limit.js");
+    await takeUpstreamSlot("uid-ch", 15, 3);
+    const chunks = JSON.stringify(mockCallArgs[0]);
+    expect(chunks).toContain("upstream:uid-ch");
+  });
+
+  it("throws on a DB error rather than answering allowed", async () => {
+    const { takeUpstreamSlot } = await import("./db-rate-limit.js");
+    mockShouldThrow = true;
+    await expect(takeUpstreamSlot("uid-ch", 15, 3)).rejects.toThrow("mocked DB failure");
+  });
+});

@@ -338,6 +338,19 @@ export function outcomeFromError(error: unknown): ExecutionOutcome {
     };
   }
 
+  // Strale's own outbound budget for the upstream was spent (or unreadable),
+  // so the call was never sent. Ours, not the capability's or the provider's.
+  if (error instanceof UpstreamUnavailableError && error.ownBudget) {
+    return {
+      ...base,
+      failure_class: "provider_unavailable",
+      billable: false,
+      retryable: error.retryable,
+      fault: "strale",
+      counts_against_capability: false,
+    };
+  }
+
   // The executor positively identified an upstream that could not answer
   // (lib/upstream-result.ts). Claimed by type before the string taxonomy: the
   // taxonomy would file it `upstream` (or `timeout`) and the transient test

@@ -2,9 +2,8 @@
  * VAT validation — single capability, multiple providers.
  *
  * Parses the input, dispatches to the right provider by country prefix, and
- * wraps every call with substrate-level cache + stale-fallback + a no-op
- * rate-limit seam (so swapping in real per-provider token buckets later is a
- * one-file change).
+ * wraps every call with substrate-level cache + stale-fallback + per-provider
+ * outbound rate limits (lib/vat-providers/rate-limit.ts).
  *
  * Coverage today:
  *   - EU27 + XI (Northern Ireland)  → VIES
@@ -23,6 +22,7 @@ import { brregProvider } from "./lib/vat-providers/brreg.js";
 import { hmrcProvider } from "./lib/vat-providers/hmrc.js";
 import { uidChProvider } from "./lib/vat-providers/uid-ch.js";
 import { viesProvider } from "./lib/vat-providers/vies.js";
+import { withProviderRateLimit } from "./lib/vat-providers/rate-limit.js";
 import type {
   ParsedVat,
   VatProvider,
@@ -57,24 +57,13 @@ setInterval(() => {
 }, 60_000).unref();
 
 // ---------------------------------------------------------------------------
-// Substrate: rate-limit seam (no-op today, real implementation later)
+// Substrate: per-provider rate limits (lib/vat-providers/rate-limit.ts)
 // ---------------------------------------------------------------------------
-
-/**
- * Wraps a provider call so that we have a single chokepoint to add per-provider
- * token buckets later (HMRC 3/s, Swiss UID 20/min, etc.). Today this is a
- * no-op — the substrate-level cache already cuts upstream load by ~90%, and
- * adding queues without traffic data would be premature.
- *
- * Plumbing the seam now means the day we need to flip it on, it's a one-file
- * change instead of an audit-the-whole-capability change.
- */
-async function withRateLimit<T>(
-  _providerName: string,
-  fn: () => Promise<T>,
-): Promise<T> {
-  return fn();
-}
+//
+// Every provider call goes through `withProviderRateLimit`. Only providers
+// with a published limit Strale must stay inside are limited (Swiss UID, 20 a
+// minute); the rest pass straight through. HMRC's 3/s is not limited here
+// because the HMRC path is inactive without credentials.
 
 // ---------------------------------------------------------------------------
 // Provider routing
@@ -204,7 +193,7 @@ registerCapability("vat-validate", async (input: CapabilityInput) => {
   // have one; this is the substrate guarantee — every provider gets the same
   // resilience treatment.
   try {
-    const result = await withRateLimit(provider.name, () =>
+    const result = await withProviderRateLimit(provider.name, () =>
       provider.validate(parsed),
     );
 
@@ -226,6 +215,7 @@ registerCapability("vat-validate", async (input: CapabilityInput) => {
       },
     };
   } catch (err) {
+    // degraded-ok: the cached answer is served only marked stale:true with the failure as stale_reason; with nothing cached the error is rethrown unchanged.
     if (cached) {
       // Stale-fallback: provider failed, but we have a previous answer for
       // this VAT. Serve it with stale=true so the agent's decision-readiness
