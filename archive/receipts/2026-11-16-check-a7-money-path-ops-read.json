@@ -1,0 +1,537 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "apps/api/src/lib/ops-read.ts",
+    "commit": "ec8dfd582eea2aba9de7f2aaebbcacac1d41a8f6"
+  },
+  "at": "2026-11-16T02:43:58.866Z",
+  "inputs": {
+    "endpoint": "GET https://api.strale.io/v1/ops-read/<check>",
+    "checks": [
+      "capability-debits",
+      "solution-debits",
+      "kept-charges",
+      "swallowed-failure-exposure",
+      "fx-error-rate"
+    ],
+    "deployed_commit": "ec8dfd582eea",
+    "privacy": "docs/lanes/pc/a7-bundle-queries-brief.md receipt table; counts 1-4 shown as <5 or folded into (other)",
+    "timings_seconds": {
+      "capability-debits": 1.2,
+      "solution-debits": 0.41,
+      "kept-charges": 2.93,
+      "swallowed-failure-exposure": 0.7,
+      "fx-error-rate": 0.28
+    }
+  },
+  "summary": {
+    "all_http_200": true,
+    "slowest_check_seconds": 2.93,
+    "statement_timeout_seconds": 5,
+    "capability_paid_wallet_calls": 2853,
+    "capability_no_debit": 0,
+    "capability_debit_ne_recorded": 0,
+    "capability_recorded_ne_listed": 114,
+    "solution_wallet_calls_since_wp3": 0,
+    "solution_calls_before_wp3": 23,
+    "overcharged_calls": 0,
+    "overrefunded_calls": 0,
+    "orphan_debits_no_reference": 27,
+    "orphan_debits_no_reference_cents": "5840",
+    "unmatched_refunds": 0,
+    "swallowed_exposure_paid_calls": 4060,
+    "swallowed_exposure_recorded_cents": "19929",
+    "swallowed_exposure_distinct_payers": 24,
+    "swallowed_exposure_payers_unknown": 639,
+    "fx_failed_calls_window": 0,
+    "fx_failed_tests_window": 0
+  },
+  "topic": "a7-money-path-ops-read",
+  "raw": {
+    "Q1_capability_debits": {
+      "total": {
+        "calls": 2853,
+        "no_debit": 0,
+        "debit_ne_recorded": 0,
+        "recorded_ne_listed": 114,
+        "refunded": 0,
+        "debited_cents": "26181"
+      },
+      "finding_slugs": [
+        {
+          "slug": "german-company-data",
+          "calls": 17,
+          "no_debit": 0,
+          "debit_ne_recorded": 0,
+          "recorded_ne_listed": 14,
+          "refunded": 0,
+          "debited_cents": "1030"
+        },
+        {
+          "slug": "lei-lookup",
+          "calls": 19,
+          "no_debit": 0,
+          "debit_ne_recorded": 0,
+          "recorded_ne_listed": 5,
+          "refunded": 0,
+          "debited_cents": "120"
+        },
+        {
+          "slug": "pep-check",
+          "calls": 155,
+          "no_debit": 0,
+          "debit_ne_recorded": 0,
+          "recorded_ne_listed": 6,
+          "refunded": 0,
+          "debited_cents": "835"
+        },
+        {
+          "slug": "polish-company-data",
+          "calls": 30,
+          "no_debit": 0,
+          "debit_ne_recorded": 0,
+          "recorded_ne_listed": 13,
+          "refunded": 0,
+          "debited_cents": "1125"
+        },
+        {
+          "slug": "swedish-company-data",
+          "calls": 40,
+          "no_debit": 0,
+          "debit_ne_recorded": 0,
+          "recorded_ne_listed": 11,
+          "refunded": 0,
+          "debited_cents": "1025"
+        },
+        {
+          "slug": "vat-validate",
+          "calls": 70,
+          "no_debit": 0,
+          "debit_ne_recorded": 0,
+          "recorded_ne_listed": 18,
+          "refunded": 0,
+          "debited_cents": "284"
+        },
+        {
+          "calls": 299,
+          "no_debit": 0,
+          "debit_ne_recorded": 0,
+          "recorded_ne_listed": 47,
+          "refunded": 0,
+          "debited_cents": "2704",
+          "slug": "(other)",
+          "rows_folded": 33
+        }
+      ]
+    },
+    "Q2_solution_debits": {
+      "total": {
+        "calls": 0,
+        "no_debit": 0,
+        "debit_ne_recorded": 0,
+        "no_longer_listed": 0,
+        "recorded_ne_listed": 0,
+        "refunded": 0,
+        "debited_cents": "0"
+      },
+      "finding_slugs": [],
+      "before_wp3": {
+        "calls": 23,
+        "recorded_cents": "5240"
+      }
+    },
+    "Q3_kept_charges": {
+      "summed": {
+        "debited_calls": 2815,
+        "overcharged_calls": 0,
+        "overcharged_cents": "0",
+        "overrefunded_calls": 0,
+        "overrefunded_cents": "0"
+      },
+      "groups": [
+        {
+          "status": "completed",
+          "payment_method": "wallet",
+          "is_solution": false,
+          "debited_calls": 2780,
+          "overcharged_calls": 0,
+          "overrefunded_calls": 0
+        },
+        {
+          "status": "failed",
+          "payment_method": "wallet",
+          "is_solution": false,
+          "debited_calls": 35,
+          "overcharged_calls": 0,
+          "overrefunded_calls": 0
+        }
+      ]
+    },
+    "Q3b_orphan_debits": {
+      "no_reference_false": {
+        "debits": "<5",
+        "debited_cents": "65"
+      },
+      "no_reference_true": {
+        "debits": 27,
+        "debited_cents": "5840"
+      }
+    },
+    "Q3c_unmatched_refunds": {
+      "summed": {
+        "refunds": 0,
+        "refunded_cents": "0"
+      },
+      "groups": []
+    },
+    "Q4_swallowed_failure_exposure": {
+      "total": {
+        "completed_paid_calls": 4060,
+        "distinct_payers": 24,
+        "payers_unknown": 639,
+        "recorded_cents": "19929",
+        "first_day": "2026-02-26",
+        "last_day": "2026-11-15"
+      },
+      "slugs": [
+        {
+          "slug": "startup-domain-check",
+          "payment_method": "x402",
+          "completed_paid_calls": 502,
+          "recorded_cents": "2510"
+        },
+        {
+          "slug": "mx-lookup",
+          "payment_method": "x402",
+          "completed_paid_calls": 1220,
+          "recorded_cents": "2440"
+        },
+        {
+          "slug": "seo-audit",
+          "payment_method": "x402",
+          "completed_paid_calls": 59,
+          "recorded_cents": "1770"
+        },
+        {
+          "slug": "email-deliverability-check",
+          "payment_method": "x402",
+          "completed_paid_calls": 331,
+          "recorded_cents": "1655"
+        },
+        {
+          "slug": "pricing-page-extract",
+          "payment_method": "x402",
+          "completed_paid_calls": 53,
+          "recorded_cents": "1590"
+        },
+        {
+          "slug": "domain-age-check",
+          "payment_method": "x402",
+          "completed_paid_calls": 486,
+          "recorded_cents": "1458"
+        },
+        {
+          "slug": "domain-reputation",
+          "payment_method": "x402",
+          "completed_paid_calls": 263,
+          "recorded_cents": "1315"
+        },
+        {
+          "slug": "tech-stack-detect",
+          "payment_method": "x402",
+          "completed_paid_calls": 322,
+          "recorded_cents": "966"
+        },
+        {
+          "slug": "whois-lookup",
+          "payment_method": "x402",
+          "completed_paid_calls": 131,
+          "recorded_cents": "655"
+        },
+        {
+          "slug": "backlink-check",
+          "payment_method": "x402",
+          "completed_paid_calls": 43,
+          "recorded_cents": "645"
+        },
+        {
+          "slug": "customs-duty-lookup",
+          "payment_method": "x402",
+          "completed_paid_calls": 24,
+          "recorded_cents": "480"
+        },
+        {
+          "slug": "github-repo-analyze",
+          "payment_method": "x402",
+          "completed_paid_calls": 90,
+          "recorded_cents": "450"
+        },
+        {
+          "slug": "company-tech-stack",
+          "payment_method": "x402",
+          "completed_paid_calls": 13,
+          "recorded_cents": "390"
+        },
+        {
+          "slug": "barcode-lookup",
+          "payment_method": "x402",
+          "completed_paid_calls": 74,
+          "recorded_cents": "370"
+        },
+        {
+          "slug": "seo-audit",
+          "payment_method": "wallet",
+          "completed_paid_calls": 12,
+          "recorded_cents": "360"
+        },
+        {
+          "slug": "company-tech-stack",
+          "payment_method": "wallet",
+          "completed_paid_calls": 11,
+          "recorded_cents": "330"
+        },
+        {
+          "slug": "country-trade-data",
+          "payment_method": "x402",
+          "completed_paid_calls": 12,
+          "recorded_cents": "240"
+        },
+        {
+          "slug": "cookie-scan",
+          "payment_method": "x402",
+          "completed_paid_calls": 15,
+          "recorded_cents": "225"
+        },
+        {
+          "slug": "pricing-page-extract",
+          "payment_method": "wallet",
+          "completed_paid_calls": 6,
+          "recorded_cents": "180"
+        },
+        {
+          "slug": "whois-lookup",
+          "payment_method": "wallet",
+          "completed_paid_calls": 22,
+          "recorded_cents": "130"
+        },
+        {
+          "slug": "container-track",
+          "payment_method": "x402",
+          "completed_paid_calls": 24,
+          "recorded_cents": "120"
+        },
+        {
+          "slug": "country-trade-data",
+          "payment_method": "wallet",
+          "completed_paid_calls": 6,
+          "recorded_cents": "120"
+        },
+        {
+          "slug": "backlink-check",
+          "payment_method": "wallet",
+          "completed_paid_calls": 7,
+          "recorded_cents": "105"
+        },
+        {
+          "slug": "tech-stack-detect",
+          "payment_method": "wallet",
+          "completed_paid_calls": 27,
+          "recorded_cents": "81"
+        },
+        {
+          "slug": "github-repo-analyze",
+          "payment_method": "wallet",
+          "completed_paid_calls": 7,
+          "recorded_cents": "80"
+        },
+        {
+          "slug": "email-deliverability-check",
+          "payment_method": "wallet",
+          "completed_paid_calls": 12,
+          "recorded_cents": "75"
+        },
+        {
+          "slug": "cz-company-data",
+          "payment_method": "wallet",
+          "completed_paid_calls": 14,
+          "recorded_cents": "70"
+        },
+        {
+          "slug": "domain-reputation",
+          "payment_method": "wallet",
+          "completed_paid_calls": 14,
+          "recorded_cents": "70"
+        },
+        {
+          "slug": "mx-lookup",
+          "payment_method": "wallet",
+          "completed_paid_calls": 33,
+          "recorded_cents": "66"
+        },
+        {
+          "slug": "package-security-audit",
+          "payment_method": "wallet",
+          "completed_paid_calls": 7,
+          "recorded_cents": "65"
+        },
+        {
+          "slug": "email-reputation-score",
+          "payment_method": "x402",
+          "completed_paid_calls": 19,
+          "recorded_cents": "57"
+        },
+        {
+          "slug": "dependency-audit",
+          "payment_method": "wallet",
+          "completed_paid_calls": 7,
+          "recorded_cents": "50"
+        },
+        {
+          "slug": "dependency-audit",
+          "payment_method": "x402",
+          "completed_paid_calls": 9,
+          "recorded_cents": "45"
+        },
+        {
+          "slug": "startup-domain-check",
+          "payment_method": "wallet",
+          "completed_paid_calls": 7,
+          "recorded_cents": "45"
+        },
+        {
+          "slug": "container-track",
+          "payment_method": "wallet",
+          "completed_paid_calls": 8,
+          "recorded_cents": "40"
+        },
+        {
+          "slug": "domain-contact-extract",
+          "payment_method": "wallet",
+          "completed_paid_calls": 8,
+          "recorded_cents": "40"
+        },
+        {
+          "slug": "business-day-check",
+          "payment_method": "x402",
+          "completed_paid_calls": 19,
+          "recorded_cents": "38"
+        },
+        {
+          "slug": "barcode-lookup",
+          "payment_method": "wallet",
+          "completed_paid_calls": 7,
+          "recorded_cents": "35"
+        },
+        {
+          "slug": "vasp-verify",
+          "payment_method": "x402",
+          "completed_paid_calls": 15,
+          "recorded_cents": "30"
+        },
+        {
+          "slug": "vasp-verify",
+          "payment_method": "wallet",
+          "completed_paid_calls": 14,
+          "recorded_cents": "28"
+        },
+        {
+          "slug": "og-image-check",
+          "payment_method": "wallet",
+          "completed_paid_calls": 5,
+          "recorded_cents": "25"
+        },
+        {
+          "slug": "vasp-non-compliant-check",
+          "payment_method": "wallet",
+          "completed_paid_calls": 10,
+          "recorded_cents": "20"
+        },
+        {
+          "slug": "ens-reverse-lookup",
+          "payment_method": "wallet",
+          "completed_paid_calls": 9,
+          "recorded_cents": "18"
+        },
+        {
+          "slug": "protocol-fees-lookup",
+          "payment_method": "wallet",
+          "completed_paid_calls": 9,
+          "recorded_cents": "18"
+        },
+        {
+          "slug": "domain-age-check",
+          "payment_method": "wallet",
+          "completed_paid_calls": 5,
+          "recorded_cents": "15"
+        },
+        {
+          "slug": "email-auth-check",
+          "payment_method": "wallet",
+          "completed_paid_calls": 5,
+          "recorded_cents": "15"
+        },
+        {
+          "slug": "email-reputation-score",
+          "payment_method": "wallet",
+          "completed_paid_calls": 5,
+          "recorded_cents": "15"
+        },
+        {
+          "slug": "business-day-check",
+          "payment_method": "wallet",
+          "completed_paid_calls": 7,
+          "recorded_cents": "14"
+        },
+        {
+          "slug": "protocol-fees-lookup",
+          "payment_method": "x402",
+          "completed_paid_calls": 5,
+          "recorded_cents": "10"
+        },
+        {
+          "slug": "vasp-non-compliant-check",
+          "payment_method": "x402",
+          "completed_paid_calls": 5,
+          "recorded_cents": "10"
+        },
+        {
+          "completed_paid_calls": 42,
+          "recorded_cents": "350",
+          "slug": "(other)",
+          "rows_folded": 15
+        }
+      ]
+    },
+    "Q5_fx_error_rate": {
+      "from": "2026-11-09",
+      "to": "2026-11-15",
+      "oldest_result_day": "2026-10-16",
+      "tests": [
+        {
+          "source": "tests",
+          "slug": "currency-convert",
+          "outcome": "passed",
+          "n": 525
+        },
+        {
+          "source": "tests",
+          "slug": "exchange-rate",
+          "outcome": "passed",
+          "n": 696
+        },
+        {
+          "source": "tests",
+          "slug": "forex-history",
+          "outcome": "passed",
+          "n": 524
+        }
+      ],
+      "calls": [
+        {
+          "outcome": "completed",
+          "n": 144
+        }
+      ]
+    }
+  }
+}
