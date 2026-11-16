@@ -1,0 +1,62 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "apps/api/src/lib/ops-read.ts",
+    "commit": "86b96e6fdb4fc0153fcc1cf7ed89260ed7b9d83d"
+  },
+  "at": "2026-11-16T07:06:59.550Z",
+  "inputs": {
+    "endpoint": "GET https://api.strale.io/v1/ops-read/transaction-quality-orphans",
+    "deployed_commit": "86b96e6fdb4f",
+    "run_at": "2026-11-16T07:05:50Z",
+    "seconds": 6.3,
+    "privacy": "docs/lanes/pc/a7-bundle-queries-brief.md Q3b rule: no month split (windows are bounded by named incident dates); no count in 1-4 occurs; no field derives one",
+    "incident_dates_utc": "2026-04-16 B-tree corruption outage on transactions; 2026-05-04 disk-full crash-loop; 2026-07-02 I/O degradation"
+  },
+  "summary": {
+    "http_200": true,
+    "all_parts_complete": true,
+    "index_plan_used_transactions_pkey": true,
+    "heap_plan_used_no_index": true,
+    "index_count_equals_heap_count": true,
+    "orphaned_rows": 103416,
+    "orphaned_created_before_2026_04_16": 103416,
+    "orphaned_created_on_or_after_2026_04_16": 0,
+    "surviving_calls_exist_before_2026_04_16": true
+  },
+  "topic": "a7-transaction-quality-orphans-banded",
+  "raw": {
+    "index_plan": {
+      "complete": true,
+      "plan": {
+        "quality_read_from_table": true,
+        "transactions_probed_by_pkey": true,
+        "transactions_read_from_table": false,
+        "any_index_used": true
+      },
+      "orphaned_rows": 103416
+    },
+    "heap_plan": {
+      "complete": true,
+      "plan": {
+        "quality_read_from_table": true,
+        "transactions_probed_by_pkey": false,
+        "transactions_read_from_table": true,
+        "any_index_used": false
+      },
+      "orphaned_rows": 103416,
+      "orphaned_created_before_2026_04_16": 103416,
+      "orphaned_created_on_2026_04_16": 0,
+      "orphaned_created_2026_04_17_to_2026_05_03": 0,
+      "orphaned_created_2026_05_04_to_2026_07_01": 0,
+      "orphaned_created_from_2026_07_02": 0
+    },
+    "oldest_call": {
+      "complete": true,
+      "oldest_call_before_2026_04_16": true,
+      "oldest_call_before_2026_04_17": true,
+      "oldest_call_before_2026_05_04": true,
+      "oldest_call_before_2026_07_02": true
+    }
+  }
+}
