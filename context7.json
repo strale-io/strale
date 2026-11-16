@@ -31,7 +31,26 @@
     ".claude",
     "**/__pycache__",
     "**/venv",
-    "**/.venv"
+    "**/.venv",
+    "docs/audits",
+    "docs/company",
+    "docs/decisions",
+    "docs/design",
+    "docs/diligence",
+    "docs/dpia",
+    "docs/governance",
+    "docs/incidents",
+    "docs/lanes",
+    "docs/operations",
+    "docs/plan",
+    "docs/programs",
+    "docs/project",
+    "docs/release",
+    "docs/remediation",
+    "docs/research",
+    "docs/security",
+    "docs/smoke-tests",
+    "docs/strategy"
   ],
   "excludeFiles": [
     "*.lock",
@@ -42,7 +61,11 @@
     "AUDIT-*.md",
     "DIAGNOSTIC-*.md",
     "audit-backend-report.md",
-    "capability-inventory.md"
+    "capability-inventory.md",
+    "FOUNDER_PROFILE.md",
+    "COMMS_CORE.md",
+    "onboarding-improvements.md",
+    "claude-connector-listing.md"
   ],
   "rules": [
     "Strale provides free capabilities that work without an API key: email-validate, iban-validate, dns-lookup, url-to-markdown, json-repair",
