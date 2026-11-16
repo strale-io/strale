@@ -56,13 +56,20 @@ PGOPTIONS='-c default_transaction_read_only=on -c statement_timeout=30s' psql "$
 
 This reads only the one line, so nothing else in `.env` is executed or exported. It also strips Windows line endings and surrounding quotes.
 
-Then, inside `psql`, start with:
+In Git Bash, if `psql` shows no prompt, start it with `winpty` in front. Then, inside `psql`, start with:
 
 ```sql
-SELECT current_user;          -- must print strale_ro; if not, \q and report, run nothing else
+SELECT current_user = 'strale_ro' AS role_ok, current_user \gset
+\if :role_ok
+\else
+  \echo 'STOP: connected as' :current_user 'not strale_ro'
+  \q
+\endif
 \set ON_ERROR_ROLLBACK on
 BEGIN TRANSACTION READ ONLY;
 ```
+
+If psql prints `STOP` and quits, report that line and run nothing else.
 
 `strale_ro` is the read-only role (SELECT only, writes refused by privilege). That check is the real guard: `SHOW transaction_read_only` inside `BEGIN TRANSACTION READ ONLY` always prints `on`, so it proves nothing about the role. `ON_ERROR_ROLLBACK` keeps one failing query from aborting the rest.
 
@@ -310,8 +317,9 @@ The master writes the receipts (`npm run receipt`) from it. Receipts are committ
 
 | Query | What the committed receipt holds |
 |---|---|
-| Q1, Q2, Q4 | the total row, with its dates; for findings, slugs and counts without dates, any row with a count under 5 folded into one `(other)` row; `distinct_payers` only in the total |
-| Q2b, Q3c | the rows as returned: they carry no slug or date |
+| Q1, Q2, Q4 | the total row, with its days only when its call count is 5 or more (otherwise months only, and the count as `<5`); for findings, slugs and counts without dates, any row with a count under 5 folded into one `(other)` row; `distinct_payers` only in the total |
+| Q2b | `calls` and `recorded_cents` only, without its day columns |
+| Q3c | the rows as returned: they carry no slug or date |
 | Q3 | the counts and cents summed across all groups, plus the per-status counts with any count under 5 shown as `<5`; no dates |
 | Q3b | the totals per `no_reference` value, without months |
 | Q5 | the `tests` rows as returned, plus one `calls` row per outcome summed over the three tools, with any count under 5 shown as `<5` |
