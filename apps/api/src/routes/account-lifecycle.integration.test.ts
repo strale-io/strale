@@ -41,6 +41,7 @@ if (process.env.DATABASE_URL_TEST) {
   process.env.FRONTEND_URL ??= "https://strale.io";
   process.env.STRIPE_SECRET_KEY ??= "sk_test_wp11_placeholder";
   process.env.AUDIT_HMAC_SECRET ??= "wp11-integration-secret-at-least-32-chars";
+  process.env.ADMIN_SECRET ??= "wp11-integration-admin-secret-at-least-32-chars";
 }
 
 const DATABASE_URL_TEST = useTestDatabase();
@@ -1433,5 +1434,184 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     expect(forfeits).toHaveLength(1);
 
     // Cleanup is afterEach's.
+  });
+
+  it("the operator path runs the same closure and refuses a second run", async () => {
+    // POST /v1/admin/accounts/close exists for a holder who asks by
+    // email: the operator must not use a key the holder pasted. It has to do
+    // exactly what DELETE /v1/auth/me does, so the properties asserted above
+    // for the self-service path are asserted here for this one.
+    const email = emailFor("closure-operator");
+    const created = await register({ email });
+    const { api_key, user_id } = (await created.json()) as {
+      api_key: string;
+      user_id: string;
+    };
+    const wallet = await walletOf(user_id);
+    const adminHeaders = {
+      Authorization: `Bearer ${process.env.ADMIN_SECRET}`,
+      "Content-Type": "application/json",
+    };
+    const closeUrl = "http://localhost/v1/admin/accounts/close";
+    const closeBody = JSON.stringify({ email, confirm_email: email, reason: "request 2026-11-16" });
+
+    const refused = await app.request(closeUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: closeBody,
+    });
+    expect(refused.status).toBe(401);
+
+    const closed = await app.request(closeUrl, {
+      method: "POST",
+      headers: adminHeaders,
+      body: closeBody,
+    });
+    expect(closed.status).toBe(200);
+    const receipt = (await closed.json()) as {
+      status: string;
+      user_id: string;
+      deletion_reason: string;
+      wallet_status: string;
+    };
+    expect(receipt).toMatchObject({
+      status: "redacted",
+      user_id,
+      deletion_reason: "operator: request 2026-11-16",
+      wallet_status: "balance_zeroed",
+    });
+
+    const [row] = await db
+      .select({ email: users.email, deletedAt: users.deletedAt, deletionReason: users.deletionReason })
+      .from(users)
+      .where(eq(users.id, user_id));
+    expect(row!.deletedAt).not.toBeNull();
+    expect(row!.email).not.toBe(email);
+    expect(row!.deletionReason).toBe("operator: request 2026-11-16");
+
+    // The holder's key dies, as it does on the self-service path.
+    const keyAfter = await app.request("http://localhost/v1/wallet/balance", {
+      headers: { Authorization: `Bearer ${api_key}` },
+    });
+    expect(keyAfter.status).toBe(401);
+
+    // Forfeit through the ledger, and the ledger still sums to the balance.
+    const [after] = await db
+      .select({ balanceCents: wallets.balanceCents })
+      .from(wallets)
+      .where(eq(wallets.id, wallet!.id));
+    expect(after!.balanceCents).toBe(0);
+    const [sum] = await db
+      .select({ total: sql<number>`COALESCE(SUM(amount_cents), 0)::int` })
+      .from(walletTransactions)
+      .where(eq(walletTransactions.walletId, wallet!.id));
+    expect(Number(sum!.total)).toBe(0);
+
+    // A second run is refused and changes nothing. The address is now the
+    // sentinel, so the only way to aim at this account again is by the
+    // in-transaction guard, exercised below by calling the shared closure on
+    // the id directly.
+    const again = await app.request(closeUrl, {
+      method: "POST",
+      headers: adminHeaders,
+      body: closeBody,
+    });
+    expect(again.status).toBe(404);
+    const { closeAccount, AccountAlreadyClosedError } = await import("../lib/close-account.js");
+    const { getDb } = await import("../db/index.js");
+    await expect(closeAccount(getDb(), { userId: user_id, reason: "second run" })).rejects.toBeInstanceOf(
+      AccountAlreadyClosedError,
+    );
+    const [unchanged] = await db
+      .select({ deletedAt: users.deletedAt, deletionReason: users.deletionReason })
+      .from(users)
+      .where(eq(users.id, user_id));
+    expect(unchanged!.deletedAt!.getTime()).toBe(row!.deletedAt!.getTime());
+    expect(unchanged!.deletionReason).toBe("operator: request 2026-11-16");
+    const forfeits = await db
+      .select({ id: walletTransactions.id })
+      .from(walletTransactions)
+      .where(
+        and(
+          eq(walletTransactions.walletId, wallet!.id),
+          eq(walletTransactions.type, "closure_forfeit"),
+        ),
+      );
+    expect(forfeits).toHaveLength(1);
+  });
+
+  it("two closures at once close the account once", async () => {
+    // The route's "is it still open?" read is outside the transaction, so two
+    // concurrent closures both pass it. The row lock taken as the closure
+    // transaction's first statement is what makes exactly one of them win.
+    const email = emailFor("closure-race");
+    const created = await register({ email });
+    const { api_key, user_id } = (await created.json()) as { api_key: string; user_id: string };
+
+    const [selfService, operator] = await Promise.all([
+      app.request("http://localhost/v1/auth/me", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${api_key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: "wp11 race" }),
+      }),
+      app.request("http://localhost/v1/admin/accounts/close", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${process.env.ADMIN_SECRET}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ email, confirm_email: email, reason: "race 2026-11-16" }),
+      }),
+    ]);
+    const statuses = [selfService.status, operator.status].sort();
+    // One 200. The loser answers 409 if it reached the closure transaction,
+    // or 401/404 if the winner had already committed before its own lookup.
+    expect(statuses.filter((st) => st === 200)).toHaveLength(1);
+    expect(statuses.filter((st) => st >= 500)).toHaveLength(0);
+
+    const wallet = await walletOf(user_id);
+    const forfeits = await db
+      .select({ id: walletTransactions.id })
+      .from(walletTransactions)
+      .where(and(eq(walletTransactions.walletId, wallet!.id), eq(walletTransactions.type, "closure_forfeit")));
+    expect(forfeits).toHaveLength(1);
+  });
+
+  it("a closure overlapping a paid call does not deadlock", async () => {
+    // Every money path takes the wallet lock and then inserts a row that
+    // references `users`, which takes FOR KEY SHARE on the users row. A
+    // closure that locked `users` FOR UPDATE before the wallet waited on the
+    // paid call's wallet lock while the paid call waited on its users lock:
+    // Postgres broke the cycle by aborting one of them (40P01). This holds the
+    // wallet lock the way a paid call does, lets the closure queue behind it,
+    // then makes the FK insert and commits.
+    const email = emailFor("closure-lock-order");
+    const created = await register({ email });
+    const { user_id } = (await created.json()) as { user_id: string };
+    const { closeAccount } = await import("../lib/close-account.js");
+    const { getDb } = await import("../db/index.js");
+
+    let closure!: Promise<unknown>;
+    await client.begin(async (t) => {
+      await t`SELECT id FROM wallets WHERE user_id = ${user_id} FOR UPDATE`;
+      const [{ pid: holder }] = await t`SELECT pg_backend_pid() AS pid`;
+      closure = closeAccount(getDb(), { userId: user_id, reason: "lock order 2026-11-16" }).then(
+        () => "closed",
+        (err: unknown) => err,
+      );
+      // Wait until the closure is blocked on THIS transaction's lock, not on
+      // anything else in the database, so a stray waiter cannot end the wait
+      // early and let the test pass for any lock order.
+      const deadline = Date.now() + 10_000;
+      for (;;) {
+        const [row] = await client`SELECT count(*)::int AS n FROM pg_stat_activity
+          WHERE ${holder}::int = ANY(pg_blocking_pids(pid))`;
+        if ((row?.n ?? 0) >= 1) break;
+        if (Date.now() > deadline) throw new Error("closure never queued behind the wallet lock");
+        await new Promise((r) => setTimeout(r, 25));
+      }
+      await t`INSERT INTO failed_requests (user_id, task) VALUES (${user_id}, ${`${RUN_TAG} lock-order probe`})`;
+    });
+
+    expect(await closure).toBe("closed");
+    const [row] = await db.select({ deletedAt: users.deletedAt }).from(users).where(eq(users.id, user_id));
+    expect(row?.deletedAt).not.toBeNull();
   });
 });
