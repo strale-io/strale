@@ -15,7 +15,7 @@ B. The 27 no-reference debits (5840 cents), compared with Q2b's 23 pre-WP3 solut
 - The debits that match the 23 completed calls total 5390 cents, which is 150 cents more than those calls' recorded prices. **Up to €1.50 may be a second charge for a completed call.**
 - The matching is ambiguous: 12 debits fall in bursts where repeated identical calls share a time window.
 - Whether the possible €1.50 was refunded has not been measured.
-- WP3 replaced the pre-WP3 solution charging path that produced these debits on 2026-08-22, so no live defect remains here.
+- WP3 replaced the pre-WP3 solution charging path that produced these debits, so no live defect remains here.
 
 Refund owed: €0 proven and at most €1.50 possible. No refund runs before the refund-caps decision, which was proposed on 2026-11-16 and is waiting on Petter.
 
