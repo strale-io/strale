@@ -348,7 +348,7 @@ suite("transaction-quality-orphans on disposable Postgres", () => {
       const index = await plan(INDEX_PLAN_SETTINGS, ORPHANS_INDEX_PLAN);
       expect(index).toMatch(/Nested Loop Anti Join/);
       expect(index).toMatch(/Seq Scan on transaction_quality q\b/);
-      expect(index).toMatch(/Index Scan using transactions_pkey on transactions t\b/);
+      expect(index).toMatch(/Index (Only )?Scan using transactions_pkey on transactions t\b/);
       const heap = await plan(HEAP_PLAN_SETTINGS, ORPHANS_HEAP_PLAN);
       expect(heap).not.toMatch(/Index|Bitmap/);
       expect(heap).toMatch(/Seq Scan on transactions t\b/);

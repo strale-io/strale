@@ -1246,7 +1246,7 @@ export const OPS_READ_CHECKS: Record<string, CheckDef<unknown>> = {
     run: async (tx) => {
       const index = await underPlan(tx, "orphans_index_plan", INDEX_PLAN_SETTINGS, ORPHANS_INDEX_PLAN, true);
       const heap = await underPlan(tx, "orphans_heap_plan", HEAP_PLAN_SETTINGS, ORPHANS_HEAP_PLAN, true);
-      const oldest = await underPlan(tx, "orphans_oldest_call", [], OLDEST_CALL, false);
+      const oldest = await underPlan(tx, "orphans_oldest_call", HEAP_PLAN_SETTINGS, OLDEST_CALL, false);
       return {
         // A missing row reads as nulls, not as a confident zero.
         index_plan: { complete: index.complete, plan: index.plan, ...pick(index.row ?? {}, ["orphaned_rows"]) },
@@ -1283,19 +1283,20 @@ function isStatementTimeout(err: unknown): boolean {
 
 /**
  * Planner settings for the two orphan counts in transaction-quality-orphans.
- * INDEX: no hash or merge join, no index-only or bitmap scan, so each quality
- * row is looked up in `transactions` by a nested-loop Index Scan of its
- * primary key, and the quality rows themselves are not read from the
- * quality table's index-only path (which could be the faulty index). HEAP: no
- * index is used anywhere, so every `transactions` row is read from the table
- * itself. Settings only price plans; `plan` in the output records the plan
- * that ran. Both are SET LOCAL inside a savepoint that is rolled back after
- * the read, which restores the settings for the rest of the transaction.
+ * INDEX: no hash or merge join and no bitmap scan, so each quality row is
+ * looked up in `transactions` by a nested-loop probe of its primary key (an
+ * index-only probe is allowed: a missing index entry is missed either way).
+ * The count reads q.created_at, which the quality table's unique index does
+ * not hold, so the quality rows cannot come from an index-only path on that
+ * index. HEAP: no index is used anywhere, so every `transactions` row is read
+ * from the table itself. Settings only price plans; `plan` in the output
+ * records the planned access paths. All are SET LOCAL inside a savepoint that
+ * is rolled back after the read, which restores the settings for the rest of
+ * the transaction.
  */
 export const INDEX_PLAN_SETTINGS = [
   sql`SET LOCAL enable_hashjoin = off`,
   sql`SET LOCAL enable_mergejoin = off`,
-  sql`SET LOCAL enable_indexonlyscan = off`,
   sql`SET LOCAL enable_bitmapscan = off`,
 ];
 export const HEAP_PLAN_SETTINGS = [
@@ -1304,8 +1305,9 @@ export const HEAP_PLAN_SETTINGS = [
   sql`SET LOCAL enable_bitmapscan = off`,
 ];
 
+// created_at is NOT NULL, so COUNT(q.created_at) = COUNT(*).
 export const ORPHANS_INDEX_PLAN = sql`
-        SELECT COUNT(*)::int AS orphaned_rows
+        SELECT COUNT(q.created_at)::int AS orphaned_rows
           FROM transaction_quality q
          WHERE NOT EXISTS (SELECT 1 FROM transactions t WHERE t.id = q.transaction_id)
       `;
@@ -1328,7 +1330,8 @@ export const ORPHANS_HEAP_PLAN = sql`
       `;
 
 // Flags at the window boundaries only, never the instant itself: an instant
-// taken from the data would split a window and could undo a "<5" band.
+// taken from the data would split a window and could undo a "<5" band. Run
+// under HEAP_PLAN_SETTINGS so no index supplies the MIN.
 export const OLDEST_CALL = sql`
         SELECT MIN(created_at) < TIMESTAMPTZ '2026-04-16 00:00:00+00' AS oldest_call_before_2026_04_16,
                MIN(created_at) < TIMESTAMPTZ '2026-04-17 00:00:00+00' AS oldest_call_before_2026_04_17,
@@ -1354,10 +1357,17 @@ const OLDEST_CALL_FIELDS = [
 ] as const;
 
 type PlanFlags = {
-  quality_read_from_table: boolean;
-  transactions_probed_by_pkey: boolean;
-  transactions_read_from_table: boolean;
-  any_index_used: boolean;
+  quality_read_from_table: boolean | null;
+  transactions_probed_by_pkey: boolean | null;
+  transactions_read_from_table: boolean | null;
+  any_index_used: boolean | null;
+};
+/** The plan could not be read or EXPLAIN did not finish: null leaves, so the output contract still holds. */
+const UNKNOWN_PLAN: PlanFlags = {
+  quality_read_from_table: null,
+  transactions_probed_by_pkey: null,
+  transactions_read_from_table: null,
+  any_index_used: null,
 };
 
 /**
@@ -1380,6 +1390,7 @@ export function planFlags(rows: Record<string, unknown>[]): PlanFlags | null {
     if (Array.isArray(kids)) kids.forEach(walk);
   };
   walk(root);
+  if (!nodes.some((n) => typeof n["Node Type"] === "string")) return null;
   const seq = (rel: string) => nodes.some((n) => n["Node Type"] === "Seq Scan" && n["Relation Name"] === rel);
   return {
     quality_read_from_table: seq("transaction_quality"),
@@ -1392,9 +1403,11 @@ export function planFlags(rows: Record<string, unknown>[]): PlanFlags | null {
 /**
  * Runs `query` under `settings` inside a savepoint that is always rolled back
  * (restoring the settings). With `explain`, first records the plan of the same
- * statement under the same settings (planning only; nothing is bound, so the
- * plan that runs next is this one). A statement timeout reads as incomplete;
- * any other error fails the check.
+ * statement under the same settings. That is planning only: a plan cached on
+ * the connection for the count itself was made under the same settings but
+ * possibly older statistics, so the flags are strong evidence of the access
+ * paths, not proof. A statement timeout reads as incomplete; any other error
+ * fails the check. An unavailable plan is reported as null flags.
  */
 async function underPlan(
   tx: ReadExecutor,
@@ -1402,7 +1415,7 @@ async function underPlan(
   settings: SQL[],
   query: SQL,
   explain: boolean,
-): Promise<{ row: Record<string, unknown> | undefined; plan: PlanFlags | null; complete: boolean }> {
+): Promise<{ row: Record<string, unknown> | undefined; plan: PlanFlags; complete: boolean }> {
   await tx.execute(sql.raw(`SAVEPOINT ${name}`));
   let row: Record<string, unknown> | undefined;
   let plan: PlanFlags | null = null;
@@ -1417,7 +1430,7 @@ async function underPlan(
   }
   await tx.execute(sql.raw(`ROLLBACK TO SAVEPOINT ${name}`));
   await tx.execute(sql.raw(`RELEASE SAVEPOINT ${name}`));
-  return { row, plan, complete };
+  return { row, plan: plan ?? UNKNOWN_PLAN, complete };
 }
 
 export function isOpsReadCheck(name: string): boolean {

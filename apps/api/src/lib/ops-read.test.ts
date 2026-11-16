@@ -270,7 +270,7 @@ function canned(): Record<MoneyCheck, Record<string, unknown>[][]> {
       [], // RELEASE SAVEPOINT
     ],
     "transaction-quality-orphans": [
-      [], [], [], [], [], // SAVEPOINT, four SET LOCAL
+      [], [], [], [], // SAVEPOINT, three SET LOCAL
       [{ "QUERY PLAN": INDEX_EXPLAIN }],
       [{ orphaned_rows: 7 }],
       [], [], // ROLLBACK TO, RELEASE
@@ -278,7 +278,7 @@ function canned(): Record<MoneyCheck, Record<string, unknown>[][]> {
       [{ "QUERY PLAN": JSON.stringify(HEAP_EXPLAIN) }], // a driver may hand json back as text
       [{ ...HEAP_ORPHANS }],
       [], [], // ROLLBACK TO, RELEASE
-      [], // SAVEPOINT
+      [], [], [], [], // SAVEPOINT, three SET LOCAL
       [{ ...OLDEST_CALL_FLAGS }],
       [], [], // ROLLBACK TO, RELEASE
     ],
@@ -466,10 +466,9 @@ const REVIEWED_FILTERS: Record<MoneyCheck, string[][]> = {
     ["SAVEPOINT orphans_index_plan"],
     ["SET LOCAL enable_hashjoin = off"],
     ["SET LOCAL enable_mergejoin = off"],
-    ["SET LOCAL enable_indexonlyscan = off"],
     ["SET LOCAL enable_bitmapscan = off"],
     ["EXPLAIN (FORMAT JSON)", "FROM transaction_quality q", "NOT EXISTS (SELECT 1 FROM transactions t WHERE t.id = q.transaction_id)"],
-    ["FROM transaction_quality q", "NOT EXISTS (SELECT 1 FROM transactions t WHERE t.id = q.transaction_id)"],
+    ["SELECT COUNT(q.created_at)::int AS orphaned_rows", "FROM transaction_quality q", "NOT EXISTS (SELECT 1 FROM transactions t WHERE t.id = q.transaction_id)"],
     ["ROLLBACK TO SAVEPOINT orphans_index_plan"],
     ["RELEASE SAVEPOINT orphans_index_plan"],
     ["SAVEPOINT orphans_heap_plan"],
@@ -486,6 +485,9 @@ const REVIEWED_FILTERS: Record<MoneyCheck, string[][]> = {
     ["ROLLBACK TO SAVEPOINT orphans_heap_plan"],
     ["RELEASE SAVEPOINT orphans_heap_plan"],
     ["SAVEPOINT orphans_oldest_call"],
+    ["SET LOCAL enable_indexscan = off"],
+    ["SET LOCAL enable_indexonlyscan = off"],
+    ["SET LOCAL enable_bitmapscan = off"],
     ["FROM transactions\n",
       "MIN(created_at) < TIMESTAMPTZ '2026-04-16 00:00:00+00' AS oldest_call_before_2026_04_16",
       "MIN(created_at) < TIMESTAMPTZ '2026-04-17 00:00:00+00' AS oldest_call_before_2026_04_17",
@@ -1049,7 +1051,7 @@ function failingPlanExecutor(failOn: string, err: Error): ReadExecutor & { state
       if (text.startsWith(failOn)) throw err;
       if (text.startsWith("EXPLAIN")) return [{ "QUERY PLAN": text.includes("orphaned_rows,") ? HEAP_EXPLAIN : INDEX_EXPLAIN }];
       if (text.startsWith("SELECT COUNT(*)::int AS orphaned_rows,")) return [{ ...HEAP_ORPHANS }];
-      if (text.startsWith("SELECT COUNT(*)::int AS orphaned_rows")) return [{ orphaned_rows: 7 }];
+      if (text.startsWith("SELECT COUNT(q.created_at)::int AS orphaned_rows")) return [{ orphaned_rows: 7 }];
       if (text.startsWith("SELECT MIN(created_at)")) return [{ ...OLDEST_CALL_FLAGS }];
       return [];
     },
@@ -1073,9 +1075,9 @@ describe("transaction-quality-orphans", () => {
     const heads = tx.queries.map((q) => q.sql.trim().split(/\s+/).slice(0, 4).join(" "));
     expect(heads).toEqual([
       "SAVEPOINT orphans_index_plan",
-      "SET LOCAL enable_hashjoin =", "SET LOCAL enable_mergejoin =", "SET LOCAL enable_indexonlyscan =", "SET LOCAL enable_bitmapscan =",
+      "SET LOCAL enable_hashjoin =", "SET LOCAL enable_mergejoin =", "SET LOCAL enable_bitmapscan =",
       "EXPLAIN (FORMAT JSON) SELECT",
-      "SELECT COUNT(*)::int AS orphaned_rows",
+      "SELECT COUNT(q.created_at)::int AS orphaned_rows",
       "ROLLBACK TO SAVEPOINT orphans_index_plan", "RELEASE SAVEPOINT orphans_index_plan",
       "SAVEPOINT orphans_heap_plan",
       "SET LOCAL enable_indexscan =", "SET LOCAL enable_indexonlyscan =", "SET LOCAL enable_bitmapscan =",
@@ -1083,6 +1085,7 @@ describe("transaction-quality-orphans", () => {
       "SELECT COUNT(*)::int AS orphaned_rows,",
       "ROLLBACK TO SAVEPOINT orphans_heap_plan", "RELEASE SAVEPOINT orphans_heap_plan",
       "SAVEPOINT orphans_oldest_call",
+      "SET LOCAL enable_indexscan =", "SET LOCAL enable_indexonlyscan =", "SET LOCAL enable_bitmapscan =",
       "SELECT MIN(created_at) < TIMESTAMPTZ",
       "ROLLBACK TO SAVEPOINT orphans_oldest_call", "RELEASE SAVEPOINT orphans_oldest_call",
     ]);
@@ -1090,7 +1093,7 @@ describe("transaction-quality-orphans", () => {
 
   it("each EXPLAIN is of the exact statement that then runs", async () => {
     const { tx } = await runMoney("transaction-quality-orphans");
-    for (const [explain, run] of [[5, 6], [13, 14]]) {
+    for (const [explain, run] of [[4, 5], [12, 13]]) {
       const [head, rest] = [tx.queries[explain].sql.slice(0, 22), tx.queries[explain].sql.slice(22)];
       expect(head).toBe("EXPLAIN (FORMAT JSON) ");
       expect(rest).toBe(tx.queries[run].sql);
@@ -1100,10 +1103,10 @@ describe("transaction-quality-orphans", () => {
   it("the index plan keeps the primary-key probe and the heap plan turns off every index access", () => {
     const settings = (xs: SQL[]) => xs.map(text).join("; ");
     const index = settings(INDEX_PLAN_SETTINGS);
-    for (const s of ["enable_hashjoin = off", "enable_mergejoin = off", "enable_indexonlyscan = off", "enable_bitmapscan = off"]) {
-      expect(index).toContain(s);
-    }
-    expect(index).not.toContain("enable_indexscan");
+    for (const s of ["enable_hashjoin = off", "enable_mergejoin = off", "enable_bitmapscan = off"]) expect(index).toContain(s);
+    expect(index).not.toMatch(/enable_index(only)?scan/);
+    // The count reads a column the quality table's unique index lacks, so no index-only path can supply q.
+    expect(text(ORPHANS_INDEX_PLAN)).toMatch(/^\s*SELECT COUNT\(q\.created_at\)::int AS orphaned_rows\s/);
     expect(index).not.toContain("enable_seqscan");
     const heap = settings(HEAP_PLAN_SETTINGS);
     for (const s of ["enable_indexscan = off", "enable_indexonlyscan = off", "enable_bitmapscan = off"]) expect(heap).toContain(s);
@@ -1122,13 +1125,13 @@ describe("transaction-quality-orphans", () => {
     expect(q.match(/MIN\(created_at\)/g)).toHaveLength(4);
     expect(q.match(/MIN\(created_at\) < TIMESTAMPTZ '2026-\d\d-\d\d 00:00:00\+00' AS oldest_call_before_/g)).toHaveLength(4);
     const answers = canned()["transaction-quality-orphans"];
-    answers[18][0] = { ...answers[18][0], oldest_call_at: "2026-04-20T00:00:00Z", orphaned_newer_than_oldest_call: 4 };
+    answers[20][0] = { ...answers[20][0], oldest_call_at: "2026-04-20T00:00:00Z", orphaned_newer_than_oldest_call: 4 };
     const { result } = await runMoney("transaction-quality-orphans", answers);
     expect([...allKeys(result)].filter((k) => /newer_than|oldest_call_at/.test(k))).toEqual([]);
   });
 
   it.each([
-    ["index_plan", "SELECT COUNT(*)::int AS orphaned_rows\n", {
+    ["index_plan", "SELECT COUNT(q.created_at)::int AS orphaned_rows", {
       index_plan: { complete: false, plan: INDEX_PLAN_FLAGS, orphaned_rows: null },
       heap_plan: { complete: true, plan: HEAP_PLAN_FLAGS, ...HEAP_ORPHANS },
       oldest_call: { complete: true, ...OLDEST_CALL_FLAGS },
@@ -1153,6 +1156,28 @@ describe("transaction-quality-orphans", () => {
     expect(tx.statements[i + 2]).toBe(`RELEASE SAVEPOINT orphans_${part}`);
   });
 
+  it.each([["index_plan", INDEX_PLAN_FLAGS], ["heap_plan", HEAP_PLAN_FLAGS]] as const)(
+    "a timeout on the %s EXPLAIN reports null plan flags, still passes the output contract, and keeps every count",
+    async (part, flags) => {
+      const failOn = part === "index_plan" ? "EXPLAIN (FORMAT JSON) \n        SELECT COUNT(q.created_at)" : "EXPLAIN (FORMAT JSON) \n        SELECT COUNT(*)::int AS orphaned_rows,";
+      const tx = failingPlanExecutor(failOn, timeout());
+      const result = (await def.run(tx, def.prepare({}))) as Record<string, Record<string, unknown>>;
+      expect(() => assertSafeOutput({ check: "transaction-quality-orphans", result })).not.toThrow();
+      expect(result[part]).toMatchObject({ complete: false, plan: nulls(flags) });
+      const other = part === "index_plan" ? "heap_plan" : "index_plan";
+      expect(result[other].complete).toBe(true);
+      expect(result.oldest_call).toEqual({ complete: true, ...OLDEST_CALL_FLAGS });
+    },
+  );
+
+  it("an unreadable plan reports null flags, completes the count, and passes the output contract", async () => {
+    const answers = canned()["transaction-quality-orphans"];
+    answers[4] = [{ "QUERY PLAN": [{ Plan: {} }] }];
+    const { result } = await runMoney("transaction-quality-orphans", answers);
+    expect(() => assertSafeOutput({ check: "transaction-quality-orphans", result })).not.toThrow();
+    expect(result).toMatchObject({ index_plan: { complete: true, plan: nulls(INDEX_PLAN_FLAGS), orphaned_rows: 7 } });
+  });
+
   it("any other error fails the check and skips the remaining parts", async () => {
     const tx = failingPlanExecutor("SET LOCAL enable_hashjoin", Object.assign(new Error("permission denied"), { cause: { code: "42501" } }));
     await expect(def.run(tx, def.prepare({}))).rejects.toThrow("permission denied");
@@ -1161,14 +1186,14 @@ describe("transaction-quality-orphans", () => {
 
   it("an extra column, such as a month, never reaches the output: run() keeps its fixed fields", async () => {
     const answers = canned()["transaction-quality-orphans"];
-    for (const i of [6, 14, 18]) answers[i][0] = { ...answers[i][0], month: "2026-05" };
+    for (const i of [5, 13, 20]) answers[i][0] = { ...answers[i][0], month: "2026-05" };
     const { result } = await runMoney("transaction-quality-orphans", answers);
     expect(result).toEqual(EXPECTED["transaction-quality-orphans"]);
   });
 
   it.each([
-    ["a count as text", 14, { orphaned_created_on_2026_04_16: "2" }],
-    ["a flag as text", 18, { oldest_call_before_2026_04_16: "t" }],
+    ["a count as text", 13, { orphaned_created_on_2026_04_16: "2" }],
+    ["a flag as text", 20, { oldest_call_before_2026_04_16: "t" }],
   ])("the output contract refuses %s", async (_label, at, change) => {
     const answers = canned()["transaction-quality-orphans"];
     answers[at][0] = { ...answers[at][0], ...change };
@@ -1189,7 +1214,9 @@ describe("transaction-quality-orphans", () => {
     });
 
     it("returns null for an unreadable plan rather than a confident false", () => {
-      for (const v of [undefined, "not json", [], [{}], { Plan: {} }]) expect(planFlags([{ "QUERY PLAN": v }])).toBeNull();
+      for (const v of [undefined, "not json", [], [{}], { Plan: {} }, [{ Plan: {} }], [{ Plan: { Plans: [{ "Relation Name": "transactions" }] } }]]) {
+        expect(planFlags([{ "QUERY PLAN": v }])).toBeNull();
+      }
       expect(planFlags([])).toBeNull();
     });
   });
