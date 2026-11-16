@@ -31,7 +31,7 @@ beforeEach(() => {
   id = randomUUID();
   state.identity = {user: {id: randomUUID()}, apiKeyId: randomUUID()};
   const q: any = {
-    from: () => q, leftJoin: () => q, orderBy: () => q, where: () => q, limit: () => q, set: () => {state.writes(); return q;},
+    from: () => q, leftJoin: () => q, orderBy: () => q, where: () => q, limit: () => q, for: () => q, set: () => {state.writes(); return q;},
     values: () => {state.writes(); return q;}, returning: () => q,
     then: (resolve: any, reject: any) => Promise.resolve([{id, legalHold: false, balanceCents: 1000, submittedAt: new Date()}]).then(resolve, reject),
   };

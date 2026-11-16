@@ -1,12 +1,10 @@
 import { resolveSignupSource } from "../lib/signup-source.js";
 import { Hono } from "hono";
-import * as walletService from "../lib/wallet-service.js";
 import { eq, sql, and, gte } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { users, transactions } from "../db/schema.js";
 import { generateApiKey, hashApiKey, getKeyPrefix } from "../lib/auth.js";
 import { apiError } from "../lib/errors.js";
-import { logError } from "../lib/log.js";
 import { requirePrimaryKey, authMiddleware, getClientIp, hashIp } from "../lib/middleware.js";
 import { rateLimitByIpDb } from "../lib/db-rate-limit.js";
 import { sendWebhook } from "../lib/webhook.js";
@@ -18,12 +16,7 @@ import {
   emailIsRegistered,
   EmailAlreadyRegisteredError,
 } from "../lib/account-service.js";
-import {
-  applyClosurePlan,
-  buildClosureSummary,
-  describeAuditKeysHeld,
-  type ClosureOutcome,
-} from "../lib/account-closure.js";
+import { AccountAlreadyClosedError, closeAccount } from "../lib/close-account.js";
 import {
   assessTrialGrant,
   MAX_NAME_LENGTH,
@@ -411,117 +404,25 @@ authRoute.delete("/me", authMiddleware, requirePrimaryKey, async (c) => {
   const body = await c.req.json().catch(() => ({})) as { reason?: string };
   const reason = (body.reason ?? "").toString().slice(0, 500) || "user_request";
 
-  const now = new Date();
-
-  // Read BEFORE the transaction opens, not inside it.
-  //
-  // The previous version put this read inside the closure transaction wrapped
-  // in a try/catch, on the reasoning that a reporting nicety must not fail the
-  // closure. The catch could not do that job: a SQL error inside a Postgres
-  // transaction aborts the WHOLE transaction, so every later statement fails
-  // with 25P02 and the COMMIT becomes a ROLLBACK. Catching the error in
-  // JavaScript let execution carry on into `forfeitOnClosure`, which then
-  // failed on an already-aborted transaction and threw — a 500 with nothing
-  // closed, deterministically, on every retry. That is the same Postgres
-  // semantic the retention job needed a SAVEPOINT for, in a commit that added
-  // the SAVEPOINT there and this catch here.
-  //
-  // Outside the transaction the catch works as intended, and the read still
-  // precedes the clearing, which is all it needed.
-  let outcome: ClosureOutcome | undefined;
-  let auditKeysHeld: string[];
+  // The closure itself is shared with the operator path
+  // (`POST /v1/admin/accounts/close`) so the two cannot drift.
   try {
-    auditKeysHeld = await describeAuditKeysHeld(db, user.id);
+    const { body: receipt } = await closeAccount(db, { userId: user.id, reason });
+    return c.json(receipt);
   } catch (err) {
-    logError("closure-audit-key-read-failed", err, { user_id: user.id });
-    auditKeysHeld = ["<unavailable — contact petter@strale.io for the full list>"];
+    // A concurrent closure (the operator path, or a second request on this
+    // still-live key) committed first.
+    if (err instanceof AccountAlreadyClosedError) {
+      return c.json(
+        apiError("invalid_request", "This account is already closed.", {
+          fix: "Nothing to retry: an earlier request closed this account. Contact petter@strale.io if you did not ask for that.",
+          retryable: false,
+        }),
+        409,
+      );
+    }
+    throw err;
   }
-
-  await db.transaction(async (tx) => {
-
-    // Forfeit whatever remains — refund-on-delete is out of scope (it would
-    // need a Stripe payout flow) and is documented in the response.
-    //
-    // WP2: this used to zero the balance with no ledger entry, which made it
-    // the one balance change on the platform with no audit trail and left the
-    // ledger permanently out of step with the balance for that wallet. It now
-    // goes through the wallet service, which writes a paired closure_forfeit
-    // entry, and takes the row lock the previous version skipped.
-    //
-    // Runs BEFORE the anonymisation so the forfeit is computed against a live
-    // account, and inside the same transaction so a failure closes nothing.
-    await walletService.forfeitOnClosure(tx, {
-      userId: user.id,
-      description: "Balance forfeited on account closure (Art. 17 erasure)",
-    });
-
-    // WP11: every clearing step, including the users row itself, is declared
-    // once in `lib/account-closure.ts` — which also builds the summary
-    // returned below. They were two hand-maintained artifacts and drifted
-    // apart in four consecutive review rounds; they are one artifact now.
-    outcome = await applyClosurePlan(tx, {
-      userId: user.id,
-      anonymisedAt: now,
-      deletionReason: reason,
-    });
-  });
-
-  const closureSummary = buildClosureSummary(outcome);
-
-  // Cert-audit Y-7: be explicit about what survives erasure.
-  //
-  // This comment used to say the integrity hash covers input and auditTrail,
-  // so clearing them would break the chain — and the response said the same to
-  // the customer. Round 5 checked it against the platform's own behaviour:
-  // `purgeCustomerContent` clears exactly those columns on EVERY transaction
-  // at 90 days, `integrity_hash` and `previous_hash` are not on its clear
-  // list, and `verify.ts` reports a redacted predecessor as redacted rather
-  // than broken. 312,677 of 919,304 user-linked production rows already carry
-  // `redacted_at`. So the refusal ground was false, and a subject asking on
-  // day 10 was told it was impossible while the platform did it anyway on day
-  // 90. Closure clears the content immediately now.
-  //
-  // What genuinely survives is the processing record — that a call happened,
-  // when, what it cost, its hashes — under Art. 30, plus a legal-hold
-  // exception the response reports.
-  return c.json({
-    status: "redacted",
-    user_id: user.id,
-    redacted_at: now.toISOString(),
-    deletion_reason: reason,
-    summary: {
-      // Derived from CLOSURE_PLAN, never restated. A hand-written copy of this
-      // list was wrong in three consecutive review rounds — each time in a
-      // place the previous round had not pointed at.
-      ...closureSummary,
-      // Read from your own rows, not from a list somebody maintains. Four
-      // review rounds each found another writer putting another shape into
-      // `audit_trail` — `client_meta` and `request_context`, then
-      // `fingerprintHash` and `mcpClient` inside it, then a second
-      // `requestContext` object written by the solution executor with
-      // different fields under a camelCase key. A hand-written list cannot
-      // enumerate a JSONB blob, so this reports what was actually there.
-      erased_audit_trail_keys: auditKeysHeld,
-      retained_legal_basis:
-        "GDPR Art. 30 (records of processing) + DEC-20260428-B (audit-chain integrity). " +
-        "Your row's identifiers are anonymised; transaction rows still carry your user id, which points at that anonymised row — a bare id is not a name, and severing it would break the hashed chain every later transaction references. " +
-        "This is the same legal basis many regulated-industry providers (banks, KYC vendors) use for retention-on-deletion. " +
-        "Per-item reasons are in `disclosures` below.",
-      erased_content_disclosure:
-        "Everything you sent and everything derived from it is cleared from your transaction rows by this request — the request payload, the response, failure messages, the audit body, upstream source records and your idempotency keys. " +
-        "This is the same in-place redaction the platform already applies to every transaction at 90 days, so it is proven not to break the hash chain: the integrity and previous-block hashes are untouched and every later transaction still verifies, with yours reported as redacted rather than broken. " +
-        "Earlier versions of this response told you the opposite — that clearing this content would break the chain, and that you had to write in to have it removed. Both were wrong, and neither is how it works now.",
-      legal_hold_disclosure:
-        "The one exception is a transaction under a legal hold, which we are required to preserve intact and which this request therefore does not clear. " +
-        "`transactions_content_redacted` and `transactions_withheld_under_legal_hold` below are the counts for your account. " +
-        "An earlier version of this text told you the response reported them and it did not.",
-    },
-    transactions_content_redacted: outcome?.contentRedacted ?? 0,
-    transactions_withheld_under_legal_hold: outcome?.legalHoldSkipped ?? 0,
-    api_key_status: "burned — current key will fail on next use",
-    wallet_status: "balance_zeroed",
-    contact: "petter@strale.io",
-  });
 });
 
 // POST /v1/auth/api-key — Regenerate API key

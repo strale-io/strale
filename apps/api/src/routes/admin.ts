@@ -1,11 +1,13 @@
 import { Hono } from "hono";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { apiError } from "../lib/errors.js";
 import { adminOnly } from "../lib/admin-auth.js";
 import { log, logError } from "../lib/log.js";
 import { persistCapability } from "../lib/capability-persistence.js";
-import { SYSTEM_ACCOUNT_EMAIL } from "../lib/internal-accounts.js";
+import { SYSTEM_ACCOUNT_EMAIL, isInternalAccountEmail } from "../lib/internal-accounts.js";
+import { users } from "../db/schema.js";
+import { AccountAlreadyClosedError, closeAccount } from "../lib/close-account.js";
 import { wasDeactivatedDeliberately } from "../lib/solution-activation.js";
 import type { AppEnv } from "../types.js";
 
@@ -943,4 +945,102 @@ adminRoute.post("/create-solution", async (c) => {
   }
 
   return c.json({ created: solRows[0], steps_inserted: stepsInserted }, 201);
+});
+
+// POST /v1/admin/accounts/close — close an account on the holder's written
+// request (2026-11-16).
+//
+// The only closure path before this was `DELETE /v1/auth/me`, which needs the
+// holder's own primary key. An operator acting on an emailed request must not
+// use a key the holder pasted into an email, so it had no path at all. This
+// runs the very same closure (`lib/close-account.ts`) — forfeit through the
+// ledger, the whole CLOSURE_PLAN, the same itemised response — behind the
+// admin wall.
+//
+// The account is named by its email address, the one identifier the operator
+// holds from the holder's message. It goes in the body, never the path, so it
+// does not land in access logs.
+//
+// Guards, because this is one-way:
+//   - `email` and `confirm_email` must both be given and agree, so a typo in
+//     one closes nothing;
+//   - `reason` is required and recorded as the deletion reason, so the row
+//     says why an operator closed it. It must be a reference (a ticket id, a
+//     date), not a description of the person: a reason carrying an email
+//     address or a phone number would write personal data back onto the row
+//     this request has just erased, so one that looks like either is refused;
+//   - an unknown address is 404, an already-closed account is 409 (also when a
+//     concurrent closure wins the race inside the transaction) and an internal
+//     account (system, test, operator) is refused.
+//
+// The personal-data check is a guard against a slip, not a classifier. It
+// refuses an `@`, and any free-standing run of nine or more digits once
+// spaces, dots, slashes, hyphens and parentheses are allowed inside it (a
+// phone number, a personal identity number). Dates are removed first, and a
+// run glued to a letter prefix (`TKT-20261116-0042`, `INV-2026000123`) is a
+// reference, not a number about a person. That exemption also lets through
+// an identifier written with a prefix (`pnr-19800101-1234`); this catches a
+// slip, it does not stop an operator determined to paste personal data.
+const DATE = /\b(?:19|20)\d{2}[-/.](?:0?[1-9]|1[0-2])[-/.](?:0?[1-9]|[12]\d|3[01])\b/g;
+const FREE_DIGIT_RUN = /(?<![\p{L}\d][-_]?)\+?\d[\d\s().\/-]*\d/gu;
+function looksPersonal(text: string): boolean {
+  if (text.includes("@")) return true;
+  for (const run of text.replace(DATE, " ").matchAll(FREE_DIGIT_RUN)) {
+    if (run[0].replace(/\D/g, "").length >= 9) return true;
+  }
+  return false;
+}
+
+adminRoute.post("/accounts/close", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as
+    | { email?: unknown; confirm_email?: unknown; reason?: unknown }
+    | null;
+  const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+  const confirm = typeof body?.confirm_email === "string" ? body.confirm_email.trim().toLowerCase() : "";
+  if (!email || email !== confirm) {
+    return c.json(apiError("invalid_request", "email and confirm_email are required and must match"), 400);
+  }
+  const reason = typeof body?.reason === "string" ? body.reason.trim().slice(0, 500) : "";
+  if (!reason) {
+    return c.json(apiError("invalid_request", "reason is required (a reference such as a ticket id or the request date)"), 400);
+  }
+  if (looksPersonal(reason)) {
+    return c.json(
+      apiError(
+        "invalid_request",
+        "reason must be a reference, not personal data: it may not contain an email address, a phone number or another long run of digits such as a personal identity number. Ticket ids (TKT-1234) and dates are fine.",
+      ),
+      400,
+    );
+  }
+
+  const db = getDb();
+  const [account] = await db
+    .select({ id: users.id, email: users.email, deletedAt: users.deletedAt })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+  if (!account) {
+    return c.json(apiError("not_found", "No account with that email address"), 404);
+  }
+  if (account.deletedAt) {
+    return c.json(apiError("invalid_request", `That account was already closed at ${account.deletedAt.toISOString()}`), 409);
+  }
+  if (isInternalAccountEmail(account.email)) {
+    return c.json(apiError("invalid_request", "Internal accounts are not closed through this route"), 400);
+  }
+
+  try {
+    const { body: receipt, forfeitedCents } = await closeAccount(db, { userId: account.id, reason: `operator: ${reason}` });
+    log.info(
+      { label: "admin-account-closed", user_id: account.id, forfeited_cents: forfeitedCents },
+      "admin-account-closed",
+    );
+    return c.json(receipt);
+  } catch (err) {
+    if (err instanceof AccountAlreadyClosedError) {
+      return c.json(apiError("invalid_request", "That account was closed by a concurrent request"), 409);
+    }
+    throw err;
+  }
 });
