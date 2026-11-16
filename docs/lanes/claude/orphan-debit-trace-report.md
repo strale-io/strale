@@ -20,8 +20,10 @@ One new entry in `OPS_READ_CHECKS`. It takes no caller input (`prepare: () => nu
                 in_x402_settlement_intents, in_dispute_requests, in_job_files, in_job_callbacks,
                 is_wallet_transaction_id, refunded_cents, wallet_user_closed, debit_type_note } ],
   no_reference_debits: { months: [ { month, debits, debited_cents } ],
-                         matched_solution_calls, matched_completed_solution_calls,
-                         unmatched, unmatched_cents,
+                         matched_debits, matched_completed_debits,
+                         distinct_matched_solution_calls, distinct_matched_completed_solution_calls,
+                         debits_sharing_a_call, unmatched, unmatched_cents,
+                         matched_not_completed: { debits, debited_cents, refunded_nearby_debits },
                          unmatched_kinds: [ { month, debit_type_note, solution_call_within_10m,
                                               refunded_nearby, debits, debited_cents } ] } }
 ```
@@ -31,7 +33,7 @@ One new entry in `OPS_READ_CHECKS`. It takes no caller input (`prepare: () => nu
 These need the master's eye.
 
 - **`no_reference_debits` instead of `no_reference`.** `OUTPUT_FIELDS` is a flat map with one shape per key, and `no_reference` is already kept-charges' boolean. Reusing the name for an object would have meant loosening an existing shape.
-- **`matched_completed_solution_calls` (new).** It counts the same match with Q2b's `status = 'completed'` added. `matched_solution_calls` minus this number is the solution calls Q2b did not count. Before #350 the solution route could write `status = 'partial'` (commit `80371507`), and Q2b leaves those out.
+- **`matched_completed_debits` (new; named `matched_completed_solution_calls` in 7278c9a7).** It counts the same match with Q2b's `status = 'completed'` added. `matched_debits` minus this number is the matched debits Q2b did not count. Before #350 the solution route could write `status = 'partial'` (commit `80371507`), and Q2b leaves those out.
 - **`unmatched_kinds` (new).** It groups the unmatched debits by four columns:
   - month;
   - `debit_type_note`;
@@ -79,6 +81,21 @@ These need the master's eye.
 
   A hit only proves a deleted call when the column has no foreign key, or when the foreign key was missing at the time. With the declared cascade on `transaction_quality`, deleting the call would also have deleted its quality row.
 
+## Review fixes (after GO on 7278c9a7)
+
+- **Debits and calls counted apart.** `matched_solution_calls` counted debits, so several debits matching one call looked fully explained. It is now `matched_debits`, and `matched_completed_solution_calls` is now `matched_completed_debits`.
+  - New counts: `distinct_matched_solution_calls` and `distinct_matched_completed_solution_calls` (distinct matched calls) and `debits_sharing_a_call` (debits whose matched call another debit also matches).
+  - An internal `pairs (debit_id, call_id, call_status)` CTE holds the matches by row id. No id leaves the statement.
+- **Refund status of non-completed matches.** `matched_not_completed: { debits, debited_cents, refunded_nearby_debits }` covers debits matched only to calls that did not complete. It uses the same refund rule as `unmatched_kinds`.
+  - The count is `refunded_nearby_debits` because `refunded_nearby` is already a boolean key.
+  - The cents key is `debited_cents`, the established cents key name.
+- **`in_capability_invocations` is not evidence.** It is always false today, because no writer sets `capability_invocations.transaction_id` (see its comment in `schema.ts`).
+- **`refunded_cents` repeats per row.** It is the refund total for the reference, so when two dangling debits share one reference it appears on both rows. Do not sum it across rows.
+- **Tests.** The new test "counts debits and distinct calls apart, so one call matched by several debits is visible" fails against `7278c9a7`, along with four updated tests: `5 failed | 90 passed (95)`. All 95 pass with the fix. On a throwaway local Postgres, two debits matched to one completed call plus one refunded partial call gave:
+  - `matched_debits` 3 and `distinct_matched_solution_calls` 2;
+  - `debits_sharing_a_call` 2;
+  - `matched_not_completed` with 1 debit, 250 cents and 1 refunded nearby.
+
 ## Indexes, per statement
 
 I checked the plans on a throwaway local Postgres 16 with `enable_seqscan = off`, to prove each index can be used. These are not production plans.
@@ -107,7 +124,7 @@ The biggest cost is the `transactions` scan in statements 2 and 3, each comparab
 
 ## Tests
 
-Command: `cd apps/api && npx vitest run src/lib/ops-read.test.ts`. Result: 94 passed. With `src/routes/ops-read.test.ts` included: 106 passed. `npx tsc --noEmit -p .` exits 0, after building `packages/mcp-server` and `packages/sdk-typescript`.
+Command: `cd apps/api && npx vitest run src/lib/ops-read.test.ts`. Result: 95 passed. With `src/routes/ops-read.test.ts` included: 107 passed. `npx tsc --noEmit -p .` exits 0, after building `packages/mcp-server` and `packages/sdk-typescript`.
 
 New tests, in `describe("orphan-debit-trace")`:
 
@@ -116,6 +133,7 @@ New tests, in `describe("orphan-debit-trace")`:
 - binds nothing at all, so no Date can reach a query;
 - no id, description or email is returned, checked on run()'s own result before the output contract;
 - selects no id and no description text: description is read only inside the closed CASE;
+- counts debits and distinct calls apart, so one call matched by several debits is visible;
 - the dangling statement keeps Q3b's filters and probes every transaction-id column;
 - both no-reference statements carry the matching rule; the kinds statement keeps only the unmatched;
 - counts are cast to int and every returned cents column to bigint text;
@@ -130,7 +148,7 @@ New tests, in `describe("orphan-debit-trace")`:
 
 The existing test `only the named checks exist` now lists `orphan-debit-trace`.
 
-**Fail-before evidence.** I ran the new test file against the unchanged `ops-read.ts` (`git checkout HEAD -- apps/api/src/lib/ops-read.ts`), then restored my version:
+**Fail-before evidence, first commit.** I ran the new test file against the unchanged `ops-read.ts` (`git checkout HEAD -- apps/api/src/lib/ops-read.ts`), then restored my version:
 
 ```
 ❯ src/lib/ops-read.test.ts (94 tests | 18 failed)
@@ -147,7 +165,7 @@ The existing test `only the named checks exist` now lists `orphan-debit-trace`.
 | Dangling debit with a surviving quality row, a partial refund and a closed user | as intended |
 | Dangling debit whose reference is another ledger row | as intended |
 | Matched completed solution call | as intended |
-| Matched partial solution call | counted in `matched_solution_calls`, not in `matched_completed_solution_calls` |
+| Matched partial solution call | counted in `matched_debits` (then named `matched_solution_calls`), not in `matched_completed_debits` |
 | Solution call 5 minutes after the debit | `solution_call_within_10m` |
 | Execution error refunded with no reference | `refunded_nearby` |
 | NULL description | `none` |

@@ -153,8 +153,15 @@ const OUTPUT_FIELDS: Record<string, Shape | Vocabulary> = {
   no_reference_debits: "object",
   months: "list",
   unmatched_kinds: "list",
-  matched_solution_calls: "count",
-  matched_completed_solution_calls: "count",
+  matched_debits: "count",
+  matched_completed_debits: "count",
+  distinct_matched_solution_calls: "count",
+  distinct_matched_completed_solution_calls: "count",
+  debits_sharing_a_call: "count",
+  // { debits, debited_cents, refunded_nearby_debits }: `refunded_nearby` is
+  // already the per-group boolean of unmatched_kinds, so the count has its own key.
+  matched_not_completed: "object",
+  refunded_nearby_debits: "count",
   unmatched: "count",
   unmatched_cents: "cents",
   in_transaction_quality: "boolean",
@@ -367,17 +374,19 @@ const DEBIT_TYPE_NOTE = sql`CASE
 /**
  * Purchase debits with no reference, each with whether a wallet solution call
  * explains it: same user (wallets.user_id), `price_cents = -amount_cents`,
- * `created_at` within 60 seconds. `matched_completed` adds Q2b's
- * `status = 'completed'`, so `matched` minus it is the solution calls Q2b did
- * not count. For the rest, `solution_call_within_10m` (the same match over
- * ten minutes: the early solution route debited before it ran the steps) and
- * `refunded_nearby` (a no-reference refund of the same amount to the same
- * wallet within ten minutes after: the early route refunded a failed run
- * that way) say what they look like. A debit may match a call another debit
- * also matches; nothing here pairs them one to one.
+ * `created_at` within 60 seconds. `pairs` holds every (debit, call) match by
+ * internal row id; ids stay inside the statement and only counts leave it.
+ * `matched_completed` adds Q2b's `status = 'completed'`. `shares_call` marks
+ * a debit whose matched call another debit also matches, so several debits
+ * explained by one call are visible rather than read as fully explained.
+ * `solution_call_within_10m` (the same match over ten minutes: the early
+ * solution route debited before it ran the steps) and `refunded_nearby` (a
+ * no-reference refund of the same amount to the same wallet within ten
+ * minutes after: the early route refunded a failed run that way) describe
+ * the rest, and `refunded_nearby` also the matched calls that did not complete.
  */
 const NO_REFERENCE_DEBITS = sql`nr AS MATERIALIZED (
-          SELECT w.wallet_id, wl.user_id, w.created_at, -w.amount_cents AS debited,
+          SELECT w.id, w.wallet_id, wl.user_id, w.created_at, -w.amount_cents AS debited,
                  ${DEBIT_TYPE_NOTE} AS debit_type_note
             FROM wallet_transactions w
             JOIN wallets wl ON wl.id = w.wallet_id
@@ -385,11 +394,19 @@ const NO_REFERENCE_DEBITS = sql`nr AS MATERIALIZED (
              AND w.reference_id IS NULL
         ),
         sol AS MATERIALIZED (
-          SELECT t.user_id, t.created_at, t.price_cents, t.status
+          SELECT t.id, t.user_id, t.created_at, t.price_cents, t.status
             FROM transactions t
            WHERE t.solution_slug IS NOT NULL
              AND t.payment_method = 'wallet'
              AND t.user_id IN (SELECT nr.user_id FROM nr)
+        ),
+        pairs (debit_id, call_id, call_status) AS MATERIALIZED (
+          SELECT nr.id, s.id, s.status
+            FROM nr
+            JOIN sol s
+              ON s.user_id = nr.user_id AND s.price_cents = nr.debited
+             AND s.created_at BETWEEN nr.created_at - interval '60 seconds'
+                                  AND nr.created_at + interval '60 seconds'
         ),
         rf AS MATERIALIZED (
           SELECT r.wallet_id, r.created_at, r.amount_cents
@@ -402,15 +419,12 @@ const NO_REFERENCE_DEBITS = sql`nr AS MATERIALIZED (
           SELECT to_char(nr.created_at AT TIME ZONE 'UTC', 'YYYY-MM') AS month,
                  nr.debited,
                  nr.debit_type_note,
-                 EXISTS (SELECT 1 FROM sol s
-                          WHERE s.user_id = nr.user_id AND s.price_cents = nr.debited
-                            AND s.created_at BETWEEN nr.created_at - interval '60 seconds'
-                                                 AND nr.created_at + interval '60 seconds') AS matched,
-                 EXISTS (SELECT 1 FROM sol s
-                          WHERE s.user_id = nr.user_id AND s.price_cents = nr.debited
-                            AND s.status = 'completed'
-                            AND s.created_at BETWEEN nr.created_at - interval '60 seconds'
-                                                 AND nr.created_at + interval '60 seconds') AS matched_completed,
+                 EXISTS (SELECT 1 FROM pairs p WHERE p.debit_id = nr.id) AS matched,
+                 EXISTS (SELECT 1 FROM pairs p
+                          WHERE p.debit_id = nr.id AND p.call_status = 'completed') AS matched_completed,
+                 EXISTS (SELECT 1 FROM pairs p
+                           JOIN pairs q ON q.call_id = p.call_id AND q.debit_id <> p.debit_id
+                          WHERE p.debit_id = nr.id) AS shares_call,
                  EXISTS (SELECT 1 FROM sol s
                           WHERE s.user_id = nr.user_id AND s.price_cents = nr.debited
                             AND s.created_at BETWEEN nr.created_at - interval '10 minutes'
@@ -430,6 +444,12 @@ const NO_REFERENCE_DEBITS = sql`nr AS MATERIALIZED (
  * dispute_requests, job_files and job_callbacks refuse a delete. So a hit in
  * the first three says a call row once existed; a hit in the others says the
  * key was missing when the row was written or removed.
+ *
+ * `in_capability_invocations` is always false today: no writer sets
+ * `capability_invocations.transaction_id` (see its comment in schema.ts), so
+ * a false there is not evidence of anything. `refunded_cents` is the refund
+ * total for the reference, so it repeats on every row when two dangling
+ * debits share one reference; do not sum it across rows.
  */
 const DANGLING_FIELDS = [
   "month", "debited_cents",
@@ -437,7 +457,11 @@ const DANGLING_FIELDS = [
   "in_x402_settlement_intents", "in_dispute_requests", "in_job_files", "in_job_callbacks",
   "is_wallet_transaction_id", "refunded_cents", "wallet_user_closed", "debit_type_note",
 ] as const;
-const NO_REFERENCE_TOTAL_FIELDS = ["matched_solution_calls", "matched_completed_solution_calls", "unmatched", "unmatched_cents"] as const;
+const NO_REFERENCE_TOTAL_FIELDS = [
+  "matched_debits", "matched_completed_debits",
+  "distinct_matched_solution_calls", "distinct_matched_completed_solution_calls",
+  "debits_sharing_a_call", "unmatched", "unmatched_cents",
+] as const;
 const UNMATCHED_KIND_FIELDS = ["month", "debit_type_note", "solution_call_within_10m", "refunded_nearby", "debits", "debited_cents"] as const;
 
 interface CheckDef<P> {
@@ -862,8 +886,15 @@ export const OPS_READ_CHECKS: Record<string, CheckDef<unknown>> = {
                month,
                COUNT(*)::int AS debits,
                COALESCE(SUM(debited), 0)::bigint::text AS debited_cents,
-               COUNT(*) FILTER (WHERE matched)::int AS matched_solution_calls,
-               COUNT(*) FILTER (WHERE matched_completed)::int AS matched_completed_solution_calls,
+               COUNT(*) FILTER (WHERE matched)::int AS matched_debits,
+               COUNT(*) FILTER (WHERE matched_completed)::int AS matched_completed_debits,
+               (SELECT COUNT(DISTINCT p.call_id) FROM pairs p)::int AS distinct_matched_solution_calls,
+               (SELECT COUNT(DISTINCT p.call_id) FROM pairs p
+                 WHERE p.call_status = 'completed')::int AS distinct_matched_completed_solution_calls,
+               COUNT(*) FILTER (WHERE shares_call)::int AS debits_sharing_a_call,
+               COUNT(*) FILTER (WHERE matched AND NOT matched_completed)::int AS mnc_debits,
+               COALESCE(SUM(debited) FILTER (WHERE matched AND NOT matched_completed), 0)::bigint::text AS mnc_cents,
+               COUNT(*) FILTER (WHERE matched AND NOT matched_completed AND refunded_nearby)::int AS mnc_refunded_nearby,
                COUNT(*) FILTER (WHERE NOT matched)::int AS unmatched,
                COALESCE(SUM(debited) FILTER (WHERE NOT matched), 0)::bigint::text AS unmatched_cents
           FROM m
@@ -884,11 +915,19 @@ export const OPS_READ_CHECKS: Record<string, CheckDef<unknown>> = {
          ORDER BY 1, 2, 3, 4
       `));
       const isTotal = (r: Row) => Number(r.is_total) === 1;
+      const total: Row = perMonth.find(isTotal) ?? {};
       return {
         dangling: dangling.map((r) => pick(r, DANGLING_FIELDS)),
         no_reference_debits: {
           months: perMonth.filter((r) => !isTotal(r)).map((r) => pick(r, ["month", "debits", "debited_cents"])),
-          ...pick(perMonth.find(isTotal) ?? {}, NO_REFERENCE_TOTAL_FIELDS),
+          ...pick(total, NO_REFERENCE_TOTAL_FIELDS),
+          // Debits matched only to calls that did not complete: Q2b left them
+          // out, and refunded_nearby says whether the money went back.
+          matched_not_completed: {
+            debits: total.mnc_debits ?? null,
+            debited_cents: total.mnc_cents ?? null,
+            refunded_nearby_debits: total.mnc_refunded_nearby ?? null,
+          },
           unmatched_kinds: kinds.map((r) => pick(r, UNMATCHED_KIND_FIELDS)),
         },
       };
