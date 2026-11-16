@@ -5,6 +5,7 @@ const GEO_API = "https://geocoding-api.open-meteo.com/v1/search";
 const WEATHER_API = "https://api.open-meteo.com/v1/forecast";
 
 interface GeoHit {
+  name: string;
   latitude: number;
   longitude: number;
   country_code?: string;
@@ -81,12 +82,46 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
 
   const parts = city.split(",").map(cleanPart).filter(Boolean);
   if (parts.length < 2) {
+    let retryCalls = 0;
     // A bare-name retry only when the caller wrote no comma ("Flint 48505").
     // "Springfield, 62701" named a region by postcode; guessing the top
     // Springfield would ignore it, so that refuses.
     if (parts.length === 1 && parts[0] !== city && !city.includes(",")) {
+      retryCalls++;
       const bare = await geocodeName(parts[0], 1);
       if (bare.length) return bare[0];
+    }
+
+    if (parts.length === 1 && !city.includes(",")) {
+      const words = parts[0].split(" ");
+
+      // Some callers append "City" to an unambiguous city name, while the
+      // geocoder stores the place without that suffix. Require the returned
+      // name to be exact so a related municipality is never substituted.
+      if (words.length > 1 && norm(words.at(-1)!) === "city") {
+        const name = words.slice(0, -1).join(" ");
+        retryCalls++;
+        const hits = await geocodeName(name, 20);
+        const match = hits.find((hit) => norm(hit.name) === norm(name));
+        if (match) return match;
+      }
+
+      // Try the last one, two, then three words as a country or region. Each
+      // lookup is accepted only when the qualifier identifies that hit.
+      let mismatch: { name: string; qualifier: string } | undefined;
+      const qualifierAttempts = Math.min(3, words.length - 1, 4 - retryCalls);
+      for (let qualifierWords = 1; qualifierWords <= qualifierAttempts; qualifierWords++) {
+        const name = words.slice(0, -qualifierWords).join(" ");
+        const qualifier = words.slice(-qualifierWords).join(" ");
+        const hits = await geocodeName(name, 20);
+        const match = hits.find((hit) => hitMatchesQualifiers(hit, [qualifier]));
+        if (match) return match;
+        if (!mismatch && hits.length) mismatch = { name, qualifier };
+      }
+
+      if (mismatch) {
+        throw new Error(`Location "${city}" not found: places named "${mismatch.name}" exist, but none in ${mismatch.qualifier}. Pass latitude and longitude for an exact location.`);
+      }
     }
     throw new Error(`Location "${city}" not found.`);
   }
@@ -109,7 +144,9 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
 registerCapability("weather-lookup", async (input: CapabilityInput) => {
   let lat = Number(input.latitude ?? input.lat);
   let lon = Number(input.longitude ?? input.lon ?? input.lng);
-  const city = ((input.city as string) ?? (input.location as string) ?? (input.task as string) ?? "").trim();
+  const city = [input.city, input.location, input.place, input.task]
+    .find((value): value is string => typeof value === "string")
+    ?.trim() ?? "";
 
   // Geocode city name if no coordinates provided
   if ((isNaN(lat) || isNaN(lon)) && city) {
