@@ -55,7 +55,7 @@ export function isValidOpsReadAuth(header: string | undefined, token: string | u
 
 type Shape = "count" | "cents" | "slug" | "uuid" | "date" | "month" | "timestamp" | "boolean" | "commit" | "list" | "object";
 /** Leaves checked against a closed vocabulary rather than a pattern. */
-type Vocabulary = "test_type" | "test_mode" | "payment_method" | "call_status" | "source";
+type Vocabulary = "test_type" | "test_mode" | "payment_method" | "call_status" | "source" | "debit_note";
 
 const SHAPES: Record<Exclude<Shape, "list" | "object" | "count" | "boolean">, RegExp> = {
   cents: /^\d{1,12}$/, // non-negative integer cents, as a string (postgres bigint)
@@ -81,6 +81,9 @@ const VOCABULARIES: Record<Vocabulary, Set<string>> = {
   payment_method: new Set(["wallet", "x402"]),
   call_status: new Set(["completed", "failed", "executing", "pending", "passed"]),
   source: new Set(["calls", "tests"]),
+  // orphan-debit-trace: a purchase debit's `description`, reduced to the
+  // writer it came from (DEBIT_TYPE_NOTE). The raw text is never selected.
+  debit_note: new Set(["capability", "solution", "batch_item", "reservation_capture", "none", "other"]),
 };
 
 /** Every key a check may return, and the one shape each accepts. Null is allowed for any leaf. */
@@ -144,6 +147,35 @@ const OUTPUT_FIELDS: Record<string, Shape | Vocabulary> = {
   overcharged_cents: "cents",
   overrefunded_cents: "cents",
   refunded_cents: "cents",
+  // orphan-debit-trace (A-7 follow-up). `no_reference` above is kept-charges'
+  // boolean, so the object here is `no_reference_debits`.
+  dangling: "list",
+  no_reference_debits: "object",
+  months: "list",
+  unmatched_kinds: "list",
+  matched_debits: "count",
+  matched_completed_debits: "count",
+  distinct_matched_solution_calls: "count",
+  distinct_matched_completed_solution_calls: "count",
+  debits_sharing_a_call: "count",
+  // { debits, debited_cents, refunded_nearby_debits }: `refunded_nearby` is
+  // already the per-group boolean of unmatched_kinds, so the count has its own key.
+  matched_not_completed: "object",
+  refunded_nearby_debits: "count",
+  unmatched: "count",
+  unmatched_cents: "cents",
+  in_transaction_quality: "boolean",
+  in_wallet_reservations: "boolean",
+  in_capability_invocations: "boolean",
+  in_x402_settlement_intents: "boolean",
+  in_dispute_requests: "boolean",
+  in_job_files: "boolean",
+  in_job_callbacks: "boolean",
+  is_wallet_transaction_id: "boolean",
+  wallet_user_closed: "boolean",
+  debit_type_note: "debit_note",
+  solution_call_within_10m: "boolean",
+  refunded_nearby: "boolean",
 };
 
 export class OpsReadOutputError extends Error {
@@ -159,7 +191,7 @@ function checkLeaf(shape: Shape | Vocabulary, value: unknown, path: string): voi
     switch (shape) {
       case "count": return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
       case "boolean": return typeof value === "boolean";
-      case "test_type": case "test_mode": case "payment_method": case "call_status": case "source":
+      case "test_type": case "test_mode": case "payment_method": case "call_status": case "source": case "debit_note":
         return typeof value === "string" && VOCABULARIES[shape].has(value);
       case "list": case "object": return false;
       default: return typeof value === "string" && SHAPES[shape].test(value);
@@ -321,6 +353,116 @@ const SOLUTION_DEBIT_FIELDS = ["calls", "no_debit", "debit_ne_recorded", "no_lon
 /** Per-slug exposure fields. No payer column, ever: one payer per tool can point to one customer. */
 const EXPOSURE_SLUG_FIELDS = ["slug", "payment_method", "completed_paid_calls", "recorded_cents", "first_day", "last_day"] as const;
 const EXPOSURE_TOTAL_FIELDS = ["completed_paid_calls", "distinct_payers", "payers_unknown", "recorded_cents", "first_day", "last_day"] as const;
+
+/**
+ * A purchase debit's `description`, reduced to the code path that wrote it.
+ * Each prefix is a string a debit writer has used (git history of
+ * lib/wallet-service.ts, lib/wallet-reservations.ts, lib/do/dispatch.ts,
+ * lib/do/batch.ts and the early solution route). `starts_with`, not LIKE:
+ * the text may hold `_` or `%`. The text itself (it carries a slug and,
+ * for batches, an item number) is never selected.
+ */
+const DEBIT_TYPE_NOTE = sql`CASE
+           WHEN w.description IS NULL THEN 'none'
+           WHEN starts_with(w.description, 'Capability: ') THEN 'capability'
+           WHEN starts_with(w.description, 'Solution: ') THEN 'solution'
+           WHEN starts_with(w.description, 'Batch item ') THEN 'batch_item'
+           WHEN w.description = 'Sync capability reservation captured' THEN 'reservation_capture'
+           ELSE 'other'
+         END`;
+
+/**
+ * Purchase debits with no reference, each with whether a wallet solution call
+ * explains it: same user (wallets.user_id), `price_cents = -amount_cents`,
+ * `created_at` within 60 seconds. `pairs` holds every (debit, call) match by
+ * internal row id; ids stay inside the statement and only counts leave it.
+ * `matched_completed` adds Q2b's `status = 'completed'`. `shares_call` marks
+ * a debit whose matched call another debit also matches, so several debits
+ * explained by one call are visible rather than read as fully explained.
+ * `solution_call_within_10m` (the same match over ten minutes: the early
+ * solution route debited before it ran the steps) and `refunded_nearby` (a
+ * no-reference refund of the same amount to the same wallet within ten
+ * minutes after: the early route refunded a failed run that way) describe
+ * the rest, and `refunded_nearby` also the matched calls that did not complete.
+ */
+const NO_REFERENCE_DEBITS = sql`nr AS MATERIALIZED (
+          SELECT w.id, w.wallet_id, wl.user_id, w.created_at, -w.amount_cents AS debited,
+                 ${DEBIT_TYPE_NOTE} AS debit_type_note
+            FROM wallet_transactions w
+            JOIN wallets wl ON wl.id = w.wallet_id
+           WHERE w.type = 'purchase'
+             AND w.reference_id IS NULL
+        ),
+        sol AS MATERIALIZED (
+          SELECT t.id, t.user_id, t.created_at, t.price_cents, t.status
+            FROM transactions t
+           WHERE t.solution_slug IS NOT NULL
+             AND t.payment_method = 'wallet'
+             AND t.user_id IN (SELECT nr.user_id FROM nr)
+        ),
+        pairs (debit_id, call_id, call_status) AS MATERIALIZED (
+          SELECT nr.id, s.id, s.status
+            FROM nr
+            JOIN sol s
+              ON s.user_id = nr.user_id AND s.price_cents = nr.debited
+             AND s.created_at BETWEEN nr.created_at - interval '60 seconds'
+                                  AND nr.created_at + interval '60 seconds'
+        ),
+        rf AS MATERIALIZED (
+          SELECT r.wallet_id, r.created_at, r.amount_cents
+            FROM wallet_transactions r
+           WHERE r.type = 'refund'
+             AND r.reference_id IS NULL
+             AND r.wallet_id IN (SELECT nr.wallet_id FROM nr)
+        ),
+        m AS (
+          SELECT to_char(nr.created_at AT TIME ZONE 'UTC', 'YYYY-MM') AS month,
+                 nr.debited,
+                 nr.debit_type_note,
+                 EXISTS (SELECT 1 FROM pairs p WHERE p.debit_id = nr.id) AS matched,
+                 EXISTS (SELECT 1 FROM pairs p
+                          WHERE p.debit_id = nr.id AND p.call_status = 'completed') AS matched_completed,
+                 EXISTS (SELECT 1 FROM pairs p
+                           JOIN pairs q ON q.call_id = p.call_id AND q.debit_id <> p.debit_id
+                          WHERE p.debit_id = nr.id) AS shares_call,
+                 EXISTS (SELECT 1 FROM sol s
+                          WHERE s.user_id = nr.user_id AND s.price_cents = nr.debited
+                            AND s.created_at BETWEEN nr.created_at - interval '10 minutes'
+                                                 AND nr.created_at + interval '10 minutes') AS solution_call_within_10m,
+                 EXISTS (SELECT 1 FROM rf
+                          WHERE rf.wallet_id = nr.wallet_id AND rf.amount_cents = nr.debited
+                            AND rf.created_at BETWEEN nr.created_at
+                                                  AND nr.created_at + interval '10 minutes') AS refunded_nearby
+            FROM nr
+        )`;
+
+/**
+ * Where a dangling reference does appear. Every uuid column in schema.ts that
+ * holds a transaction id, plus `wallet_transactions.id`. Only
+ * wallet_reservations, capability_invocations and x402_settlement_intents
+ * carry no foreign key; transaction_quality's cascades on delete, and
+ * dispute_requests, job_files and job_callbacks refuse a delete. So a hit in
+ * the first three says a call row once existed; a hit in the others says the
+ * key was missing when the row was written or removed.
+ *
+ * `in_capability_invocations` is always false today: no writer sets
+ * `capability_invocations.transaction_id` (see its comment in schema.ts), so
+ * a false there is not evidence of anything. `refunded_cents` is the refund
+ * total for the reference, so it repeats on every row when two dangling
+ * debits share one reference; do not sum it across rows.
+ */
+const DANGLING_FIELDS = [
+  "month", "debited_cents",
+  "in_transaction_quality", "in_wallet_reservations", "in_capability_invocations",
+  "in_x402_settlement_intents", "in_dispute_requests", "in_job_files", "in_job_callbacks",
+  "is_wallet_transaction_id", "refunded_cents", "wallet_user_closed", "debit_type_note",
+] as const;
+const NO_REFERENCE_TOTAL_FIELDS = [
+  "matched_debits", "matched_completed_debits",
+  "distinct_matched_solution_calls", "distinct_matched_completed_solution_calls",
+  "debits_sharing_a_call", "unmatched", "unmatched_cents",
+] as const;
+const UNMATCHED_KIND_FIELDS = ["month", "debit_type_note", "solution_call_within_10m", "refunded_nearby", "debits", "debited_cents"] as const;
 
 interface CheckDef<P> {
   /** Validates caller input before any database work; throws OpsReadInputError. */
@@ -687,6 +829,107 @@ export const OPS_READ_CHECKS: Record<string, CheckDef<unknown>> = {
         to,
         oldest_result_day: oldest?.oldest_result_day ?? null,
         rows: rows.map((r) => pick(r, ["source", "slug", "outcome", "n"])),
+      };
+    },
+  }),
+
+  /**
+   * A-7 follow-up to kept-charges' `orphan_debits` (first production run,
+   * archive/receipts/2026-11-16-check-a7-money-path-ops-read.json).
+   * `dangling`: one row per purchase debit whose reference matches no
+   * `transactions` row, with where that reference does appear, what was
+   * refunded against it and whether the wallet's account is closed
+   * (`users.deleted_at`). Per-debit rows, so they go to the token holder
+   * only; the master applies the privacy table before any receipt.
+   * `no_reference_debits`: purchase debits with no reference per month, and
+   * how many a wallet solution call explains (NO_REFERENCE_DEBITS), with the
+   * unexplained rest grouped in `unmatched_kinds`. No id, description text or
+   * email is selected.
+   */
+  "orphan-debit-trace": check({
+    prepare: () => null,
+    run: async (tx) => {
+      const dangling = rowsOf(await tx.execute(sql`
+        WITH d AS MATERIALIZED (
+          SELECT w.reference_id AS ref,
+                 w.wallet_id,
+                 w.created_at,
+                 -w.amount_cents AS debited,
+                 ${DEBIT_TYPE_NOTE} AS debit_type_note
+            FROM wallet_transactions w
+            LEFT JOIN transactions t ON t.id = w.reference_id
+           WHERE w.type = 'purchase'
+             AND w.reference_id IS NOT NULL
+             AND t.id IS NULL
+        )
+        SELECT to_char(d.created_at AT TIME ZONE 'UTC', 'YYYY-MM') AS month,
+               d.debited::bigint::text AS debited_cents,
+               EXISTS (SELECT 1 FROM transaction_quality q WHERE q.transaction_id = d.ref) AS in_transaction_quality,
+               EXISTS (SELECT 1 FROM wallet_reservations v WHERE v.transaction_id = d.ref) AS in_wallet_reservations,
+               EXISTS (SELECT 1 FROM capability_invocations ci WHERE ci.transaction_id = d.ref) AS in_capability_invocations,
+               EXISTS (SELECT 1 FROM x402_settlement_intents xi WHERE xi.transaction_id = d.ref) AS in_x402_settlement_intents,
+               EXISTS (SELECT 1 FROM dispute_requests dr WHERE dr.transaction_id = d.ref) AS in_dispute_requests,
+               EXISTS (SELECT 1 FROM job_files jf WHERE jf.transaction_id = d.ref) AS in_job_files,
+               EXISTS (SELECT 1 FROM job_callbacks jc WHERE jc.transaction_id = d.ref) AS in_job_callbacks,
+               EXISTS (SELECT 1 FROM wallet_transactions o WHERE o.id = d.ref) AS is_wallet_transaction_id,
+               (SELECT COALESCE(SUM(r.amount_cents), 0) FROM wallet_transactions r
+                 WHERE r.type = 'refund' AND r.reference_id = d.ref)::bigint::text AS refunded_cents,
+               (SELECT u.deleted_at IS NOT NULL FROM wallets wl JOIN users u ON u.id = wl.user_id
+                 WHERE wl.id = d.wallet_id) AS wallet_user_closed,
+               d.debit_type_note
+          FROM d
+         ORDER BY d.created_at, d.debited
+      `));
+      const perMonth = rowsOf(await tx.execute(sql`
+        WITH ${NO_REFERENCE_DEBITS}
+        SELECT GROUPING(month)::int AS is_total,
+               month,
+               COUNT(*)::int AS debits,
+               COALESCE(SUM(debited), 0)::bigint::text AS debited_cents,
+               COUNT(*) FILTER (WHERE matched)::int AS matched_debits,
+               COUNT(*) FILTER (WHERE matched_completed)::int AS matched_completed_debits,
+               (SELECT COUNT(DISTINCT p.call_id) FROM pairs p)::int AS distinct_matched_solution_calls,
+               (SELECT COUNT(DISTINCT p.call_id) FROM pairs p
+                 WHERE p.call_status = 'completed')::int AS distinct_matched_completed_solution_calls,
+               COUNT(*) FILTER (WHERE shares_call)::int AS debits_sharing_a_call,
+               COUNT(*) FILTER (WHERE matched AND NOT matched_completed)::int AS mnc_debits,
+               COALESCE(SUM(debited) FILTER (WHERE matched AND NOT matched_completed), 0)::bigint::text AS mnc_cents,
+               COUNT(*) FILTER (WHERE matched AND NOT matched_completed AND refunded_nearby)::int AS mnc_refunded_nearby,
+               COUNT(*) FILTER (WHERE NOT matched)::int AS unmatched,
+               COALESCE(SUM(debited) FILTER (WHERE NOT matched), 0)::bigint::text AS unmatched_cents
+          FROM m
+         GROUP BY ROLLUP (month)
+         ORDER BY GROUPING(month) DESC, month
+      `));
+      const kinds = rowsOf(await tx.execute(sql`
+        WITH ${NO_REFERENCE_DEBITS}
+        SELECT month,
+               debit_type_note,
+               solution_call_within_10m,
+               refunded_nearby,
+               COUNT(*)::int AS debits,
+               COALESCE(SUM(debited), 0)::bigint::text AS debited_cents
+          FROM m
+         WHERE NOT matched
+         GROUP BY 1, 2, 3, 4
+         ORDER BY 1, 2, 3, 4
+      `));
+      const isTotal = (r: Row) => Number(r.is_total) === 1;
+      const total: Row = perMonth.find(isTotal) ?? {};
+      return {
+        dangling: dangling.map((r) => pick(r, DANGLING_FIELDS)),
+        no_reference_debits: {
+          months: perMonth.filter((r) => !isTotal(r)).map((r) => pick(r, ["month", "debits", "debited_cents"])),
+          ...pick(total, NO_REFERENCE_TOTAL_FIELDS),
+          // Debits matched only to calls that did not complete: Q2b left them
+          // out, and refunded_nearby says whether the money went back.
+          matched_not_completed: {
+            debits: total.mnc_debits ?? null,
+            debited_cents: total.mnc_cents ?? null,
+            refunded_nearby_debits: total.mnc_refunded_nearby ?? null,
+          },
+          unmatched_kinds: kinds.map((r) => pick(r, UNMATCHED_KIND_FIELDS)),
+        },
       };
     },
   }),

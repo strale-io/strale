@@ -125,6 +125,7 @@ describe("checks", () => {
       "capability-debits",
       "fx-error-rate",
       "kept-charges",
+      "orphan-debit-trace",
       "parked-suites",
       "solution-debits",
       "swallowed-failure-exposure",
@@ -481,5 +482,225 @@ describe("money-path checks", () => {
     ["a string count", { calls: "7" }],
   ])("the output contract refuses %s", (_label, row) => {
     expect(() => assertSafeOutput({ check: "kept-charges", result: { groups: [row] } })).toThrow(OpsReadOutputError);
+  });
+});
+
+
+// ─── orphan-debit-trace (A-7 follow-up) ─────────────────────────────────────
+
+const DANGLING_ROW = {
+  month: "2026-03",
+  debited_cents: "25",
+  in_transaction_quality: true,
+  in_wallet_reservations: false,
+  in_capability_invocations: false,
+  in_x402_settlement_intents: false,
+  in_dispute_requests: false,
+  in_job_files: false,
+  in_job_callbacks: false,
+  is_wallet_transaction_id: false,
+  refunded_cents: "0",
+  wallet_user_closed: true,
+  debit_type_note: "capability",
+};
+
+function tracedAnswers(): Record<string, unknown>[][] {
+  return [
+    [DANGLING_ROW, { ...DANGLING_ROW, debited_cents: "40", in_transaction_quality: false, wallet_user_closed: false }],
+    [
+      {
+        is_total: 1, month: null, debits: 27, debited_cents: "5840",
+        matched_debits: 25, matched_completed_debits: 23,
+        distinct_matched_solution_calls: 24, distinct_matched_completed_solution_calls: 22, debits_sharing_a_call: 2,
+        mnc_debits: 2, mnc_cents: "300", mnc_refunded_nearby: 1,
+        unmatched: 2, unmatched_cents: "300",
+      },
+      { is_total: 0, month: "2026-04", debits: 20, debited_cents: "4400", matched_debits: 18, unmatched: 2, unmatched_cents: "300", mnc_debits: 2 },
+      { is_total: 0, month: "2026-05", debits: 7, debited_cents: "1440", matched_debits: 7, unmatched: 0, unmatched_cents: "0", mnc_debits: 0 },
+    ],
+    [{ month: "2026-04", debit_type_note: "solution", solution_call_within_10m: false, refunded_nearby: true, debits: 4, debited_cents: "600" }],
+  ];
+}
+
+const TRACED_EXPECTED = {
+  dangling: [DANGLING_ROW, { ...DANGLING_ROW, debited_cents: "40", in_transaction_quality: false, wallet_user_closed: false }],
+  no_reference_debits: {
+    months: [
+      { month: "2026-04", debits: 20, debited_cents: "4400" },
+      { month: "2026-05", debits: 7, debited_cents: "1440" },
+    ],
+    matched_debits: 25,
+    matched_completed_debits: 23,
+    distinct_matched_solution_calls: 24,
+    distinct_matched_completed_solution_calls: 22,
+    debits_sharing_a_call: 2,
+    unmatched: 2,
+    unmatched_cents: "300",
+    matched_not_completed: { debits: 2, debited_cents: "300", refunded_nearby_debits: 1 },
+    unmatched_kinds: [{ month: "2026-04", debit_type_note: "solution", solution_call_within_10m: false, refunded_nearby: true, debits: 4, debited_cents: "600" }],
+  },
+};
+
+async function runTrace(answers: unknown[][] = tracedAnswers()) {
+  const tx = recordingExecutor(answers);
+  const def = OPS_READ_CHECKS["orphan-debit-trace"];
+  const result = await def.run(tx, def.prepare({}));
+  return { tx, result };
+}
+
+/** Every uuid column in schema.ts holding a transaction id, plus wallet_transactions.id. */
+const TRANSACTION_ID_PROBES = [
+  "FROM transaction_quality q WHERE q.transaction_id = d.ref",
+  "FROM wallet_reservations v WHERE v.transaction_id = d.ref",
+  "FROM capability_invocations ci WHERE ci.transaction_id = d.ref",
+  "FROM x402_settlement_intents xi WHERE xi.transaction_id = d.ref",
+  "FROM dispute_requests dr WHERE dr.transaction_id = d.ref",
+  "FROM job_files jf WHERE jf.transaction_id = d.ref",
+  "FROM job_callbacks jc WHERE jc.transaction_id = d.ref",
+  "FROM wallet_transactions o WHERE o.id = d.ref",
+];
+
+const NO_REFERENCE_FILTERS = [
+  "w.type = 'purchase'", "w.reference_id IS NULL", "JOIN wallets wl ON wl.id = w.wallet_id",
+  "t.solution_slug IS NOT NULL", "t.payment_method = 'wallet'",
+  "s.user_id = nr.user_id AND s.price_cents = nr.debited",
+  "pairs (debit_id, call_id, call_status)",
+  "nr.created_at - interval '60 seconds'", "nr.created_at + interval '60 seconds'",
+  "p.call_status = 'completed'",
+  "r.type = 'refund'", "r.reference_id IS NULL",
+];
+
+describe("orphan-debit-trace", () => {
+  it("takes no caller input", () => {
+    expect(OPS_READ_CHECKS["orphan-debit-trace"].prepare({ from: "2026-01-01", to: "not a date" })).toBeNull();
+  });
+
+  it("returns its exact shape and passes the output contract", async () => {
+    const { result } = await runTrace();
+    expect(result).toEqual(TRACED_EXPECTED);
+    expect(() => assertSafeOutput({ check: "orphan-debit-trace", result })).not.toThrow();
+  });
+
+  it("binds nothing at all, so no Date can reach a query", async () => {
+    const { tx } = await runTrace();
+    expect(tx.queries).toHaveLength(3);
+    for (const q of tx.queries) expect(q.params).toEqual([]);
+  });
+
+  it("no id, description or email is returned, checked on run()'s own result before the output contract", async () => {
+    const planted = tracedAnswers().map((rows) => rows.map((r) => ({
+      ...r,
+      id: "6b7c1f8e-2f3a-4b5c-9d8e-1f2a3b4c5d71",
+      ref: "6b7c1f8e-2f3a-4b5c-9d8e-1f2a3b4c5d72",
+      reference_id: "6b7c1f8e-2f3a-4b5c-9d8e-1f2a3b4c5d73",
+      wallet_id: "6b7c1f8e-2f3a-4b5c-9d8e-1f2a3b4c5d6f",
+      user_id: "6b7c1f8e-2f3a-4b5c-9d8e-1f2a3b4c5d6e",
+      api_key_id: "6b7c1f8e-2f3a-4b5c-9d8e-1f2a3b4c5d70",
+      description: "Capability: vat-validate",
+      email: "jane.doe@example.com",
+      debited: 25,
+      matched: true,
+    })));
+    const { result } = await runTrace(planted);
+    const keys = allKeys(result);
+    for (const k of [...FORBIDDEN_KEYS, "ref", "reference_id", "description", "debited", "matched", "is_total", "mnc_debits", "call_id", "debit_id"]) {
+      expect(keys.has(k), `returned ${k}`).toBe(false);
+    }
+    expect(result).toEqual(TRACED_EXPECTED);
+    expect(() => assertSafeOutput({ check: "orphan-debit-trace", result })).not.toThrow();
+  });
+
+  it("selects no id and no description text: description is read only inside the closed CASE", async () => {
+    const { tx } = await runTrace();
+    for (const q of tx.queries) {
+      const withoutCase = q.sql.replace(/CASE\s+WHEN w\.description IS NULL[\s\S]*?END/g, "");
+      expect(withoutCase).not.toMatch(/\bdescription\b/);
+      expect(q.sql).not.toMatch(/\bemail\b|\bkey_prefix\b|\binput\b|\boutput\b/);
+      // Ids are only ever joined or compared, never a selected output column.
+      expect(q.sql).not.toMatch(/\b(?:id|user_id|wallet_id|reference_id|ref)\s+AS\s+(?!ref\b)/);
+    }
+    expect(tx.queries[0].sql).toContain("starts_with(w.description, 'Capability: ')");
+  });
+
+  it("the dangling statement keeps Q3b's filters and probes every transaction-id column", async () => {
+    const { tx } = await runTrace();
+    const [q] = tx.queries;
+    for (const f of ["w.type = 'purchase'", "w.reference_id IS NOT NULL", "LEFT JOIN transactions t ON t.id = w.reference_id", "t.id IS NULL"]) {
+      expect(q.sql, f).toContain(f);
+    }
+    for (const probe of TRANSACTION_ID_PROBES) expect(q.sql, probe).toContain(probe);
+    expect(q.sql).toContain("r.type = 'refund' AND r.reference_id = d.ref");
+    expect(q.sql).toContain("u.deleted_at IS NOT NULL");
+  });
+
+  it("both no-reference statements carry the matching rule; the kinds statement keeps only the unmatched", async () => {
+    const { tx } = await runTrace();
+    for (const i of [1, 2]) {
+      for (const f of NO_REFERENCE_FILTERS) expect(tx.queries[i].sql, `statement ${i + 1}: ${f}`).toContain(f);
+      expect(tx.queries[i].sql).not.toContain("w.reference_id IS NOT NULL");
+    }
+    expect(tx.queries[1].sql).toContain("GROUP BY ROLLUP (month)");
+    expect(tx.queries[2].sql).toContain("WHERE NOT matched");
+  });
+
+  it("counts debits and distinct calls apart, so one call matched by several debits is visible", async () => {
+    const { tx, result } = await runTrace();
+    const sqlText = tx.queries[1].sql;
+    // Every (debit, call) match is kept by row id inside the statement; only counts leave it.
+    expect(sqlText).toContain("pairs (debit_id, call_id, call_status) AS MATERIALIZED");
+    expect(sqlText).toContain("(SELECT COUNT(DISTINCT p.call_id) FROM pairs p)::int AS distinct_matched_solution_calls");
+    expect(sqlText).toMatch(/COUNT\(DISTINCT p\.call_id\) FROM pairs p\s+WHERE p\.call_status = 'completed'\)::int AS distinct_matched_completed_solution_calls/);
+    expect(sqlText).toContain("JOIN pairs q ON q.call_id = p.call_id AND q.debit_id <> p.debit_id");
+    expect(sqlText).toContain("COUNT(*) FILTER (WHERE shares_call)::int AS debits_sharing_a_call");
+    expect(sqlText).toContain("COUNT(*) FILTER (WHERE matched)::int AS matched_debits");
+    // The not-completed rollup uses the same refund rule as the unmatched kinds.
+    expect(sqlText).toContain("FILTER (WHERE matched AND NOT matched_completed AND refunded_nearby)");
+    const out = (result as { no_reference_debits: Record<string, unknown> }).no_reference_debits;
+    expect(out).not.toHaveProperty("matched_solution_calls");
+    expect(out).not.toHaveProperty("matched_completed_solution_calls");
+    expect(out.distinct_matched_solution_calls).toBe(24);
+    expect(out.matched_debits).toBe(25);
+    expect(out.debits_sharing_a_call).toBe(2);
+  });
+
+  it("counts are cast to int and every returned cents column to bigint text", async () => {
+    const uncastCount = /COUNT\((?:[^()]|\([^()]*\))*\)(?:\s+FILTER\s+\((?:[^()]|\([^()]*\))*\))?\s+AS\s/;
+    const { tx } = await runTrace();
+    const all = tx.queries.map((q) => q.sql).join("\n");
+    expect(all).not.toMatch(uncastCount);
+    for (const key of centsKeys(TRACED_EXPECTED)) expect(all, key).toContain(`::bigint::text AS ${key}`);
+  });
+
+  it("a missing total row reads as nulls, not zeros", async () => {
+    const answers = tracedAnswers();
+    answers[1] = answers[1].filter((r) => r.is_total !== 1);
+    const { result } = await runTrace(answers);
+    expect((result as { no_reference_debits: Record<string, unknown> }).no_reference_debits).toMatchObject({
+      matched_debits: null, matched_completed_debits: null,
+      distinct_matched_solution_calls: null, distinct_matched_completed_solution_calls: null, debits_sharing_a_call: null,
+      unmatched: null, unmatched_cents: null,
+      matched_not_completed: { debits: null, debited_cents: null, refunded_nearby_debits: null },
+    });
+  });
+
+  it.each([0, 1, 2])("a database error in statement %i propagates", async (failAt) => {
+    let i = 0;
+    const tx: ReadExecutor = {
+      execute: () => (i++ === failAt ? Promise.reject(new Error("canceling statement due to statement timeout")) : Promise.resolve([])),
+    };
+    await expect(OPS_READ_CHECKS["orphan-debit-trace"].run(tx, null)).rejects.toThrow("canceling statement due to statement timeout");
+  });
+
+  it.each([
+    ["raw description text as the note", { debit_type_note: "Capability: vat-validate" }],
+    ["a note outside the vocabulary", { debit_type_note: "refund" }],
+    ["a flag as text", { in_transaction_quality: "true" }],
+    ["negative cents", { debited_cents: "-25" }],
+    ["a month with a day", { month: "2026-03-01" }],
+  ])("the output contract refuses %s", async (_label, change) => {
+    const answers = tracedAnswers();
+    answers[0][0] = { ...answers[0][0], ...change };
+    const { result } = await runTrace(answers);
+    expect(() => assertSafeOutput({ check: "orphan-debit-trace", result })).toThrow(OpsReadOutputError);
   });
 });
