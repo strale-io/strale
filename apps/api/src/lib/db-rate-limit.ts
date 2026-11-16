@@ -102,6 +102,22 @@ async function incrementAndCheck(
   return { allowed, count, retryAfterSeconds, windowStart: start, windowEnd: end };
 }
 
+/**
+ * Take one slot from a shared outbound budget: Strale's own calls to an
+ * upstream that publishes a rate limit. The counter lives in the database, so
+ * every running instance draws on one budget, and a restart does not hand out
+ * a fresh one. Throws on DB error; the caller decides how to fail (closed,
+ * for an upstream whose terms depend on staying inside the limit).
+ */
+export async function takeUpstreamSlot(
+  bucket: string,
+  windowSeconds: number,
+  max: number,
+): Promise<{ allowed: boolean; retryAfterSeconds: number }> {
+  const result = await incrementAndCheck(`upstream:${bucket}`, windowSeconds, max);
+  return { allowed: result.allowed, retryAfterSeconds: result.retryAfterSeconds };
+}
+
 // ─── Response headers ─────────────────────────────────────────────────────────
 
 function setHeaders(

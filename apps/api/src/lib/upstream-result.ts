@@ -44,11 +44,21 @@ export class UpstreamUnavailableError extends Error {
    * redirect it cannot follow.
    */
   readonly targetFault: boolean;
+  /**
+   * True when the call was never sent because Strale's own outbound budget
+   * for this upstream was used up, or could not be read
+   * (capabilities/lib/vat-providers/rate-limit.ts). Nothing failed upstream:
+   * Strale chose not to call. Unbilled like any upstream failure, but
+   * outcomeFromError records it with fault "strale" and
+   * counts_against_capability false, so a burst of demand cannot push the
+   * capability under its quality floor (failure family F1).
+   */
+  readonly ownBudget: boolean;
 
   constructor(
     upstream: string,
     detail: string,
-    options: { code?: string | null; retryable?: boolean; cause?: unknown; targetFault?: boolean } = {},
+    options: { code?: string | null; retryable?: boolean; cause?: unknown; targetFault?: boolean; ownBudget?: boolean } = {},
   ) {
     super(`Upstream unavailable: ${upstream}: ${detail}`, { cause: options.cause });
     this.name = "UpstreamUnavailableError";
@@ -56,6 +66,7 @@ export class UpstreamUnavailableError extends Error {
     this.code = options.code ?? null;
     this.retryable = options.retryable ?? true;
     this.targetFault = options.targetFault ?? false;
+    this.ownBudget = options.ownBudget ?? false;
   }
 }
 

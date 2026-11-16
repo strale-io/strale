@@ -812,12 +812,6 @@
       "line": 79
     },
     {
-      "file": "apps/api/src/capabilities/vat-validate.ts",
-      "fingerprint": "e1e1cf5b31fd277244bdcb525cdf65b5449a56546f0dcf0ddae4a9d8e51b8799",
-      "count": 1,
-      "line": 228
-    },
-    {
       "file": "apps/api/src/capabilities/website-to-company.ts",
       "fingerprint": "01d37a36b9369c4dfadb71942511e3ea23ca9927db042a24295c287de9e2f398",
       "count": 1,
