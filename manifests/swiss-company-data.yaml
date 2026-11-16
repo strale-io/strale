@@ -150,3 +150,4 @@ limitations:
 data_access:
   lane: preferred
   acquisition_method: direct_api
+  upstream_vendor: Zefix (Federal Commercial Registry Office)
