@@ -16,6 +16,7 @@ import {
   loadSecTickerMap,
   resolveByTicker,
   resolveByTitle,
+  stripSecTitleAnnotation,
   _resetSecTickerMapCacheForTests,
 } from "./sec-ticker-map.js";
 
@@ -160,5 +161,107 @@ describe("resolveByTitle", () => {
 
   it("falls through cleanly (returns null, does not throw) when the map fetch fails", async () => {
     await expect(resolveByTitle("Apple", fakeFetch(500))).resolves.toBeNull();
+  });
+});
+
+/**
+ * Production, 2026-11-16/17: one wallet bought 332 US company lookups and was
+ * refused on ORACLE CORP, BANK OF AMERICA CORP, TUCOWS INC and Fatpipe Inc.
+ * All four are in SEC's own ticker file. Two shapes in that file hid them
+ * from the exact title path; the rows below are copied from the live file.
+ */
+describe("resolveByTitle, shapes of the live SEC file", () => {
+  const LIVE = {
+    // One registrant, two listed securities: one row per ticker, same CIK.
+    "0": { cik_str: 1341439, ticker: "ORCL", title: "ORACLE CORP" },
+    "1": { cik_str: 1341439, ticker: "ORCL-PD", title: "ORACLE CORP" },
+    // SEC's registrant annotation, in the spellings the file uses.
+    "2": { cik_str: 70858, ticker: "BAC", title: "BANK OF AMERICA CORP /DE/" },
+    "3": { cik_str: 909494, ticker: "TCX", title: "TUCOWS INC /PA/" },
+    "4": { cik_str: 1993400, ticker: "FATN", title: "Fatpipe Inc/UT" },
+    "5": { cik_str: 875320, ticker: "VRTX", title: "VERTEX PHARMACEUTICALS INC / MA" },
+    "6": { cik_str: 909832, ticker: "COST", title: "COSTCO WHOLESALE CORP /NEW" },
+    "7": { cik_str: 1094517, ticker: "TM", title: "TOYOTA MOTOR CORP/" },
+    // Slashes that are part of the name and must survive.
+    "8": { cik_str: 1434265, ticker: "GMAB", title: "GENMAB A/S" },
+    "9": { cik_str: 39263, ticker: "CFR", title: "CULLEN/FROST BANKERS, INC." },
+    // Two DIFFERENT registrants that collide only once the annotation is gone.
+    "10": { cik_str: 5550001, ticker: "TWN1", title: "TWIN CORP /DE/" },
+    "11": { cik_str: 5550002, ticker: "TWN2", title: "TWIN CORP /NV/" },
+    // Depositary-receipt facilities: a shell beside the issuer, and one alone.
+    "12": { cik_str: 2102907, ticker: "RML", title: "Resolution Minerals Ltd" },
+    "13": { cik_str: 2086869, ticker: "RLMLY", title: "RESOLUTION MINERALS LTD/ADR" },
+    "14": { cik_str: 5550003, ticker: "TYHOY", title: "TOYOTA TSUSHO CORP/ADR" },
+    "15": { cik_str: 5550004, ticker: "PANDY", title: "Pandora A/S / ADR" },
+  };
+
+  it("treats two rows with one CIK as one company (Oracle, ORCL and ORCL-PD)", async () => {
+    const hit = await resolveByTitle("ORACLE CORP", fakeFetch(200, LIVE));
+    expect(hit).not.toBeNull();
+    expect(hit!.cik).toBe("0001341439");
+    expect(hit!.ticker).toBe("ORCL"); // the primary listing, not the preferred
+    expect((await resolveByTitle("Oracle", fakeFetch(200, LIVE)))!.cik).toBe("0001341439");
+  });
+
+  it.each([
+    ["BANK OF AMERICA CORP", "0000070858"],
+    ["Bank of America Corp", "0000070858"],
+    ["TUCOWS INC", "0000909494"],
+    ["Fatpipe Inc", "0001993400"],
+    ["Vertex Pharmaceuticals", "0000875320"],
+    ["Costco Wholesale", "0000909832"],
+    ["Toyota Motor Corp", "0001094517"],
+  ])("matches %s although SEC's title carries a registrant annotation", async (name, cik) => {
+    const hit = await resolveByTitle(name, fakeFetch(200, LIVE));
+    expect(hit?.cik).toBe(cik);
+  });
+
+  it("returns SEC's own title, annotation intact", async () => {
+    const hit = await resolveByTitle("Tucows", fakeFetch(200, LIVE));
+    expect(hit!.title).toBe("TUCOWS INC /PA/");
+  });
+
+  it("still refuses two different registrants that share a name once the annotation is removed", async () => {
+    expect(await resolveByTitle("Twin Corp", fakeFetch(200, LIVE))).toBeNull();
+  });
+
+  it("never resolves a name to a depositary-receipt facility (/ADR)", async () => {
+    expect(await resolveByTitle("Toyota Tsusho", fakeFetch(200, LIVE))).toBeNull();
+    expect(await resolveByTitle("Toyota Tsusho Corp", fakeFetch(200, LIVE))).toBeNull();
+    expect(await resolveByTitle("Pandora", fakeFetch(200, LIVE))).toBeNull();
+    // Not even when the caller types the tag: the row is not in the index.
+    expect(await resolveByTitle("Toyota Tsusho Corp ADR", fakeFetch(200, LIVE))).toBeNull();
+    // The facility is still reachable by its own ticker.
+    expect((await resolveByTicker("TYHOY", fakeFetch(200, LIVE)))!.cik).toBe("0005550003");
+  });
+
+  it("resolves to the issuer when an /ADR facility shares its name", async () => {
+    const hit = await resolveByTitle("Resolution Minerals", fakeFetch(200, LIVE));
+    expect(hit!.cik).toBe("0002102907");
+  });
+
+  it("leaves slashes that belong to the name", async () => {
+    expect((await resolveByTitle("Genmab", fakeFetch(200, LIVE)))!.cik).toBe("0001434265");
+    expect((await resolveByTitle("Cullen/Frost Bankers", fakeFetch(200, LIVE)))!.cik).toBe("0000039263");
+  });
+});
+
+describe("stripSecTitleAnnotation", () => {
+  it.each([
+    ["BANK OF AMERICA CORP /DE/", "BANK OF AMERICA CORP"],
+    ["Fatpipe Inc/UT", "Fatpipe Inc"],
+    ["PROGRESSIVE CORP/OH/", "PROGRESSIVE CORP"],
+    ["VERTEX PHARMACEUTICALS INC / MA", "VERTEX PHARMACEUTICALS INC"],
+    ["ARM HOLDINGS PLC /UK", "ARM HOLDINGS PLC"],
+    ["COSTCO WHOLESALE CORP /NEW", "COSTCO WHOLESALE CORP"],
+    ["TOYOTA MOTOR CORP/", "TOYOTA MOTOR CORP"],
+    ["Core Scientific, Inc./tx", "Core Scientific, Inc."],
+    ["Pandora A/S / ADR", "Pandora A/S / ADR"], // a facility, not an annotation
+    ["TOYOTA TSUSHO CORP/ADR", "TOYOTA TSUSHO CORP/ADR"],
+    ["GENMAB A/S", "GENMAB A/S"],
+    ["CULLEN/FROST BANKERS, INC.", "CULLEN/FROST BANKERS, INC."],
+    ["Apple Inc.", "Apple Inc."],
+  ])("%s -> %s", (title, expected) => {
+    expect(stripSecTitleAnnotation(title)).toBe(expected);
   });
 });

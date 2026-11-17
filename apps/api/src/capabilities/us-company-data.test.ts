@@ -26,7 +26,11 @@ vi.mock("@anthropic-ai/sdk", async (importOriginal) => ({
   },
 }));
 
-vi.mock("../lib/sec-ticker-map.js", () => ({
+vi.mock("../lib/sec-ticker-map.js", async (importOriginal) => ({
+  // The real annotation stripper: it is pure, and the executor's confidence
+  // classification depends on it.
+  stripSecTitleAnnotation: (await importOriginal<typeof import("../lib/sec-ticker-map.js")>())
+    .stripSecTitleAnnotation,
   resolveByTicker,
   resolveByTitle,
 }));
@@ -381,6 +385,19 @@ describe("us-company-data — resolution order (the Apple/AAPL bug)", () => {
     await expect(exec()({ company: "Stripe" })).rejects.toThrow(
       /No confident SEC EDGAR match for "Stripe"/,
     );
+  });
+
+  it('"Tucows Inc" is served, not refused, when the map hit carries SEC\'s annotation (TUCOWS INC /PA/)', async () => {
+    const TUCOWS_CIK = "0000909494";
+    resolveByTitle.mockResolvedValueOnce({ cik: TUCOWS_CIK, title: "TUCOWS INC /PA/", ticker: "TCX" });
+    stubCompanyFetch({ [TUCOWS_CIK]: { name: "TUCOWS INC /PA/", cik: TUCOWS_CIK, entityType: "operating" } });
+
+    const result = await exec()({ company: "Tucows Inc" });
+
+    expect(result.output.cik).toBe(TUCOWS_CIK);
+    expect(result.output.match_confidence).toBe("exact");
+    expect(result.output.resolution_method).toBe("title");
+    expect(messagesCreate).not.toHaveBeenCalled();
   });
 
   it("falls through cleanly to the LLM+EFTS path when the ticker/title map is unavailable (does not throw)", async () => {
