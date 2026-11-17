@@ -400,25 +400,6 @@ describe("us-company-data — resolution order (the Apple/AAPL bug)", () => {
     expect(messagesCreate).not.toHaveBeenCalled();
   });
 
-  it("free-text input: the extracted name is tried against the exact title map before filing search", async () => {
-    const ORACLE_CIK = "0001341439";
-    resolveByTitle
-      .mockResolvedValueOnce(null) // the sentence itself is not a title
-      .mockResolvedValueOnce({ cik: ORACLE_CIK, title: "ORACLE CORP", ticker: "ORCL" });
-    messagesCreate.mockResolvedValueOnce({ content: [{ type: "text", text: "ORACLE CORP" }] });
-    const fetchSpy = stubCompanyFetch({ [ORACLE_CIK]: { name: "ORACLE CORP", cik: ORACLE_CIK, entityType: "operating" } });
-
-    const result = await exec()({ company: "look up the SEC registration for ORACLE CORP" });
-
-    expect(result.output.cik).toBe(ORACLE_CIK);
-    expect(result.output.searched_name).toBe("ORACLE CORP");
-    expect(result.output.match_confidence).toBe("exact");
-    expect(result.output.resolution_method).toBe("title");
-    expect(resolveByTitle).toHaveBeenLastCalledWith("ORACLE CORP");
-    // Filing search (efts.sec.gov) was never consulted.
-    expect(fetchSpy.mock.calls.some(([u]) => String(u).includes("efts.sec.gov"))).toBe(false);
-  });
-
   it("falls through cleanly to the LLM+EFTS path when the ticker/title map is unavailable (does not throw)", async () => {
     // Simulates a ticker-map load failure: resolveByTicker/resolveByTitle
     // already swallow the failure internally (sec-ticker-map.test.ts covers

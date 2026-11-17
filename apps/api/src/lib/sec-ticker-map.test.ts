@@ -188,6 +188,11 @@ describe("resolveByTitle, shapes of the live SEC file", () => {
     // Two DIFFERENT registrants that collide only once the annotation is gone.
     "10": { cik_str: 5550001, ticker: "TWN1", title: "TWIN CORP /DE/" },
     "11": { cik_str: 5550002, ticker: "TWN2", title: "TWIN CORP /NV/" },
+    // Depositary-receipt facilities: a shell beside the issuer, and one alone.
+    "12": { cik_str: 2102907, ticker: "RML", title: "Resolution Minerals Ltd" },
+    "13": { cik_str: 2086869, ticker: "RLMLY", title: "RESOLUTION MINERALS LTD/ADR" },
+    "14": { cik_str: 5550003, ticker: "TYHOY", title: "TOYOTA TSUSHO CORP/ADR" },
+    "15": { cik_str: 5550004, ticker: "PANDY", title: "Pandora A/S / ADR" },
   };
 
   it("treats two rows with one CIK as one company (Oracle, ORCL and ORCL-PD)", async () => {
@@ -220,6 +225,19 @@ describe("resolveByTitle, shapes of the live SEC file", () => {
     expect(await resolveByTitle("Twin Corp", fakeFetch(200, LIVE))).toBeNull();
   });
 
+  it("never resolves a name to a depositary-receipt facility (/ADR)", async () => {
+    expect(await resolveByTitle("Toyota Tsusho", fakeFetch(200, LIVE))).toBeNull();
+    expect(await resolveByTitle("Toyota Tsusho Corp", fakeFetch(200, LIVE))).toBeNull();
+    expect(await resolveByTitle("Pandora", fakeFetch(200, LIVE))).toBeNull();
+    // The facility is still reachable by its own ticker.
+    expect((await resolveByTicker("TYHOY", fakeFetch(200, LIVE)))!.cik).toBe("0005550003");
+  });
+
+  it("resolves to the issuer when an /ADR facility shares its name", async () => {
+    const hit = await resolveByTitle("Resolution Minerals", fakeFetch(200, LIVE));
+    expect(hit!.cik).toBe("0002102907");
+  });
+
   it("leaves slashes that belong to the name", async () => {
     expect((await resolveByTitle("Genmab", fakeFetch(200, LIVE)))!.cik).toBe("0001434265");
     expect((await resolveByTitle("Cullen/Frost Bankers", fakeFetch(200, LIVE)))!.cik).toBe("0000039263");
@@ -236,7 +254,8 @@ describe("stripSecTitleAnnotation", () => {
     ["COSTCO WHOLESALE CORP /NEW", "COSTCO WHOLESALE CORP"],
     ["TOYOTA MOTOR CORP/", "TOYOTA MOTOR CORP"],
     ["Core Scientific, Inc./tx", "Core Scientific, Inc."],
-    ["Pandora A/S / ADR", "Pandora A/S"],
+    ["Pandora A/S / ADR", "Pandora A/S / ADR"], // a facility, not an annotation
+    ["TOYOTA TSUSHO CORP/ADR", "TOYOTA TSUSHO CORP/ADR"],
     ["GENMAB A/S", "GENMAB A/S"],
     ["CULLEN/FROST BANKERS, INC.", "CULLEN/FROST BANKERS, INC."],
     ["Apple Inc.", "Apple Inc."],

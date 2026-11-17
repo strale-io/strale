@@ -66,22 +66,35 @@ function padCik(cikStr: number | string): string {
 }
 
 /**
- * SEC appends a registrant annotation to about one title in eleven: the state
- * or country of incorporation ("BANK OF AMERICA CORP /DE/", "Fatpipe Inc/UT",
- * "VERTEX PHARMACEUTICALS INC / MA", "ARM HOLDINGS PLC /UK"), "/NEW", "/ADR",
- * or a bare trailing slash ("TOYOTA MOTOR CORP/"). It is SEC's filing label,
- * not part of the company's name, and nobody types it. Left in, "Bank of
- * America Corp" normalizes to "bank of america" while the map holds
- * "bank of america de", so the exact title path misses and the caller falls
- * through to full-text filing search, which returns a different filer and is
- * refused. Measured on the live file on 2026-11-17: 961 of 10,404 titles.
+ * SEC appends a registrant annotation to several hundred titles: the state or
+ * country of incorporation ("BANK OF AMERICA CORP /DE/", "Fatpipe Inc/UT",
+ * "VERTEX PHARMACEUTICALS INC / MA", "ARM HOLDINGS PLC /UK"), "/NEW", or a
+ * bare trailing slash ("TOYOTA MOTOR CORP/"). It is SEC's filing label, not
+ * part of the company's name, and nobody types it. Left in, "Bank of America
+ * Corp" normalizes to "bank of america" while the map holds "bank of america
+ * de", so the exact title path misses and the caller falls through to
+ * full-text filing search, which returns a different filer and is refused.
  *
  * Only a trailing two- or three-letter segment is removed, so "GENMAB A/S"
  * and "CULLEN/FROST BANKERS, INC." are untouched.
+ *
+ * "/ADR" is deliberately NOT an annotation to remove. Those rows (557 on
+ * 2026-11-17) are depositary-receipt facilities, not the issuer: they file
+ * only F-6, and their SEC record usually carries the depositary bank's New
+ * York address. Stripping the tag would return that shell as an exact match
+ * for the issuer's name. They are left out of the title index altogether
+ * (`isAdrFacilityTitle`); the ticker still resolves them for a caller who
+ * means the ADR.
  */
 const SEC_TITLE_ANNOTATION_RE = /\s*\/\s*[A-Za-z]{2,3}\s*\/?\s*$|\s*\/\s*$/;
+const ADR_TITLE_RE = /\/\s*ADR\s*\/?\s*$/i;
+
+export function isAdrFacilityTitle(title: string): boolean {
+  return ADR_TITLE_RE.test(title);
+}
 
 export function stripSecTitleAnnotation(title: string): string {
+  if (isAdrFacilityTitle(title)) return title.trim();
   return title.replace(SEC_TITLE_ANNOTATION_RE, "").trim();
 }
 
@@ -90,7 +103,10 @@ function buildIndexes(map: SecTickerMap): void {
   titleIndex = new Map();
   for (const entry of Object.values(map)) {
     if (entry.ticker) tickerIndex.set(entry.ticker.toUpperCase(), entry);
-    const norm = normalizeCompanyName(stripSecTitleAnnotation(entry.title ?? ""));
+    const title = entry.title ?? "";
+    // A depositary-receipt facility is not the company; never a title match.
+    if (isAdrFacilityTitle(title)) continue;
+    const norm = normalizeCompanyName(stripSecTitleAnnotation(title));
     if (norm) {
       const bucket = titleIndex.get(norm);
       if (!bucket) titleIndex.set(norm, [entry]);
