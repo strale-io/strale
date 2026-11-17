@@ -412,6 +412,24 @@ describe("weather-lookup place resolution", () => {
       expect(r.output.coordinates).toEqual({ latitude: stCloud.latitude, longitude: stCloud.longitude });
     });
 
+    it("reads 'St' as 'Saint' in a bare 'St Cloud'", async () => {
+      fetchMock = fakeOpenMeteo({ "Saint Cloud": [SAINT_CLOUD_MN] });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const r = await exec({ city: "St Cloud" });
+      expect(r.output.coordinates).toEqual({ latitude: SAINT_CLOUD_MN.latitude, longitude: SAINT_CLOUD_MN.longitude });
+      expect(geocoderNames(fetchMock)).toEqual(["St Cloud", "Saint Cloud"]);
+    });
+
+    it("reads 'St' as 'Saint' in 'St Louis City'", async () => {
+      const SAINT_LOUIS_MO = us("Saint Louis", "Missouri", 38.62727, -90.19789);
+      fetchMock = fakeOpenMeteo({ "Saint Louis": [SAINT_LOUIS_MO] });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const r = await exec({ city: "St Louis City" });
+      expect(r.output.coordinates).toEqual({ latitude: SAINT_LOUIS_MO.latitude, longitude: SAINT_LOUIS_MO.longitude });
+    });
+
     it("leaves 'Stockholm' alone: no 'Saint' lookup", async () => {
       fetchMock = fakeOpenMeteo({});
       vi.stubGlobal("fetch", fetchMock);

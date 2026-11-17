@@ -179,7 +179,7 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
         cityRuleRan = true;
         const name = words.slice(0, -1).join(" ");
         const hits = await geocodePlaceName(name, 20);
-        const match = hits.find((hit) => norm(hit.name) === norm(name));
+        const match = hits.find((hit) => exactNameMatch(hit, name, []));
         if (match) return match;
       }
 
