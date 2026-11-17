@@ -137,11 +137,26 @@ describe("weather-lookup place resolution", () => {
 
   it("refuses a namesake outside the unpunctuated qualifier without forecasting", async () => {
     const parisFr = { name: "Paris", latitude: 48.85341, longitude: 2.3488, country_code: "FR", country: "France" };
-    fetchMock = fakeOpenMeteo({ "Paris Texas": [], Paris: [parisFr] });
+    const parisMountain = { name: "Paris Mountain", latitude: 33.1, longitude: -95.5, country_code: "US", country: "United States", admin1: "Texas" };
+    fetchMock = fakeOpenMeteo({ "Paris Texas": [], Paris: [parisFr, parisMountain] });
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(exec({ city: "Paris Texas" })).rejects.toThrow(/places named "Paris" exist, but none in Texas/);
     expect(forecastCall(fetchMock)).toBeUndefined();
+  });
+
+  it("tries the next split when a longer name lookup returns a fuzzy hit", async () => {
+    const charlestonWest = { name: "Charleston", latitude: 37.1, longitude: -78.2, country_code: "US", country: "United States", admin1: "Virginia" };
+    const charlestonWv = { name: "Charleston", latitude: 38.34982, longitude: -81.63262, country_code: "US", country: "United States", admin1: "West Virginia" };
+    fetchMock = fakeOpenMeteo({
+      "Charleston West Virginia": [],
+      "Charleston West": [charlestonWest],
+      Charleston: [charlestonWv],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const r = await exec({ city: "Charleston West Virginia" });
+    expect(r.output.coordinates).toEqual({ latitude: charlestonWv.latitude, longitude: charlestonWv.longitude });
   });
 
   it("resolves a trailing City only when the returned name is exact", async () => {
@@ -165,13 +180,23 @@ describe("weather-lookup place resolution", () => {
     expect(geo).toHaveLength(1);
   });
 
-  it("bounds an unknown five-word place to five geocoder calls", async () => {
+  it("bounds the worst-case City and postcode retries without repeating a lookup", async () => {
     fetchMock = fakeOpenMeteo({});
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(exec({ city: "one two three four five" })).rejects.toThrow(/not found/);
+    await expect(exec({ city: "a b c d e City 12345" })).rejects.toThrow(/not found/);
     const geo = fetchMock.mock.calls.filter((c) => new URL(String(c[0])).hostname === "geocoding-api.open-meteo.com");
     expect(geo.length).toBeLessThanOrEqual(5);
+    const names = geo.map((call) => new URL(String(call[0])).searchParams.get("name"));
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it("skips blank location aliases when choosing a place name", async () => {
+    fetchMock = fakeOpenMeteo({ London: [LONDON_GB] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const r = await exec({ city: "   ", place: "London" });
+    expect(r.output.coordinates.latitude).toBe(LONDON_GB.latitude);
   });
 
   it("qualifier matching: country code, alias, region name; never a single letter", () => {

@@ -94,11 +94,13 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
 
     if (parts.length === 1 && !city.includes(",")) {
       const words = parts[0].split(" ");
+      let cityRuleRan = false;
 
       // Some callers append "City" to an unambiguous city name, while the
       // geocoder stores the place without that suffix. Require the returned
       // name to be exact so a related municipality is never substituted.
       if (words.length > 1 && norm(words.at(-1)!) === "city") {
+        cityRuleRan = true;
         const name = words.slice(0, -1).join(" ");
         retryCalls++;
         const hits = await geocodeName(name, 20);
@@ -109,12 +111,13 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
       // Try the last one, two, then three words as a country or region. Each
       // lookup is accepted only when the qualifier identifies that hit.
       let mismatch: { name: string; qualifier: string } | undefined;
-      const qualifierAttempts = Math.min(3, words.length - 1, 4 - retryCalls);
-      for (let qualifierWords = 1; qualifierWords <= qualifierAttempts; qualifierWords++) {
+      const firstQualifierWords = cityRuleRan ? 2 : 1;
+      const lastQualifierWords = Math.min(3, words.length - 1, firstQualifierWords + (4 - retryCalls) - 1);
+      for (let qualifierWords = firstQualifierWords; qualifierWords <= lastQualifierWords; qualifierWords++) {
         const name = words.slice(0, -qualifierWords).join(" ");
         const qualifier = words.slice(-qualifierWords).join(" ");
         const hits = await geocodeName(name, 20);
-        const match = hits.find((hit) => hitMatchesQualifiers(hit, [qualifier]));
+        const match = hits.find((hit) => norm(hit.name) === norm(name) && hitMatchesQualifiers(hit, [qualifier]));
         if (match) return match;
         if (!mismatch && hits.length) mismatch = { name, qualifier };
       }
@@ -145,7 +148,7 @@ registerCapability("weather-lookup", async (input: CapabilityInput) => {
   let lat = Number(input.latitude ?? input.lat);
   let lon = Number(input.longitude ?? input.lon ?? input.lng);
   const city = [input.city, input.location, input.place, input.task]
-    .find((value): value is string => typeof value === "string")
+    .find((value): value is string => typeof value === "string" && value.trim().length > 0)
     ?.trim() ?? "";
 
   // Geocode city name if no coordinates provided
