@@ -58,8 +58,10 @@ const exactNameMatch = (hit: GeoHit, name: string, qualifiers: string[]): boolea
     .replace(/[^\p{L}\p{N}\s]/gu, "")
     .replace(/\s+/g, " ")
     .trim();
-  const hitName = withoutPunctuation(hit.name);
-  const lookedUpName = withoutPunctuation(name);
+  // A leading "St"/"St." and "Saint" are the same word ("St Cloud" is "Saint Cloud").
+  const canonical = (value: string) => withoutPunctuation(value).replace(/^st(?= |$)/, "saint");
+  const hitName = canonical(hit.name);
+  const lookedUpName = canonical(name);
   return hitName === lookedUpName || qualifiers.some((qualifier) => hitName === `${lookedUpName} ${withoutPunctuation(qualifier)}`);
 };
 
@@ -123,6 +125,24 @@ async function geocodeName(name: string, count: number): Promise<GeoHit[]> {
     : [];
 }
 
+/** "St Cloud" / "St. Cloud" → "Saint Cloud"; undefined when the first word is not "St" or "St.". */
+const saintSpelling = (name: string): string | undefined => {
+  const leadingSt = /^(\s*)st\.?\s+(?=\S)/i;
+  return leadingSt.test(name) ? name.replace(leadingSt, "$1Saint ") : undefined;
+};
+
+/**
+ * Look a name up; when the geocoder has nothing for a name that starts with
+ * "St" or "St.", look it up once more with "Saint", as GeoNames often stores
+ * it ("Saint Cloud"). At most one extra lookup per name.
+ */
+async function geocodePlaceName(name: string, count: number): Promise<GeoHit[]> {
+  const hits = await geocodeName(name, count);
+  if (hits.length) return hits;
+  const saint = saintSpelling(name);
+  return saint ? geocodeName(saint, count) : hits;
+}
+
 /**
  * Open-Meteo's geocoder matches a bare place name only: "London" resolves,
  * "London, UK" returns nothing. Callers overwhelmingly write "place, region,
@@ -132,7 +152,7 @@ async function geocodeName(name: string, count: number): Promise<GeoHit[]> {
  * rather than returning weather for a different place of that name.
  */
 export async function resolvePlace(city: string): Promise<GeoHit> {
-  const direct = await geocodeName(city, 1);
+  const direct = await geocodePlaceName(city, 1);
   if (direct.length) return direct[0];
 
   const parts = city.split(",").map(cleanPart).filter(Boolean);
@@ -144,7 +164,7 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
     // "Springfield, 62701" named a region by postcode; guessing the top
     // Springfield would ignore it, so that refuses.
     if (parts.length === 1 && parts[0] !== collapsedInput && !city.includes(",")) {
-      const bare = await geocodeName(parts[0], 1);
+      const bare = await geocodePlaceName(parts[0], 1);
       if (bare.length) return bare[0];
     }
 
@@ -158,8 +178,8 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
       if (words.length > 1 && norm(words.at(-1)!) === "city") {
         cityRuleRan = true;
         const name = words.slice(0, -1).join(" ");
-        const hits = await geocodeName(name, 20);
-        const match = hits.find((hit) => norm(hit.name) === norm(name));
+        const hits = await geocodePlaceName(name, 20);
+        const match = hits.find((hit) => exactNameMatch(hit, name, []));
         if (match) return match;
       }
 
@@ -171,7 +191,7 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
       for (let qualifierWords = firstQualifierWords; qualifierWords <= lastQualifierWords; qualifierWords++) {
         const name = words.slice(0, -qualifierWords).join(" ");
         const qualifier = words.slice(-qualifierWords).join(" ");
-        const hits = await geocodeName(name, 20);
+        const hits = await geocodePlaceName(name, 20);
         const exactNameHits = hits.filter((hit) => exactNameMatch(hit, name, [qualifier]));
         const match = qualifiedHits(exactNameHits, [qualifier], city)[0];
         if (match) return match;
@@ -190,7 +210,7 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
   // part on its own ("Georgia" out of "Twiggs County, Georgia, USA") finds a
   // different place of that name, so it is never done.
   const [name, ...qualifiers] = parts;
-  const hits = await geocodeName(name, 20);
+  const hits = await geocodePlaceName(name, 20);
   const exactNameHits = hits.filter((hit) => exactNameMatch(hit, name, qualifiers));
   const match = qualifiedHits(exactNameHits, qualifiers, city)[0]
     ?? qualifiedHits(hits, qualifiers, city)[0];

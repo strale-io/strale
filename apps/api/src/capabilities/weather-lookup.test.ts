@@ -354,4 +354,88 @@ describe("weather-lookup place resolution", () => {
     expect(hitMatchesQualifiers({ ...LONDON_GB, admin1: "England", admin2: "Hampshire" }, ["New Hampshire"])).toBe(false);
     expect(hitMatchesQualifiers({ name: "Example", latitude: 0, longitude: 0, country_code: "MX", country: "Mexico" }, ["New Mexico"])).toBe(false);
   });
+
+  describe("trailing US ZIP codes and a leading 'St' (2026-11-17 paid failures)", () => {
+    const us = (name: string, admin1: string, latitude: number, longitude: number) =>
+      ({ name, latitude, longitude, country_code: "US", country: "United States", admin1 });
+    const BROOKLYN_NY = us("Brooklyn", "New York", 40.6501, -73.94958);
+    const BROOKLYN_MI = us("Brooklyn", "Michigan", 42.10587, -84.24828);
+    const WILDWOOD_NJ = us("Wildwood", "New Jersey", 38.99178, -74.81489);
+    const WILDWOOD_FL = us("Wildwood", "Florida", 28.86526, -82.04064);
+    const SAINT_CLOUD_MN = us("Saint Cloud", "Minnesota", 45.5608, -94.16249);
+    const SAINT_CLOUD_FL = us("Saint Cloud", "Florida", 28.24891, -81.28118);
+    const geocoderNames = (m: ReturnType<typeof vi.fn>) => m.mock.calls
+      .map((c) => new URL(String(c[0])))
+      .filter((u) => u.hostname === "geocoding-api.open-meteo.com")
+      .map((u) => u.searchParams.get("name"));
+
+    it("resolves 'Brooklyn, NY 11206' to Brooklyn, New York", async () => {
+      fetchMock = fakeOpenMeteo({ Brooklyn: [BROOKLYN_NY, BROOKLYN_MI] });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const r = await exec({ city: "Brooklyn, NY 11206" });
+      expect(r.output.coordinates).toEqual({ latitude: BROOKLYN_NY.latitude, longitude: BROOKLYN_NY.longitude });
+    });
+
+    it("resolves 'Wildwood, FL 34785' to Wildwood, Florida", async () => {
+      fetchMock = fakeOpenMeteo({ Wildwood: [WILDWOOD_NJ, WILDWOOD_FL] });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const r = await exec({ city: "Wildwood, FL 34785" });
+      expect(r.output.coordinates).toEqual({ latitude: WILDWOOD_FL.latitude, longitude: WILDWOOD_FL.longitude });
+    });
+
+    it("reads 'St' as 'Saint' in 'St Cloud, Minnesota'", async () => {
+      fetchMock = fakeOpenMeteo({ "Saint Cloud": [SAINT_CLOUD_MN, SAINT_CLOUD_FL] });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const r = await exec({ city: "St Cloud, Minnesota" });
+      expect(r.output.coordinates).toEqual({ latitude: SAINT_CLOUD_MN.latitude, longitude: SAINT_CLOUD_MN.longitude });
+    });
+
+    it("reads 'St.' as 'Saint' in 'St. Cloud MN' (no comma)", async () => {
+      fetchMock = fakeOpenMeteo({ "Saint Cloud": [SAINT_CLOUD_FL, SAINT_CLOUD_MN] });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const r = await exec({ city: "St. Cloud MN" });
+      expect(r.output.coordinates).toEqual({ latitude: SAINT_CLOUD_MN.latitude, longitude: SAINT_CLOUD_MN.longitude });
+      const names = geocoderNames(fetchMock);
+      expect(new Set(names).size).toBe(names.length);
+    });
+
+    it("matches a hit spelled 'St. Cloud' when the caller writes 'Saint Cloud MN'", async () => {
+      const stCloud = { ...SAINT_CLOUD_MN, name: "St. Cloud" };
+      fetchMock = fakeOpenMeteo({ "Saint Cloud": [SAINT_CLOUD_FL, stCloud] });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const r = await exec({ city: "Saint Cloud MN" });
+      expect(r.output.coordinates).toEqual({ latitude: stCloud.latitude, longitude: stCloud.longitude });
+    });
+
+    it("reads 'St' as 'Saint' in a bare 'St Cloud'", async () => {
+      fetchMock = fakeOpenMeteo({ "Saint Cloud": [SAINT_CLOUD_MN] });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const r = await exec({ city: "St Cloud" });
+      expect(r.output.coordinates).toEqual({ latitude: SAINT_CLOUD_MN.latitude, longitude: SAINT_CLOUD_MN.longitude });
+      expect(geocoderNames(fetchMock)).toEqual(["St Cloud", "Saint Cloud"]);
+    });
+
+    it("reads 'St' as 'Saint' in 'St Louis City'", async () => {
+      const SAINT_LOUIS_MO = us("Saint Louis", "Missouri", 38.62727, -90.19789);
+      fetchMock = fakeOpenMeteo({ "Saint Louis": [SAINT_LOUIS_MO] });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const r = await exec({ city: "St Louis City" });
+      expect(r.output.coordinates).toEqual({ latitude: SAINT_LOUIS_MO.latitude, longitude: SAINT_LOUIS_MO.longitude });
+    });
+
+    it("leaves 'Stockholm' alone: no 'Saint' lookup", async () => {
+      fetchMock = fakeOpenMeteo({});
+      vi.stubGlobal("fetch", fetchMock);
+
+      await expect(exec({ city: "Stockholm" })).rejects.toThrow(/not found/);
+      expect(geocoderNames(fetchMock)).toEqual(["Stockholm"]);
+    });
+  });
 });
