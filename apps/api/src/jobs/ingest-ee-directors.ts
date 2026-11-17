@@ -53,6 +53,7 @@ import { sql } from "drizzle-orm";
 import postgres from "postgres";
 import { getDb } from "../db/index.js";
 import { log, logError, logWarn } from "../lib/log.js";
+import { isBlockStatus, STRALE_USER_AGENT } from "../lib/site-access.js";
 import { isShuttingDown } from "../lib/shutdown.js";
 import { registerJobSync } from "../lib/job-coordinator.js";
 
@@ -190,15 +191,39 @@ export class JsonArrayObjectStreamer {
 
 // ─── HEAD probe for Last-Modified ────────────────────────────────────────────
 
-async function headLastModified(): Promise<string | null> {
-  const res = await fetch(UPSTREAM_URL, {
-    method: "HEAD",
-    signal: AbortSignal.timeout(15000),
+export class EeSourceBlockedError extends Error {
+  constructor(method: "HEAD" | "GET", status: number) {
+    super(`${method} ${UPSTREAM_URL} was blocked with HTTP ${status}`);
+    this.name = "EeSourceBlockedError";
+  }
+}
+
+export async function fetchUpstream(
+  method: "HEAD" | "GET",
+  timeoutMs: number,
+  fetchImpl: typeof fetch = fetch,
+): Promise<Response> {
+  const res = await fetchImpl(UPSTREAM_URL, {
+    method,
+    headers: { "User-Agent": STRALE_USER_AGENT },
+    signal: AbortSignal.timeout(timeoutMs),
   });
+  if (isBlockStatus(res.status)) throw new EeSourceBlockedError(method, res.status);
+  return res;
+}
+
+export async function headLastModified(fetchImpl: typeof fetch = fetch): Promise<string | null> {
+  const res = await fetchUpstream("HEAD", 15000, fetchImpl);
   if (!res.ok) {
     throw new Error(`HEAD ${UPSTREAM_URL} returned HTTP ${res.status}`);
   }
   return res.headers.get("last-modified");
+}
+
+export function failureLogLabel(err: unknown): string {
+  return err instanceof EeSourceBlockedError
+    ? "ingest-ee-directors-source-blocked"
+    : "ingest-ee-directors-failed";
 }
 
 // ─── ZIP entry → Readable stream ─────────────────────────────────────────────
@@ -430,7 +455,7 @@ export async function runIngestOnce(): Promise<IngestResult> {
       // Download to /tmp. Streams through pipeline so we don't buffer the
       // full 45 MB body in memory.
       tmpZipPath = join(tmpdir(), `ee_persons_${Date.now()}.zip`);
-      const dlRes = await fetch(UPSTREAM_URL, { signal: AbortSignal.timeout(120_000) });
+      const dlRes = await fetchUpstream("GET", 120_000);
       if (!dlRes.ok || !dlRes.body) {
         throw new Error(`Download HTTP ${dlRes.status} (no body=${!dlRes.body})`);
       }
@@ -525,7 +550,7 @@ export async function runIngestOnce(): Promise<IngestResult> {
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    logError("ingest-ee-directors-failed", err, {
+    logError(failureLogLabel(err), err, {
       duration_ms: Date.now() - startedAt,
     });
     return {
