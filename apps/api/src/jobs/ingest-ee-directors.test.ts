@@ -15,10 +15,71 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  EeSourceBlockedError,
   JsonArrayObjectStreamer,
+  failureLogLabel,
+  fetchUpstream,
+  headLastModified,
   parseEeDate,
   shapeRow,
 } from "./ingest-ee-directors.js";
+import { STRALE_USER_AGENT } from "../lib/site-access.js";
+
+describe("upstream access", () => {
+  function stubResponse(response: Response) {
+    const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+    const fetchImpl = (async (input: string | URL | Request, init?: RequestInit) => {
+      calls.push({ input, init });
+      return response;
+    }) as typeof fetch;
+    return { calls, fetchImpl };
+  }
+
+  it.each(["HEAD", "GET"] as const)(
+    "fetchUpstream sends Strale's honest user agent for %s",
+    async (method) => {
+      const { calls, fetchImpl } = stubResponse(new Response(null, { status: 200 }));
+      await fetchUpstream(method, 1_000, fetchImpl);
+      expect(calls).toHaveLength(1);
+      expect(calls[0].init?.method).toBe(method);
+      expect(calls[0].init?.headers).toEqual({ "User-Agent": STRALE_USER_AGENT });
+    },
+  );
+
+  it("headLastModified sends Strale's honest user agent and returns last-modified", async () => {
+    const { calls, fetchImpl } = stubResponse(
+      new Response(null, {
+        status: 200,
+        headers: { "last-modified": "Tue, 17 Nov 2026 10:37:00 GMT" },
+      }),
+    );
+    await expect(headLastModified(fetchImpl)).resolves.toBe("Tue, 17 Nov 2026 10:37:00 GMT");
+    expect(calls[0].init?.headers).toEqual({ "User-Agent": STRALE_USER_AGENT });
+  });
+
+  it.each(["HEAD", "GET"] as const)(
+    "fetchUpstream reports a blocked source for %s HTTP 403",
+    async (method) => {
+      const { fetchImpl } = stubResponse(new Response(null, { status: 403 }));
+      await expect(fetchUpstream(method, 1_000, fetchImpl)).rejects.toBeInstanceOf(
+        EeSourceBlockedError,
+      );
+    },
+  );
+
+  it("leaves non-block errors to the caller", async () => {
+    const response = new Response(null, { status: 500 });
+    const { fetchImpl } = stubResponse(response);
+    await expect(fetchUpstream("GET", 1_000, fetchImpl)).resolves.toBe(response);
+  });
+
+  it("selects a distinct log label only for source blocks", () => {
+    expect(failureLogLabel(new EeSourceBlockedError("HEAD", 403))).toBe(
+      "ingest-ee-directors-source-blocked",
+    );
+    expect(failureLogLabel(new Error("ordinary failure"))).toBe("ingest-ee-directors-failed");
+  });
+});
 
 describe("parseEeDate", () => {
   it("converts DD.MM.YYYY → YYYY-MM-DD", () => {
