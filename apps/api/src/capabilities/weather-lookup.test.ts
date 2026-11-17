@@ -11,6 +11,8 @@ const LONDON_CA = { name: "London", latitude: 42.98339, longitude: -81.23304, co
 const LONDON_US = { name: "London", latitude: 39.88645, longitude: -83.44825, country_code: "US", country: "United States", admin1: "Ohio" };
 const MANHATTAN_KS = { name: "Manhattan", latitude: 39.18361, longitude: -96.57167, country_code: "US", country: "United States", admin1: "Kansas", admin2: "Riley" };
 const MANHATTAN_NY = { name: "Manhattan", latitude: 40.78343, longitude: -73.96625, country_code: "US", country: "United States", admin1: "New York", admin2: "New York County" };
+const WASHINGTON_DC = { name: "Washington D.C.", latitude: 38.89511, longitude: -77.03637, country_code: "US", country: "United States", admin1: "District of Columbia", feature_code: "PPLC" };
+const WASHINGTON_PA = { name: "Washington", latitude: 40.17396, longitude: -80.24617, country_code: "US", country: "United States", admin1: "Pennsylvania" };
 const FORECAST = { timezone: "Europe/London", current: { temperature_2m: 9, weather_code: 3 }, daily: { time: ["2026-11-07"], temperature_2m_max: [11], temperature_2m_min: [6], precipitation_sum: [0], weather_code: [3] } };
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
@@ -123,6 +125,43 @@ describe("weather-lookup place resolution", () => {
 
     const r = await exec({ city: "Lagos Nigeria" });
     expect(r.output.coordinates).toEqual({ latitude: lagosNg.latitude, longitude: lagosNg.longitude });
+  });
+
+  it.each(["Washington DC", "Washington, DC", "Washington D.C."])("resolves the punctuation-tolerant exact name '%s' to Washington, D.C.", async (city) => {
+    fetchMock = fakeOpenMeteo({
+      [city]: city === "Washington D.C." ? [WASHINGTON_DC, WASHINGTON_PA] : [],
+      Washington: [WASHINGTON_DC, WASHINGTON_PA],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const r = await exec({ city });
+    expect(r.output.coordinates).toEqual({ latitude: WASHINGTON_DC.latitude, longitude: WASHINGTON_DC.longitude });
+  });
+
+  it("resolves 'Washington PA' to Pennsylvania", async () => {
+    fetchMock = fakeOpenMeteo({ "Washington PA": [], Washington: [WASHINGTON_DC, WASHINGTON_PA] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const r = await exec({ city: "Washington PA" });
+    expect(r.output.coordinates).toEqual({ latitude: WASHINGTON_PA.latitude, longitude: WASHINGTON_PA.longitude });
+  });
+
+  it("keeps the first hit for unqualified 'Washington'", async () => {
+    fetchMock = fakeOpenMeteo({ Washington: [WASHINGTON_DC, WASHINGTON_PA] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const r = await exec({ city: "Washington" });
+    expect(r.output.coordinates).toEqual({ latitude: WASHINGTON_DC.latitude, longitude: WASHINGTON_DC.longitude });
+  });
+
+  it("ignores a loose namesake when resolving exact-name 'Sacramento, CA'", async () => {
+    const sacramentoValley = { name: "Sacramento Valley", latitude: 43.45, longitude: -80.12, country_code: "CA", country: "Canada", admin1: "Ontario" };
+    const sacramentoCa = { name: "Sacramento", latitude: 38.58157, longitude: -121.4944, country_code: "US", country: "United States", admin1: "California" };
+    fetchMock = fakeOpenMeteo({ "Sacramento, CA": [], Sacramento: [sacramentoValley, sacramentoCa] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const r = await exec({ city: "Sacramento, CA" });
+    expect(r.output.coordinates).toEqual({ latitude: sacramentoCa.latitude, longitude: sacramentoCa.longitude });
   });
 
   it("takes the qualified Hyderabad even when Pakistan is listed first", async () => {
