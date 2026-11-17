@@ -75,32 +75,30 @@ export function hitMatchesQualifiers(hit: GeoHit, qualifiers: string[]): boolean
   });
 }
 
-/** Filter hits by qualifiers while resolving the dual meaning of US state codes. */
+/** The US state a two-letter qualifier names ("CA" → "California"), if any. */
+const stateFor = (qualifier: string) => US_STATES[qualifier.trim().toUpperCase()];
+
+/**
+ * The hits every qualifier names. Ordinary qualifiers are applied first; then
+ * each two-letter US state code is read as the state or as the country with
+ * that ISO code. When both readings still have candidates the call refuses
+ * rather than guess, so "Richmond, CA" refuses while "Richmond, CA, USA"
+ * takes California and "Richmond, CA, Canada" takes British Columbia.
+ */
 function qualifiedHits(hits: GeoHit[], qualifiers: string[], input: string): GeoHit[] {
+  let candidates = hits.filter((hit) => qualifiers.every((q) => stateFor(q) || hitMatchesQualifiers(hit, [q])));
   for (const qualifier of qualifiers) {
-    const code = qualifier.trim().toUpperCase();
-    const state = US_STATES[code];
+    const state = stateFor(qualifier);
     if (!state) continue;
-    const hasStateHit = hits.some((hit) =>
-      (hit.country_code ?? "").toLowerCase() === "us" && norm(hit.admin1 ?? "") === norm(state));
-    const hasCountryHit = hits.some((hit) => (hit.country_code ?? "").toLowerCase() === code.toLowerCase());
-    if (hasStateHit && hasCountryHit) {
-      throw new Error(`Location "${input}" is ambiguous: "${code}" can mean a US state or a country. Write the state or country name in full, or pass latitude and longitude.`);
+    const code = qualifier.trim().toLowerCase();
+    const stateHits = candidates.filter((hit) => (hit.country_code ?? "").toLowerCase() === "us" && norm(hit.admin1 ?? "") === norm(state));
+    const countryHits = candidates.filter((hit) => (hit.country_code ?? "").toLowerCase() === code);
+    if (stateHits.length && countryHits.length) {
+      throw new Error(`Location "${input}" is ambiguous: "${code.toUpperCase()}" can mean a US state or a country. Write the state or country name in full, or pass latitude and longitude.`);
     }
+    candidates = stateHits.length ? stateHits : countryHits;
   }
-
-  return qualifiers.reduce((candidates, qualifier) => {
-    const code = qualifier.trim().toUpperCase();
-    const state = US_STATES[code];
-    if (!state) {
-      return candidates.filter((hit) => hitMatchesQualifiers(hit, [qualifier]));
-    }
-
-    const stateHits = candidates.filter((hit) =>
-      (hit.country_code ?? "").toLowerCase() === "us" && norm(hit.admin1 ?? "") === norm(state));
-    const countryHits = candidates.filter((hit) => (hit.country_code ?? "").toLowerCase() === code.toLowerCase());
-    return stateHits.length ? stateHits : countryHits;
-  }, hits);
+  return candidates;
 }
 
 async function geocodeName(name: string, count: number): Promise<GeoHit[]> {
@@ -127,10 +125,9 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
 
   const parts = city.split(",").map(cleanPart).filter(Boolean);
   if (parts.length < 2) {
+    // Compared with spaces collapsed, so input that differs only by spacing
+    // ("New  York") does not repeat the same lookup.
     const collapsedInput = city.replace(/\s+/g, " ").trim();
-    if (parts.length === 1 && parts[0] === collapsedInput && collapsedInput !== city) {
-      throw new Error(`Location "${city}" not found.`);
-    }
     // A bare-name retry only when the caller wrote no comma ("Flint 48505").
     // "Springfield, 62701" named a region by postcode; guessing the top
     // Springfield would ignore it, so that refuses.
