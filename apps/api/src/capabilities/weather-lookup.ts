@@ -51,6 +51,18 @@ const US_STATES: Record<string, string> = {
 
 const norm = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
 
+/** Compare place names without punctuation, which geocoders often add or omit. */
+const exactNameMatch = (hit: GeoHit, name: string, qualifiers: string[]): boolean => {
+  const withoutPunctuation = (value: string) => norm(value)
+    .replace(/[-‐‑–—]/g, " ")
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const hitName = withoutPunctuation(hit.name);
+  const lookedUpName = withoutPunctuation(name);
+  return hitName === lookedUpName || qualifiers.some((qualifier) => hitName === `${lookedUpName} ${withoutPunctuation(qualifier)}`);
+};
+
 /** One comma-separated part of a place string, with postal codes removed ("Michigan 48505" → "Michigan"). */
 const cleanPart = (s: string) => s.replace(/\b\d{3,}(-\d+)?\b/g, " ").replace(/\s+/g, " ").trim();
 
@@ -160,7 +172,7 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
         const name = words.slice(0, -qualifierWords).join(" ");
         const qualifier = words.slice(-qualifierWords).join(" ");
         const hits = await geocodeName(name, 20);
-        const exactNameHits = hits.filter((hit) => norm(hit.name) === norm(name));
+        const exactNameHits = hits.filter((hit) => exactNameMatch(hit, name, [qualifier]));
         const match = qualifiedHits(exactNameHits, [qualifier], city)[0];
         if (match) return match;
         if (!mismatch && hits.length) mismatch = { name, qualifier };
@@ -179,7 +191,9 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
   // different place of that name, so it is never done.
   const [name, ...qualifiers] = parts;
   const hits = await geocodeName(name, 20);
-  const match = qualifiedHits(hits, qualifiers, city)[0];
+  const exactNameHits = hits.filter((hit) => exactNameMatch(hit, name, qualifiers));
+  const match = qualifiedHits(exactNameHits, qualifiers, city)[0]
+    ?? qualifiedHits(hits, qualifiers, city)[0];
   if (match) return match;
   throw new Error(
     hits.length
