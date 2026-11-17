@@ -92,12 +92,13 @@ you need the rest of the catalog.
 | [`straleio`](https://www.npmjs.com/package/straleio) | npm | TypeScript/JavaScript SDK |
 | [`straleio`](https://pypi.org/project/straleio/) | PyPI | Python SDK |
 | [`langchain-strale`](https://pypi.org/project/langchain-strale/) | PyPI | LangChain toolkit (`StraleToolkit`) |
-| [`crewai-strale`](https://pypi.org/project/crewai-strale/) | PyPI | CrewAI integration — drop-in BaseTools for agents |
-| [`strale-semantic-kernel`](https://www.npmjs.com/package/strale-semantic-kernel) | npm | Semantic Kernel plugin for .NET and TypeScript agents |
-| [`composio-strale`](https://pypi.org/project/composio-strale/) | PyPI | Composio integration — custom actions |
+| [`crewai-strale`](https://pypi.org/project/crewai-strale/) | PyPI | CrewAI integration — drop-in BaseTools for agents (maintenance only) |
+| [`composio-strale`](https://pypi.org/project/composio-strale/) | PyPI | Composio integration — custom actions (maintenance only) |
 
 Each package's own README is the reference for that integration; this file
-only points at them. Every distribution PR against an external framework
+only points at them. Maintenance-only packages get fixes but no new features;
+for new work, connect any MCP client to `strale-mcp`. The former
+`strale-semantic-kernel` package is deprecated and no longer listed. Every distribution PR against an external framework
 repo, and every publish of one of these packages, follows CLAUDE.md's
 Distribution PR Integrity Protocol — a package claiming framework-native
 integration is verified against the published artefact, not the source
