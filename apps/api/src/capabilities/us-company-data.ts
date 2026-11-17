@@ -25,7 +25,7 @@ export { normalizeCompanyName, classifyNameMatch } from "../lib/company-name-mat
 export type { MatchConfidence } from "../lib/company-name-match.js";
 import { classifyNameMatch } from "../lib/company-name-match.js";
 import type { MatchConfidence } from "../lib/company-name-match.js";
-import { resolveByTicker, resolveByTitle } from "../lib/sec-ticker-map.js";
+import { resolveByTicker, resolveByTitle, stripSecTitleAnnotation } from "../lib/sec-ticker-map.js";
 import { messageText } from "../lib/llm-response.js";
 
 // A ticker is normally 1-5 chars, but don't hard-fail longer ones — just try
@@ -201,7 +201,10 @@ registerCapability("us-company-data", async (input: CapabilityInput) => {
       // through classifyNameMatch (rather than hardcoding "exact") keeps the
       // confidence computation in one place and stays correct even if
       // resolveByTitle's matching rules loosen in the future.
-      preResolvedMatch = classifyNameMatch(trimmed, titleHit.title);
+      // Compared without SEC's registrant annotation: "Tucows Inc" against
+      // "TUCOWS INC /PA/" would otherwise read as a one-token partial match,
+      // classify `low`, and be refused below although the map hit is exact.
+      preResolvedMatch = classifyNameMatch(trimmed, stripSecTitleAnnotation(titleHit.title));
     }
   }
 
@@ -222,8 +225,21 @@ registerCapability("us-company-data", async (input: CapabilityInput) => {
   // ticker/title map — i.e. exactly the cases the map can't answer.
   if (!cik) {
     searchedName = await extractCompanyName(trimmed);
-    cik = await searchEdgar(searchedName);
-    resolutionMethod = "search";
+    // The extracted name gets the same exact title lookup the raw input got.
+    // Free-text input ("look up ORACLE CORP") misses the map as a sentence,
+    // and full-text filing search then ranks a different filer first
+    // ("Oracle Systems"), which the low-confidence gate refuses. Only an
+    // unambiguous exact title is accepted here; anything else still goes to
+    // filing search and its gate.
+    const extractedHit = await resolveByTitle(searchedName);
+    if (extractedHit) {
+      cik = extractedHit.cik;
+      resolutionMethod = "title";
+      preResolvedMatch = classifyNameMatch(searchedName, stripSecTitleAnnotation(extractedHit.title));
+    } else {
+      cik = await searchEdgar(searchedName);
+      resolutionMethod = "search";
+    }
   }
 
   const company = await fetchCompany(cik);

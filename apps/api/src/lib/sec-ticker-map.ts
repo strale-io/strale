@@ -65,16 +65,42 @@ function padCik(cikStr: number | string): string {
   return String(cikStr).padStart(10, "0");
 }
 
+/**
+ * SEC appends a registrant annotation to about one title in eleven: the state
+ * or country of incorporation ("BANK OF AMERICA CORP /DE/", "Fatpipe Inc/UT",
+ * "VERTEX PHARMACEUTICALS INC / MA", "ARM HOLDINGS PLC /UK"), "/NEW", "/ADR",
+ * or a bare trailing slash ("TOYOTA MOTOR CORP/"). It is SEC's filing label,
+ * not part of the company's name, and nobody types it. Left in, "Bank of
+ * America Corp" normalizes to "bank of america" while the map holds
+ * "bank of america de", so the exact title path misses and the caller falls
+ * through to full-text filing search, which returns a different filer and is
+ * refused. Measured on the live file on 2026-11-17: 961 of 10,404 titles.
+ *
+ * Only a trailing two- or three-letter segment is removed, so "GENMAB A/S"
+ * and "CULLEN/FROST BANKERS, INC." are untouched.
+ */
+const SEC_TITLE_ANNOTATION_RE = /\s*\/\s*[A-Za-z]{2,3}\s*\/?\s*$|\s*\/\s*$/;
+
+export function stripSecTitleAnnotation(title: string): string {
+  return title.replace(SEC_TITLE_ANNOTATION_RE, "").trim();
+}
+
 function buildIndexes(map: SecTickerMap): void {
   tickerIndex = new Map();
   titleIndex = new Map();
   for (const entry of Object.values(map)) {
     if (entry.ticker) tickerIndex.set(entry.ticker.toUpperCase(), entry);
-    const norm = normalizeCompanyName(entry.title ?? "");
+    const norm = normalizeCompanyName(stripSecTitleAnnotation(entry.title ?? ""));
     if (norm) {
       const bucket = titleIndex.get(norm);
-      if (bucket) bucket.push(entry);
-      else titleIndex.set(norm, [entry]);
+      if (!bucket) titleIndex.set(norm, [entry]);
+      // The file has one row per ticker, not per company: a registrant with
+      // two share classes or a listed preferred appears twice under one CIK
+      // (ORACLE CORP as ORCL and ORCL-PD). Those rows are the same entity, so
+      // they must not count as two candidates, or the "exactly one" rule
+      // below reads every such company as ambiguous. Keep the first row, which
+      // is the primary listing in SEC's ordering.
+      else if (!bucket.some((e) => padCik(e.cik_str) === padCik(entry.cik_str))) bucket.push(entry);
     }
   }
 }
@@ -191,8 +217,10 @@ export async function resolveByTicker(
  * `CORP_SUFFIX_RE`), so a single normalized-equality pass over both sides
  * already gives "exact normalized equality, suffix-agnostic": "Apple",
  * "Apple Inc", and "Apple Inc." all normalize to "apple" and compare equal.
- * ONLY returns a hit when it is unambiguous (exactly one candidate matches
- * that normalized form) — multiple candidates → null, never a guess.
+ * ONLY returns a hit when it is unambiguous (exactly one registrant, by CIK,
+ * matches that normalized form) — two different registrants → null, never a
+ * guess. Titles are compared without SEC's trailing registrant annotation
+ * (see `stripSecTitleAnnotation`); the returned `title` is SEC's own, intact.
  */
 export async function resolveByTitle(
   name: string,
