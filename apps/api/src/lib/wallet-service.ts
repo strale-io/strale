@@ -54,6 +54,7 @@ export type LedgerEntryType =
   | "purchase"
   | "refund"
   | "trial_credit"
+  | "operator_credit"
   | "closure_forfeit";
 
 export interface LockedWallet {
@@ -265,7 +266,7 @@ export async function credit(
   params: {
     walletId: string;
     amountCents: number;
-    type: Extract<LedgerEntryType, "top_up" | "trial_credit" | "refund">;
+    type: Extract<LedgerEntryType, "top_up" | "trial_credit" | "operator_credit" | "refund">;
     description: string;
     referenceId?: string | null;
     stripeSessionId?: string | null;

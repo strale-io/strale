@@ -5,7 +5,7 @@
   "projectTitle": "Strale",
   "description": "Docs and examples for Strale: pay-per-call tools for AI agents over MCP, REST, and the TypeScript and Python SDKs. Free tools work without an API key.",
   "folders": [
-    "docs",
+    "docs/ide-rules",
     "packages/sdk-typescript",
     "packages/sdk-python",
     "packages/mcp-server",
