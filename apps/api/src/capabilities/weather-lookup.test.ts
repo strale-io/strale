@@ -164,6 +164,26 @@ describe("weather-lookup place resolution", () => {
     expect(r.output.coordinates).toEqual({ latitude: sacramentoCa.latitude, longitude: sacramentoCa.longitude });
   });
 
+  it("falls back to a qualified loose-name hit for 'Bombay, IN'", async () => {
+    const bombayNy = { name: "Bombay", latitude: 44.94, longitude: -74.59, country_code: "US", country: "United States", admin1: "New York" };
+    const bombayNz = { name: "Bombay", latitude: -37.18, longitude: 174.99, country_code: "NZ", country: "New Zealand", admin1: "Auckland" };
+    const dharaviIn = { name: "Dharavi", latitude: 19.04, longitude: 72.85, country_code: "IN", country: "India", admin1: "Maharashtra" };
+    fetchMock = fakeOpenMeteo({ "Bombay, IN": [], Bombay: [bombayNy, bombayNz, dharaviIn] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const r = await exec({ city: "Bombay, IN" });
+    expect(r.output.coordinates).toEqual({ latitude: dharaviIn.latitude, longitude: dharaviIn.longitude });
+  });
+
+  it("matches a hyphenated geocoder name for 'Winston Salem NC'", async () => {
+    const winstonSalem = { name: "Winston-Salem", latitude: 36.1, longitude: -80.24, country_code: "US", country: "United States", admin1: "North Carolina" };
+    fetchMock = fakeOpenMeteo({ "Winston Salem NC": [], "Winston Salem": [winstonSalem], Winston: [] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const r = await exec({ city: "Winston Salem NC" });
+    expect(r.output.coordinates).toEqual({ latitude: winstonSalem.latitude, longitude: winstonSalem.longitude });
+  });
+
   it("takes the qualified Hyderabad even when Pakistan is listed first", async () => {
     const hyderabadPk = { name: "Hyderabad", latitude: 25.39242, longitude: 68.37366, country_code: "PK", country: "Pakistan" };
     const hyderabadIn = { name: "Hyderabad", latitude: 17.38405, longitude: 78.45636, country_code: "IN", country: "India" };

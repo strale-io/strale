@@ -53,7 +53,11 @@ const norm = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g
 
 /** Compare place names without punctuation, which geocoders often add or omit. */
 const exactNameMatch = (hit: GeoHit, name: string, qualifiers: string[]): boolean => {
-  const withoutPunctuation = (value: string) => norm(value).replace(/[^\p{L}\p{N}\s]/gu, "").replace(/\s+/g, " ").trim();
+  const withoutPunctuation = (value: string) => norm(value)
+    .replace(/[-‐‑–—]/g, " ")
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
   const hitName = withoutPunctuation(hit.name);
   const lookedUpName = withoutPunctuation(name);
   return hitName === lookedUpName || qualifiers.some((qualifier) => hitName === `${lookedUpName} ${withoutPunctuation(qualifier)}`);
@@ -188,7 +192,8 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
   const [name, ...qualifiers] = parts;
   const hits = await geocodeName(name, 20);
   const exactNameHits = hits.filter((hit) => exactNameMatch(hit, name, qualifiers));
-  const match = qualifiedHits(exactNameHits.length ? exactNameHits : hits, qualifiers, city)[0];
+  const match = qualifiedHits(exactNameHits, qualifiers, city)[0]
+    ?? qualifiedHits(hits, qualifiers, city)[0];
   if (match) return match;
   throw new Error(
     hits.length
