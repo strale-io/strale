@@ -5,6 +5,7 @@ const GEO_API = "https://geocoding-api.open-meteo.com/v1/search";
 const WEATHER_API = "https://api.open-meteo.com/v1/forecast";
 
 interface GeoHit {
+  name: string;
   latitude: number;
   longitude: number;
   country_code?: string;
@@ -29,6 +30,23 @@ const COUNTRY_ALIASES: Record<string, string> = {
   "czech republic": "cz",
   holland: "nl",
   "south korea": "kr",
+};
+
+// Open-Meteo spells US first-level administrative areas this way. A state
+// code may also be an ISO country code (for example CA), so callers using a
+// two-letter qualifier need both interpretations considered together.
+const US_STATES: Record<string, string> = {
+  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
+  CO: "Colorado", CT: "Connecticut", DE: "Delaware", FL: "Florida", GA: "Georgia",
+  HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa",
+  KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland",
+  MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri",
+  MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey",
+  NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio",
+  OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina",
+  SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont",
+  VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
+  DC: "District of Columbia",
 };
 
 const norm = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
@@ -57,6 +75,32 @@ export function hitMatchesQualifiers(hit: GeoHit, qualifiers: string[]): boolean
   });
 }
 
+/** The US state a two-letter qualifier names ("CA" → "California"), if any. */
+const stateFor = (qualifier: string) => US_STATES[qualifier.trim().toUpperCase()];
+
+/**
+ * The hits every qualifier names. Ordinary qualifiers are applied first; then
+ * each two-letter US state code is read as the state or as the country with
+ * that ISO code. When both readings still have candidates the call refuses
+ * rather than guess, so "Richmond, CA" refuses while "Richmond, CA, USA"
+ * takes California and "Richmond, CA, Canada" takes British Columbia.
+ */
+function qualifiedHits(hits: GeoHit[], qualifiers: string[], input: string): GeoHit[] {
+  let candidates = hits.filter((hit) => qualifiers.every((q) => stateFor(q) || hitMatchesQualifiers(hit, [q])));
+  for (const qualifier of qualifiers) {
+    const state = stateFor(qualifier);
+    if (!state) continue;
+    const code = qualifier.trim().toLowerCase();
+    const stateHits = candidates.filter((hit) => (hit.country_code ?? "").toLowerCase() === "us" && norm(hit.admin1 ?? "") === norm(state));
+    const countryHits = candidates.filter((hit) => (hit.country_code ?? "").toLowerCase() === code);
+    if (stateHits.length && countryHits.length) {
+      throw new Error(`Location "${input}" is ambiguous: "${code.toUpperCase()}" can mean a US state or a country. Write the state or country name in full, or pass latitude and longitude.`);
+    }
+    candidates = stateHits.length ? stateHits : countryHits;
+  }
+  return candidates;
+}
+
 async function geocodeName(name: string, count: number): Promise<GeoHit[]> {
   const geoUrl = `${GEO_API}?name=${encodeURIComponent(name)}&count=${count}&language=en`;
   const gr = await fetch(geoUrl, { signal: AbortSignal.timeout(10000) });
@@ -81,12 +125,50 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
 
   const parts = city.split(",").map(cleanPart).filter(Boolean);
   if (parts.length < 2) {
+    // Compared with spaces collapsed, so input that differs only by spacing
+    // ("New  York") does not repeat the same lookup.
+    const collapsedInput = city.replace(/\s+/g, " ").trim();
     // A bare-name retry only when the caller wrote no comma ("Flint 48505").
     // "Springfield, 62701" named a region by postcode; guessing the top
     // Springfield would ignore it, so that refuses.
-    if (parts.length === 1 && parts[0] !== city && !city.includes(",")) {
+    if (parts.length === 1 && parts[0] !== collapsedInput && !city.includes(",")) {
       const bare = await geocodeName(parts[0], 1);
       if (bare.length) return bare[0];
+    }
+
+    if (parts.length === 1 && !city.includes(",")) {
+      const words = parts[0].split(" ");
+      let cityRuleRan = false;
+
+      // Some callers append "City" to an unambiguous city name, while the
+      // geocoder stores the place without that suffix. Require the returned
+      // name to be exact so a related municipality is never substituted.
+      if (words.length > 1 && norm(words.at(-1)!) === "city") {
+        cityRuleRan = true;
+        const name = words.slice(0, -1).join(" ");
+        const hits = await geocodeName(name, 20);
+        const match = hits.find((hit) => norm(hit.name) === norm(name));
+        if (match) return match;
+      }
+
+      // Try the last one, two, then three words as a country or region. Each
+      // lookup is accepted only when the qualifier identifies that hit.
+      let mismatch: { name: string; qualifier: string } | undefined;
+      const firstQualifierWords = cityRuleRan ? 2 : 1;
+      const lastQualifierWords = Math.min(3, words.length - 1);
+      for (let qualifierWords = firstQualifierWords; qualifierWords <= lastQualifierWords; qualifierWords++) {
+        const name = words.slice(0, -qualifierWords).join(" ");
+        const qualifier = words.slice(-qualifierWords).join(" ");
+        const hits = await geocodeName(name, 20);
+        const exactNameHits = hits.filter((hit) => norm(hit.name) === norm(name));
+        const match = qualifiedHits(exactNameHits, [qualifier], city)[0];
+        if (match) return match;
+        if (!mismatch && hits.length) mismatch = { name, qualifier };
+      }
+
+      if (mismatch) {
+        throw new Error(`Location "${city}" not found: places named "${mismatch.name}" exist, but none in ${mismatch.qualifier}. Pass latitude and longitude for an exact location.`);
+      }
     }
     throw new Error(`Location "${city}" not found.`);
   }
@@ -97,7 +179,7 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
   // different place of that name, so it is never done.
   const [name, ...qualifiers] = parts;
   const hits = await geocodeName(name, 20);
-  const match = hits.find((h) => qualifiers.every((q) => hitMatchesQualifiers(h, [q])));
+  const match = qualifiedHits(hits, qualifiers, city)[0];
   if (match) return match;
   throw new Error(
     hits.length
@@ -109,7 +191,9 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
 registerCapability("weather-lookup", async (input: CapabilityInput) => {
   let lat = Number(input.latitude ?? input.lat);
   let lon = Number(input.longitude ?? input.lon ?? input.lng);
-  const city = ((input.city as string) ?? (input.location as string) ?? (input.task as string) ?? "").trim();
+  const city = [input.city, input.location, input.place, input.task]
+    .find((value): value is string => typeof value === "string" && value.trim().length > 0)
+    ?.trim() ?? "";
 
   // Geocode city name if no coordinates provided
   if ((isNaN(lat) || isNaN(lon)) && city) {

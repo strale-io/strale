@@ -106,6 +106,180 @@ describe("weather-lookup place resolution", () => {
     expect(geo).toHaveLength(1);
   });
 
+  it("accepts place as an alias and treats a non-string city as absent", async () => {
+    fetchMock = fakeOpenMeteo({ London: [LONDON_GB] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const r = await exec({ place: "London" });
+    expect(r.output.coordinates.latitude).toBe(LONDON_GB.latitude);
+    await expect(exec({ city: 42 })).rejects.toThrow("'city' (location name) or 'latitude'/'longitude' is required.");
+  });
+
+  it("resolves a country qualifier without a comma", async () => {
+    const lagosNg = { name: "Lagos", latitude: 6.45407, longitude: 3.39467, country_code: "NG", country: "Nigeria" };
+    const lagosPt = { name: "Lagos", latitude: 37.10202, longitude: -8.67422, country_code: "PT", country: "Portugal" };
+    fetchMock = fakeOpenMeteo({ "Lagos Nigeria": [], Lagos: [lagosPt, lagosNg] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const r = await exec({ city: "Lagos Nigeria" });
+    expect(r.output.coordinates).toEqual({ latitude: lagosNg.latitude, longitude: lagosNg.longitude });
+  });
+
+  it("takes the qualified Hyderabad even when Pakistan is listed first", async () => {
+    const hyderabadPk = { name: "Hyderabad", latitude: 25.39242, longitude: 68.37366, country_code: "PK", country: "Pakistan" };
+    const hyderabadIn = { name: "Hyderabad", latitude: 17.38405, longitude: 78.45636, country_code: "IN", country: "India" };
+    fetchMock = fakeOpenMeteo({ "Hyderabad India": [], Hyderabad: [hyderabadPk, hyderabadIn] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const r = await exec({ city: "Hyderabad India" });
+    expect(r.output.coordinates.latitude).toBe(hyderabadIn.latitude);
+  });
+
+  it.each(["Richmond CA", "Richmond, CA"])("refuses ambiguous state and country code in '%s'", async (city) => {
+    const richmondBc = { name: "Richmond", latitude: 49.17, longitude: -123.14, country_code: "CA", country: "Canada", admin1: "British Columbia" };
+    const richmondCa = { name: "Richmond", latitude: 37.94, longitude: -122.35, country_code: "US", country: "United States", admin1: "California" };
+    fetchMock = fakeOpenMeteo({ [city]: [], Richmond: [richmondBc, richmondCa] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(exec({ city })).rejects.toThrow(`Location "${city}" is ambiguous: "CA" can mean a US state or a country. Write the state or country name in full, or pass latitude and longitude.`);
+    expect(forecastCall(fetchMock)).toBeUndefined();
+  });
+
+  it("refuses Dublin CA when both Canada and California contain a candidate", async () => {
+    const dublinOn = { name: "Dublin", latitude: 43.5, longitude: -81.1, country_code: "CA", country: "Canada", admin1: "Ontario" };
+    const dublinCa = { name: "Dublin", latitude: 37.7, longitude: -121.9, country_code: "US", country: "United States", admin1: "California" };
+    fetchMock = fakeOpenMeteo({ "Dublin CA": [], Dublin: [dublinOn, dublinCa] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(exec({ city: "Dublin CA" })).rejects.toThrow(/"CA" can mean a US state or a country/);
+  });
+
+  it.each([
+    ["Richmond, CA, Canada", "British Columbia"],
+    ["Richmond, Canada, CA", "British Columbia"],
+    ["Richmond, CA, USA", "California"],
+    ["Richmond, USA, CA", "California"],
+  ])("lets another qualifier settle a two-letter code in '%s'", async (city, admin1) => {
+    const richmondBc = { name: "Richmond", latitude: 49.17, longitude: -123.14, country_code: "CA", country: "Canada", admin1: "British Columbia" };
+    const richmondCa = { name: "Richmond", latitude: 37.94, longitude: -122.35, country_code: "US", country: "United States", admin1: "California" };
+    fetchMock = fakeOpenMeteo({ [city]: [], Richmond: [richmondBc, richmondCa] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const want = admin1 === "California" ? richmondCa : richmondBc;
+    const r = await exec({ city });
+    expect(r.output.coordinates).toEqual({ latitude: want.latitude, longitude: want.longitude });
+  });
+
+  it.each(["Austin TX", "Austin, TX"])("resolves a state code in '%s'", async (city) => {
+    const austin = { name: "Austin", latitude: 30.27, longitude: -97.74, country_code: "US", country: "United States", admin1: "Texas" };
+    fetchMock = fakeOpenMeteo({ [city]: [], Austin: [austin] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const r = await exec({ city });
+    expect(r.output.coordinates).toEqual({ latitude: austin.latitude, longitude: austin.longitude });
+  });
+
+  it.each([
+    ["Richmond California", { name: "Richmond", latitude: 37.94, longitude: -122.35, country_code: "US", country: "United States", admin1: "California" }],
+    ["Paris FR", { name: "Paris", latitude: 48.85, longitude: 2.35, country_code: "FR", country: "France" }],
+    ["Toronto CA", { name: "Toronto", latitude: 43.65, longitude: -79.38, country_code: "CA", country: "Canada", admin1: "Ontario" }],
+    ["Sacramento CA", { name: "Sacramento", latitude: 38.58, longitude: -121.49, country_code: "US", country: "United States", admin1: "California" }],
+  ])("resolves the sole interpretation of '%s'", async (city, hit) => {
+    const name = city.split(" ")[0];
+    fetchMock = fakeOpenMeteo({ [city]: [], [name]: [hit] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const r = await exec({ city });
+    expect(r.output.coordinates).toEqual({ latitude: hit.latitude, longitude: hit.longitude });
+  });
+
+  it("does not repeat a lookup when the input differs only by whitespace", async () => {
+    const newYork = { name: "New York", latitude: 40.71, longitude: -74.01, country_code: "US", country: "United States", admin1: "New York" };
+    fetchMock = fakeOpenMeteo({ "New  York": [], "New York": [newYork], New: [] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(exec({ city: "New  York" })).rejects.toThrow(/not found/);
+    const names = fetchMock.mock.calls
+      .map((c) => new URL(String(c[0])))
+      .filter((u) => u.hostname === "geocoding-api.open-meteo.com")
+      .map((u) => u.searchParams.get("name"));
+    expect(names).not.toContain("New York");
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it("still reads a qualifier when the input has extra spaces ('Austin  TX')", async () => {
+    const austin = { name: "Austin", latitude: 30.27, longitude: -97.74, country_code: "US", country: "United States", admin1: "Texas" };
+    fetchMock = fakeOpenMeteo({ "Austin  TX": [], Austin: [austin] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const r = await exec({ city: "Austin  TX" });
+    expect(r.output.coordinates).toEqual({ latitude: austin.latitude, longitude: austin.longitude });
+  });
+
+  it("refuses a namesake outside the unpunctuated qualifier without forecasting", async () => {
+    const parisFr = { name: "Paris", latitude: 48.85341, longitude: 2.3488, country_code: "FR", country: "France" };
+    const parisMountain = { name: "Paris Mountain", latitude: 33.1, longitude: -95.5, country_code: "US", country: "United States", admin1: "Texas" };
+    fetchMock = fakeOpenMeteo({ "Paris Texas": [], Paris: [parisFr, parisMountain] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(exec({ city: "Paris Texas" })).rejects.toThrow(/places named "Paris" exist, but none in Texas/);
+    expect(forecastCall(fetchMock)).toBeUndefined();
+  });
+
+  it("tries the next split when a longer name lookup returns a fuzzy hit", async () => {
+    const charlestonWest = { name: "Charleston", latitude: 37.1, longitude: -78.2, country_code: "US", country: "United States", admin1: "Virginia" };
+    const charlestonWv = { name: "Charleston", latitude: 38.34982, longitude: -81.63262, country_code: "US", country: "United States", admin1: "West Virginia" };
+    fetchMock = fakeOpenMeteo({
+      "Charleston West Virginia": [],
+      "Charleston West": [charlestonWest],
+      Charleston: [charlestonWv],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const r = await exec({ city: "Charleston West Virginia" });
+    expect(r.output.coordinates).toEqual({ latitude: charlestonWv.latitude, longitude: charlestonWv.longitude });
+  });
+
+  it("resolves a trailing City only when the returned name is exact", async () => {
+    const luxembourg = { name: "Luxembourg", latitude: 49.61167, longitude: 6.13, country_code: "LU", country: "Luxembourg" };
+    const township = { name: "Springfield Township", latitude: 40.1, longitude: -75.2, country_code: "US", country: "United States" };
+    fetchMock = fakeOpenMeteo({ "Luxembourg City": [], Luxembourg: [luxembourg], "Springfield City": [], Springfield: [township] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const r = await exec({ city: "Luxembourg City" });
+    expect(r.output.coordinates.latitude).toBe(luxembourg.latitude);
+    await expect(exec({ city: "Springfield City" })).rejects.toThrow(/not found/);
+  });
+
+  it("keeps a direct Kansas City hit to one geocoder call", async () => {
+    const kansasCity = { name: "Kansas City", latitude: 39.09973, longitude: -94.57857, country_code: "US", country: "United States", admin1: "Missouri" };
+    fetchMock = fakeOpenMeteo({ "Kansas City": [kansasCity] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await exec({ city: "Kansas City" });
+    const geo = fetchMock.mock.calls.filter((c) => new URL(String(c[0])).hostname === "geocoding-api.open-meteo.com");
+    expect(geo).toHaveLength(1);
+  });
+
+  it("bounds the worst-case City and postcode retries without repeating a lookup", async () => {
+    fetchMock = fakeOpenMeteo({});
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(exec({ city: "a b c d e City 12345" })).rejects.toThrow(/not found/);
+    const geo = fetchMock.mock.calls.filter((c) => new URL(String(c[0])).hostname === "geocoding-api.open-meteo.com");
+    expect(geo.length).toBeLessThanOrEqual(5);
+    const names = geo.map((call) => new URL(String(call[0])).searchParams.get("name"));
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it("skips blank location aliases when choosing a place name", async () => {
+    fetchMock = fakeOpenMeteo({ London: [LONDON_GB] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const r = await exec({ city: "   ", place: "London" });
+    expect(r.output.coordinates.latitude).toBe(LONDON_GB.latitude);
+  });
+
   it("qualifier matching: country code, alias, region name; never a single letter", () => {
     expect(hitMatchesQualifiers(LONDON_GB, ["GB"])).toBe(true);
     expect(hitMatchesQualifiers(LONDON_GB, ["UK"])).toBe(true);
@@ -115,10 +289,10 @@ describe("weather-lookup place resolution", () => {
     expect(hitMatchesQualifiers(MANHATTAN_KS, ["New York City"])).toBe(false);
     expect(hitMatchesQualifiers({ ...LONDON_GB, admin1: "E" }, ["E"])).toBe(false);
     // Review of PR 968: a qualifier must not name a longer region that merely contains it, or the reverse.
-    const NEWRY = { latitude: 54.17, longitude: -6.34, country_code: "GB", country: "United Kingdom", admin1: "Northern Ireland" };
+    const NEWRY = { name: "Newry", latitude: 54.17, longitude: -6.34, country_code: "GB", country: "United Kingdom", admin1: "Northern Ireland" };
     expect(hitMatchesQualifiers(NEWRY, ["Ireland"])).toBe(false);
     expect(hitMatchesQualifiers(NEWRY, ["Northern Ireland"])).toBe(true);
     expect(hitMatchesQualifiers({ ...LONDON_GB, admin1: "England", admin2: "Hampshire" }, ["New Hampshire"])).toBe(false);
-    expect(hitMatchesQualifiers({ latitude: 0, longitude: 0, country_code: "MX", country: "Mexico" }, ["New Mexico"])).toBe(false);
+    expect(hitMatchesQualifiers({ name: "Example", latitude: 0, longitude: 0, country_code: "MX", country: "Mexico" }, ["New Mexico"])).toBe(false);
   });
 });
