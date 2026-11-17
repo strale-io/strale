@@ -229,6 +229,8 @@ describe("resolveByTitle, shapes of the live SEC file", () => {
     expect(await resolveByTitle("Toyota Tsusho", fakeFetch(200, LIVE))).toBeNull();
     expect(await resolveByTitle("Toyota Tsusho Corp", fakeFetch(200, LIVE))).toBeNull();
     expect(await resolveByTitle("Pandora", fakeFetch(200, LIVE))).toBeNull();
+    // Not even when the caller types the tag: the row is not in the index.
+    expect(await resolveByTitle("Toyota Tsusho Corp ADR", fakeFetch(200, LIVE))).toBeNull();
     // The facility is still reachable by its own ticker.
     expect((await resolveByTicker("TYHOY", fakeFetch(200, LIVE)))!.cik).toBe("0005550003");
   });
