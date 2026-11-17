@@ -32,6 +32,23 @@ const COUNTRY_ALIASES: Record<string, string> = {
   "south korea": "kr",
 };
 
+// Open-Meteo spells US first-level administrative areas this way. A state
+// code may also be an ISO country code (for example CA), so callers using a
+// two-letter qualifier need both interpretations considered together.
+const US_STATES: Record<string, string> = {
+  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
+  CO: "Colorado", CT: "Connecticut", DE: "Delaware", FL: "Florida", GA: "Georgia",
+  HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa",
+  KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland",
+  MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri",
+  MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey",
+  NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio",
+  OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina",
+  SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont",
+  VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
+  DC: "District of Columbia",
+};
+
 const norm = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
 
 /** One comma-separated part of a place string, with postal codes removed ("Michigan 48505" → "Michigan"). */
@@ -58,6 +75,34 @@ export function hitMatchesQualifiers(hit: GeoHit, qualifiers: string[]): boolean
   });
 }
 
+/** Filter hits by qualifiers while resolving the dual meaning of US state codes. */
+function qualifiedHits(hits: GeoHit[], qualifiers: string[], input: string): GeoHit[] {
+  for (const qualifier of qualifiers) {
+    const code = qualifier.trim().toUpperCase();
+    const state = US_STATES[code];
+    if (!state) continue;
+    const hasStateHit = hits.some((hit) =>
+      (hit.country_code ?? "").toLowerCase() === "us" && norm(hit.admin1 ?? "") === norm(state));
+    const hasCountryHit = hits.some((hit) => (hit.country_code ?? "").toLowerCase() === code.toLowerCase());
+    if (hasStateHit && hasCountryHit) {
+      throw new Error(`Location "${input}" is ambiguous: "${code}" can mean a US state or a country. Write the state or country name in full, or pass latitude and longitude.`);
+    }
+  }
+
+  return qualifiers.reduce((candidates, qualifier) => {
+    const code = qualifier.trim().toUpperCase();
+    const state = US_STATES[code];
+    if (!state) {
+      return candidates.filter((hit) => hitMatchesQualifiers(hit, [qualifier]));
+    }
+
+    const stateHits = candidates.filter((hit) =>
+      (hit.country_code ?? "").toLowerCase() === "us" && norm(hit.admin1 ?? "") === norm(state));
+    const countryHits = candidates.filter((hit) => (hit.country_code ?? "").toLowerCase() === code.toLowerCase());
+    return stateHits.length ? stateHits : countryHits;
+  }, hits);
+}
+
 async function geocodeName(name: string, count: number): Promise<GeoHit[]> {
   const geoUrl = `${GEO_API}?name=${encodeURIComponent(name)}&count=${count}&language=en`;
   const gr = await fetch(geoUrl, { signal: AbortSignal.timeout(10000) });
@@ -82,12 +127,14 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
 
   const parts = city.split(",").map(cleanPart).filter(Boolean);
   if (parts.length < 2) {
-    let retryCalls = 0;
+    const collapsedInput = city.replace(/\s+/g, " ").trim();
+    if (parts.length === 1 && parts[0] === collapsedInput && collapsedInput !== city) {
+      throw new Error(`Location "${city}" not found.`);
+    }
     // A bare-name retry only when the caller wrote no comma ("Flint 48505").
     // "Springfield, 62701" named a region by postcode; guessing the top
     // Springfield would ignore it, so that refuses.
-    if (parts.length === 1 && parts[0] !== city && !city.includes(",")) {
-      retryCalls++;
+    if (parts.length === 1 && parts[0] !== collapsedInput && !city.includes(",")) {
       const bare = await geocodeName(parts[0], 1);
       if (bare.length) return bare[0];
     }
@@ -102,7 +149,6 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
       if (words.length > 1 && norm(words.at(-1)!) === "city") {
         cityRuleRan = true;
         const name = words.slice(0, -1).join(" ");
-        retryCalls++;
         const hits = await geocodeName(name, 20);
         const match = hits.find((hit) => norm(hit.name) === norm(name));
         if (match) return match;
@@ -112,12 +158,13 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
       // lookup is accepted only when the qualifier identifies that hit.
       let mismatch: { name: string; qualifier: string } | undefined;
       const firstQualifierWords = cityRuleRan ? 2 : 1;
-      const lastQualifierWords = Math.min(3, words.length - 1, firstQualifierWords + (4 - retryCalls) - 1);
+      const lastQualifierWords = Math.min(3, words.length - 1);
       for (let qualifierWords = firstQualifierWords; qualifierWords <= lastQualifierWords; qualifierWords++) {
         const name = words.slice(0, -qualifierWords).join(" ");
         const qualifier = words.slice(-qualifierWords).join(" ");
         const hits = await geocodeName(name, 20);
-        const match = hits.find((hit) => norm(hit.name) === norm(name) && hitMatchesQualifiers(hit, [qualifier]));
+        const exactNameHits = hits.filter((hit) => norm(hit.name) === norm(name));
+        const match = qualifiedHits(exactNameHits, [qualifier], city)[0];
         if (match) return match;
         if (!mismatch && hits.length) mismatch = { name, qualifier };
       }
@@ -135,7 +182,7 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
   // different place of that name, so it is never done.
   const [name, ...qualifiers] = parts;
   const hits = await geocodeName(name, 20);
-  const match = hits.find((h) => qualifiers.every((q) => hitMatchesQualifiers(h, [q])));
+  const match = qualifiedHits(hits, qualifiers, city)[0];
   if (match) return match;
   throw new Error(
     hits.length

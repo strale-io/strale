@@ -135,6 +135,67 @@ describe("weather-lookup place resolution", () => {
     expect(r.output.coordinates.latitude).toBe(hyderabadIn.latitude);
   });
 
+  it.each(["Richmond CA", "Richmond, CA"])("refuses ambiguous state and country code in '%s'", async (city) => {
+    const richmondBc = { name: "Richmond", latitude: 49.17, longitude: -123.14, country_code: "CA", country: "Canada", admin1: "British Columbia" };
+    const richmondCa = { name: "Richmond", latitude: 37.94, longitude: -122.35, country_code: "US", country: "United States", admin1: "California" };
+    fetchMock = fakeOpenMeteo({ [city]: [], Richmond: [richmondBc, richmondCa] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(exec({ city })).rejects.toThrow(`Location "${city}" is ambiguous: "CA" can mean a US state or a country. Write the state or country name in full, or pass latitude and longitude.`);
+    expect(forecastCall(fetchMock)).toBeUndefined();
+  });
+
+  it("refuses Dublin CA when both Canada and California contain a candidate", async () => {
+    const dublinOn = { name: "Dublin", latitude: 43.5, longitude: -81.1, country_code: "CA", country: "Canada", admin1: "Ontario" };
+    const dublinCa = { name: "Dublin", latitude: 37.7, longitude: -121.9, country_code: "US", country: "United States", admin1: "California" };
+    fetchMock = fakeOpenMeteo({ "Dublin CA": [], Dublin: [dublinOn, dublinCa] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(exec({ city: "Dublin CA" })).rejects.toThrow(/"CA" can mean a US state or a country/);
+  });
+
+  it.each(["Richmond, CA, Canada", "Richmond, Canada, CA"])("keeps ambiguity independent of qualifier order in '%s'", async (city) => {
+    const richmondBc = { name: "Richmond", latitude: 49.17, longitude: -123.14, country_code: "CA", country: "Canada", admin1: "British Columbia" };
+    const richmondCa = { name: "Richmond", latitude: 37.94, longitude: -122.35, country_code: "US", country: "United States", admin1: "California" };
+    fetchMock = fakeOpenMeteo({ [city]: [], Richmond: [richmondBc, richmondCa] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(exec({ city })).rejects.toThrow(/"CA" can mean a US state or a country/);
+  });
+
+  it.each(["Austin TX", "Austin, TX"])("resolves a state code in '%s'", async (city) => {
+    const austin = { name: "Austin", latitude: 30.27, longitude: -97.74, country_code: "US", country: "United States", admin1: "Texas" };
+    fetchMock = fakeOpenMeteo({ [city]: [], Austin: [austin] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const r = await exec({ city });
+    expect(r.output.coordinates).toEqual({ latitude: austin.latitude, longitude: austin.longitude });
+  });
+
+  it.each([
+    ["Richmond California", { name: "Richmond", latitude: 37.94, longitude: -122.35, country_code: "US", country: "United States", admin1: "California" }],
+    ["Paris FR", { name: "Paris", latitude: 48.85, longitude: 2.35, country_code: "FR", country: "France" }],
+    ["Toronto CA", { name: "Toronto", latitude: 43.65, longitude: -79.38, country_code: "CA", country: "Canada", admin1: "Ontario" }],
+    ["Sacramento CA", { name: "Sacramento", latitude: 38.58, longitude: -121.49, country_code: "US", country: "United States", admin1: "California" }],
+  ])("resolves the sole interpretation of '%s'", async (city, hit) => {
+    const name = city.split(" ")[0];
+    fetchMock = fakeOpenMeteo({ [city]: [], [name]: [hit] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const r = await exec({ city });
+    expect(r.output.coordinates).toEqual({ latitude: hit.latitude, longitude: hit.longitude });
+  });
+
+  it("does not retry a lookup when the input differs only by whitespace", async () => {
+    const newYork = { name: "New York", latitude: 40.71, longitude: -74.01, country_code: "US", country: "United States", admin1: "New York" };
+    fetchMock = fakeOpenMeteo({ "New  York": [], "New York": [newYork], New: [] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(exec({ city: "New  York" })).rejects.toThrow(/not found/);
+    const geo = fetchMock.mock.calls.filter((c) => new URL(String(c[0])).hostname === "geocoding-api.open-meteo.com");
+    expect(geo).toHaveLength(1);
+  });
+
   it("refuses a namesake outside the unpunctuated qualifier without forecasting", async () => {
     const parisFr = { name: "Paris", latitude: 48.85341, longitude: 2.3488, country_code: "FR", country: "France" };
     const parisMountain = { name: "Paris Mountain", latitude: 33.1, longitude: -95.5, country_code: "US", country: "United States", admin1: "Texas" };
