@@ -50,6 +50,7 @@ import {
 } from "../src/test-helpers/upstream-replay.js";
 import { judgeKnownAnswer, loadExecutor, loadManifest } from "../src/test-helpers/known-answer-contract.js";
 import { findProhibitedTarget } from "../src/lib/tos-blocklist.js";
+import { retryTimeoutOnce, type CheckAttempt } from "./record-upstream-retry.js";
 
 const FREE_COST_CLASSES = new Set(["free_unlimited", "free_quota"]);
 
@@ -121,7 +122,14 @@ async function costClassOf(slug: string): Promise<string | undefined> {
 }
 
 /** Run one slug live with fetch recorded. Returns the exchanges and the contract verdict. */
-async function runLive(slug: string): Promise<{ exchanges: RecordedExchange[]; failures: string[]; oversize: string[] }> {
+interface LiveRun {
+  exchanges: RecordedExchange[];
+  failures: string[];
+  oversize: string[];
+  executorError?: { name: string; message: string };
+}
+
+async function runLive(slug: string): Promise<LiveRun> {
   const manifest = loadManifest(slug);
   const input = manifest.test_fixtures?.known_answer?.input;
   if (!input) throw new Error(`${slug}: manifest has no known_answer input`);
@@ -148,7 +156,13 @@ async function runLive(slug: string): Promise<{ exchanges: RecordedExchange[]; f
     const result = await executor(structuredClone(input));
     return { exchanges, failures: judgeKnownAnswer(manifest, result.output), oversize };
   } catch (err) {
-    return { exchanges, failures: [`executor threw: ${err instanceof Error ? err.message : String(err)}`], oversize };
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      exchanges,
+      failures: [`executor threw: ${message}`],
+      oversize,
+      executorError: { name: err instanceof Error ? err.name : "", message },
+    };
   } finally {
     globalThis.fetch = realFetch;
   }
@@ -198,24 +212,41 @@ async function captureOne(slug: string): Promise<string[]> {
   return [];
 }
 
-async function checkOne(slug: string): Promise<string[]> {
+function judgeLiveRun(recording: UpstreamRecording, run: LiveRun, days: number): CheckAttempt {
+  const drift = run.failures.map((failure) => `live contract: ${failure}`);
+  for (const key of run.oversize) drift.push(`response now over ${MAX_RECORDED_BODY_BYTES} bytes: ${key}`);
+  const live = new Map(run.exchanges.map((exchange) => [requestKey(exchange.request), exchange.response.status]));
+  let statusChanged = false;
+  for (const { request, response } of recording.exchanges) {
+    const key = requestKey(request);
+    const status = live.get(key);
+    if (status === undefined) drift.push(`no longer requested: ${key}`);
+    else if (status !== response.status) {
+      statusChanged = true;
+      drift.push(`status ${response.status} -> ${status}: ${key}`);
+    }
+  }
+  const recordingExpired = days > MAX_RECORDING_AGE_DAYS;
+  if (recordingExpired) drift.push(`recording is older than ${MAX_RECORDING_AGE_DAYS} days; re-capture`);
+  return {
+    drift: drift.map((line) => `${line} (recorded ${days} days ago)`),
+    executorError: run.failures.length === 1 ? run.executorError : undefined,
+    hasNonTimeoutFailure: run.failures.length !== 1
+      || run.oversize.length > 0
+      || statusChanged
+      || recordingExpired,
+  };
+}
+
+async function checkOne(slug: string): Promise<{ problems: string[]; passedOnTimeoutRetry: boolean }> {
   const path = recordingPath(slug);
-  if (!existsSync(path)) return ["no recording"];
+  if (!existsSync(path)) return { problems: ["no recording"], passedOnTimeoutRetry: false };
   const recording = JSON.parse(readFileSync(path, "utf8")) as UpstreamRecording;
   const refused = await notFree(slug);
-  if (refused) return [refused];
-  const { exchanges, failures, oversize } = await runLive(slug);
-  const drift = failures.map((f) => `live contract: ${f}`);
-  for (const key of oversize) drift.push(`response now over ${MAX_RECORDED_BODY_BYTES} bytes: ${key}`);
-  const live = new Map(exchanges.map((e) => [requestKey(e.request), e.response.status]));
-  for (const { request, response } of recording.exchanges) {
-    const status = live.get(requestKey(request));
-    if (status === undefined) drift.push(`no longer requested: ${requestKey(request)}`);
-    else if (status !== response.status) drift.push(`status ${response.status} -> ${status}: ${requestKey(request)}`);
-  }
+  if (refused) return { problems: [refused], passedOnTimeoutRetry: false };
   const days = Math.round((Date.now() - Date.parse(recording.recorded_at)) / 86_400_000);
-  if (days > MAX_RECORDING_AGE_DAYS) drift.push(`recording is older than ${MAX_RECORDING_AGE_DAYS} days; re-capture`);
-  return drift.map((d) => `${d} (recorded ${days} days ago)`);
+  const result = await retryTimeoutOnce(async () => judgeLiveRun(recording, await runLive(slug), days));
+  return { problems: result.drift, passedOnTimeoutRetry: result.retried && result.drift.length === 0 };
 }
 
 async function main(): Promise<number> {
@@ -225,9 +256,15 @@ async function main(): Promise<number> {
     // A child whose event loop drains on a never-settled promise exits with
     // this code instead of a silent 0 the parent would count as recorded.
     process.exitCode = 3;
-    const problems = check ? await checkOne(child) : await captureOne(child);
+    const checked = check ? await checkOne(child) : undefined;
+    const problems = checked?.problems ?? await captureOne(child);
     for (const p of problems) console.log(`  ${child}: ${p}`);
-    if (!problems.length) console.log(`  ${child}: ${check ? "no drift" : `recorded ${recordingPath(child)}`}`);
+    if (!problems.length) {
+      const outcome = checked?.passedOnTimeoutRetry
+        ? "no drift (passed on retry after a timeout)"
+        : check ? "no drift" : `recorded ${recordingPath(child)}`;
+      console.log(`  ${child}: ${outcome}`);
+    }
     return problems.length ? 1 : 0;
   }
 
