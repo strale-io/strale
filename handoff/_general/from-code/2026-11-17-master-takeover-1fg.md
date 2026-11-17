@@ -12,17 +12,25 @@ Session session_01RFNL6ScBcPoMYb3sPeaj8r, started about 21:55 Swedish time.
 - **Open PRs:** only #730 (draft, waits on Petter's DEC-20261024-A items 2 and 5, bus ask 6876167899).
 - **Worktrees:** none besides the trunk in this container.
 
-## Queue (unchanged from today's morning handoff, `2026-11-17-checkin-morning.md`)
+## Builds done this session
+
+1. `upstream-check-timeout-retry`: merged as #1095 (22:15 UTC). One retry when a live check failed only on a timeout. Review GO; two LOW notes in the PR body.
+2. `weather-zip-and-saint`: merged as #1096 (22:40 UTC). "St"/"St." reads as "Saint" (direct lookup, bare-name retry, City rule, comma paths); ZIP-suffixed inputs already worked and are now pinned by tests. Review findings fixed before merge.
+   - Codex could not: two Codex runs (task_e_6afcc377…, task_e_6afccafe…) returned READY with no diff, so a Claude builder did it.
+   - Production check pending: at 23:45 Swedish time production served 05fc5c61 (#1095), not yet #1096. Next session: confirm `/health` commit is c181c2cf or later, then run `weather-lookup` on "St Cloud, Minnesota".
+3. Remote branch `codex/weather-zip-and-saint` (brief commit only, unmerged) left in place for the dispatcher to clear.
+
+## Queue
 
 Builder work:
-1. With Codex: `upstream-check-timeout-retry` (one retry on a timeout-only live failure in `record-upstream.ts --check`).
-2. With Codex: `weather-zip-and-saint` ("St"/"St." as "Saint"; ZIP regression tests).
-3. Not yet briefed: us-company-data exact lookup on the model-extracted name for free-text input (removed from #1091 on review because its "exact" is measured against the model's wording; needs a design that avoids that before a brief).
+1. Not yet briefed: us-company-data exact lookup on the model-extracted name for free-text input (removed from #1091 on review because its "exact" is measured against the model's wording; needs a design that avoids that before a brief).
 
 Non-builder, for the next interactive or morning session:
-4. Verify #1091 in production: `us-company-data` for "ORACLE CORP", "Bank of America Corp", "Tucows Inc".
-5. Watch whether the largest payer repeats the bulk `pricing-page-extract` / `us-company-data` jobs.
-6. The three overdue weekly rows (`weekly-review`, `weekly-free-callers`, `weekly-listings`).
-7. Account closure Petter approved on 11-16: run it, then his confirmation to the customer.
+2. Verify #1096 in production (above).
+3. Verify #1091 in production: `us-company-data` for "ORACLE CORP", "Bank of America Corp", "Tucows Inc".
+4. Watch whether the largest payer repeats the bulk `pricing-page-extract` / `us-company-data` jobs.
+5. The three overdue weekly rows (`weekly-review`, `weekly-free-callers`, `weekly-listings`).
+6. Account closure Petter approved on 11-16: run it, then his confirmation to the customer.
+7. Weekly wow-core sync, due about 2026-11-23 (`wow-hook.mjs` drift).
 
-Next authorised action: Claude review of the two Codex branches when the dispatcher reports them | Owner: Strale master | Blocker: none
+Next authorised action: verify #1096 and #1091 in production, then design the us-company-data exact lookup | Owner: Strale master or morning session | Blocker: none
