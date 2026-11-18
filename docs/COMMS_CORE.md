@@ -52,7 +52,8 @@ message is the conversation and nothing routes it.
   takeover's `--take`) and only entries written under it (a period that begins within 24 hours of an earlier period
   of the same account, an A→B→A flip, names none). A `--take` for a different account starts a new period and stays
   allowed (that is a takeover). If that wow-core master dies mid-period, re-run the takeover on the next account,
-  because a replacement wow-core entry in the same period is ignored by design. The guard stops honest mistakes,
+  because a replacement wow-core entry in the same period is ignored by design; a second `takeover` in the same
+  period hands back to it instead, unarchiving it when needed (takeover step 3). The guard stops honest mistakes,
   not a forger: anything on the account can post a LEASE line by another route, and a session can edit its own
   repository's hooks; the dispatcher's push attach also needs the `Codex dispatcher:` line the master merges
   (MODEL_ROUTING "Codex dispatch").
