@@ -761,19 +761,179 @@ export function touchMarker(root, sid) {
 // (GLES-016). Isolating parallel writers in worktrees is the kept doctrine (DEC-092); this
 // makes the one irreversible shared-state action fail loud instead of relying on memory.
 
-// A command start (line start, ; & | or a subshell paren), optionally prefixed by `env`/`command`
-// and VAR=value assignments (`GIT_EDITOR=true git commit`), then `git ... commit`.
-const GIT_COMMIT = /(?:^|[;&|(])\s*(?:(?:env|command)\s+)?(?:[A-Za-z_]\w*=(?:"[^"\r\n]*"|'[^'\r\n]*'|\\.|[^\s"'\\;&|()<>])*\s+)*git(?:\.exe)?(?<args>\s[^\r\n;&|]*\bcommit\b[^\r\n;&|]*)/gims;
-// An assignment value is any run of quoted parts, backslash escapes and plain characters (`A='x'y`, `N='O'\''Brien'`).
-// A plain character excludes the shell's word ends (; & | ( ) < >), so a value never runs into the next command and each
-// command start is scanned once. Each alternative starts with a different character, so a run of `A='x' ` assignments cannot backtrack exponentially:
-// an earlier `\S*` alternative also matched a quoted value, and 173 characters took 13 s.
+// Every `git ... commit` the command may run, as { index, args } (index: where its command start is; args: the text from the blank
+// after `git` up to the end of the command, `-C` flags included). A command start is the start of the text or of a line (after a
+// \n, \r, U+2028 or U+2029), or a `;`, `&`, `|`, `(`, `)` or `{`, wherever it stands (inside a quote too: `sh -c "cd x && git commit"`).
+// (`)` and `{` are new: `{ git commit; }` and `case x in a) git commit` are commits that the previous expression did not see.)
+// From a start: blanks, optionally `env` or `command` and a blank, any number of `NAME=value` and a blank, then `git` or `git.exe`
+// and a blank, and a `commit` word before the next `;`, `&`, `|` or line break. A value is a run of quoted parts, backslash escapes
+// and plain characters (`A='x'y`, `N='O'\''Brien'`, `A=\<newline>"x"`); a plain character is not whitespace, a quote, a backslash or
+// one of `; & | ( ) < >`. Every start is tried, also one inside the arguments of an earlier match (`git commit -m "$(git -C ../p commit)"`
+// holds two commits; the previous expression, which went on after the arguments, saw one).
+// This is a scan, not a regular expression, because every regular-expression form of it was quadratic on some shape (`A=\(` repeated,
+// `A=\` plus a line break plus a blank, `(git x ` repeated: each start, of which there can be one per few characters, ran to the end of
+// the run) and two rounds of tuning only traded one such shape for another (#365 review, rounds 1 and 2). Here each position's
+// answer is computed once and kept: where a value ends (valueEnd), where the assignments from a position lead to a `git` (gitWordFrom),
+// where a run of blanks ends (blanksEnd), and where the next command end and the next `commit` word are (found once, by one pass
+// backwards), so a start costs a constant, a blank run or a word is read by one start only, and the whole scan is linear in the text
+// whatever its shape (the matches are collected only up to MAX_COMMITS + 1, and probe() refuses past MAX_COMMITS of them before it reads any `-C`, so a run
+// of `(git commit ` is refused, fast). The answers are those of the previous regular expression, except where it was wrong or
+// unbounded, for the two added starts and for the matches inside arguments, which only add probes: a line break
+// is never a blank (a break between `git` and its arguments ends the command), a U+2028 or U+2029 is a line start (a command may begin
+// after one, as `^` read it) but does not end the arguments, since the shell does not break at it (`git -c user.name=a<U+2028>b commit`
+// is a commit, and its `-C` and the directory are probed), and a U+2028 or U+2029 right after `git` is a blank, as the previous
+// expression read it (PowerShell separates words there, so `git<U+2028>commit` is a commit); a U+0085 (NEL) is a blank, which the
+// previous expression's \s left out (isBlank). Every start is
+// tried, so a commit inside an earlier match's arguments is still found and its `-C` read. A value may hold any number of line continuations. A differential fuzz against ea479bd's expression (#365 round 3) found no
+// probe directory dropped outside those shapes.
+const isWs = (c) => (c >= 9 && c <= 13) || c === 32 || c === 160 || c === 5760 || (c >= 8192 && c <= 8202) || c === 8232 || c === 8233
+  || c === 8239 || c === 8287 || c === 12288 || c === 65279; // exactly the characters of \s
+const isLineBreak = (c) => c === 10 || c === 13 || c === 8232 || c === 8233;
+// A blank is whitespace but a line break, plus U+0085 (NEL), which \s leaves out but PowerShell's parser separates words at
+// (`git<NEL>commit` is `git commit` there; checked with [Parser]::ParseInput). NEL still does not end a value (partEnd reads \s):
+// bash keeps it inside a word, so `A=x<NEL>y git commit` stays a commit. U+FEFF is in \s although PowerShell does not separate
+// at it; reading it as a blank only adds probes.
+const isBlank = (c) => (isWs(c) && !isLineBreak(c)) || c === 133;
+const isCommandEnd = (c) => c === 59 || c === 38 || c === 124 || c === 10 || c === 13; // ; & | LF and CR (not U+2028/9: the shell does not end a command there)
+const isWordChar = (c) => (c >= 48 && c <= 57) || (c >= 65 && c <= 90) || c === 95 || (c >= 97 && c <= 122);
+const lower = (c) => c | 32; // for the letters tested below: only the letter and its other case map to the same value
+const COMMIT_WORD = /\bcommit\b/gi;
+export function findGitCommits(command) {
+  const text = String(command ?? "");
+  const n = text.length;
+  if (!/commit/i.test(text)) return [];
+  const code = (i) => text.charCodeAt(i);
+  const word = (at, name) => { // `name` (lower case letters) at `at`, in either case
+    for (let k = 0; k < name.length; k++) if (at + k >= n || lower(code(at + k)) !== name.charCodeAt(k)) return false;
+    return true;
+  };
+  const memo = () => new Int32Array(n + 1).fill(-2);
+  const blanksAt = memo(); // end of the run of blanks starting at i
+  const blanksEnd = (i) => {
+    if (blanksAt[i] !== -2) return blanksAt[i];
+    let j = i;
+    while (j < n && isBlank(code(j))) j++;
+    return (blanksAt[i] = j);
+  };
+  // The end of the one value part at i (a quote that closes on its line, a backslash and the next character, a plain character), or -1.
+  const partEnd = (i) => {
+    const c = code(i);
+    if (c === 34 || c === 39) {
+      for (let j = i + 1; j < n; j++) {
+        const d = code(j);
+        if (d === c) return j + 1;
+        if (d === 10 || d === 13) return -1;
+      }
+      return -1;
+    }
+    if (c === 92) return i + 1 < n ? i + 2 : -1;
+    if (isWs(c) || c === 59 || c === 38 || c === 124 || c === 40 || c === 41 || c === 60 || c === 62) return -1;
+    return i + 1;
+  };
+  const valueAt = memo(); // end of the value that starts at i
+  const valueEnd = (start) => {
+    const path = [];
+    let i = start;
+    let end;
+    for (;;) {
+      if (i >= n) { end = n; break; }
+      if (valueAt[i] !== -2) { end = valueAt[i]; break; }
+      const next = partEnd(i);
+      if (next < 0) { end = i; valueAt[i] = i; break; }
+      path.push(i);
+      i = next;
+    }
+    for (const at of path) valueAt[at] = end;
+    return end;
+  };
+  // Where the arguments begin if `git` or `git.exe` and a blank stand at i, else -1.
+  const gitArgs = (i) => {
+    if (!word(i, "git")) return -1;
+    let j = i + 3;
+    if (code(j) === 46 && word(j + 1, "exe")) j += 4;
+    return j < n && (isBlank(code(j)) || code(j) === 8232 || code(j) === 8233) ? j : -1;
+  };
+  // Where the arguments of the git command reached from i begin, through any number of `NAME=value` and a blank, or -1.
+  const gitFrom = memo();
+  const gitWordFrom = (start) => {
+    const path = [];
+    let i = start;
+    let found;
+    for (;;) {
+      if (i >= n) { found = -1; break; }
+      if (gitFrom[i] !== -2) { found = gitFrom[i]; break; }
+      path.push(i);
+      const args = gitArgs(i);
+      if (args >= 0) { found = args; break; }
+      let j = i;
+      const first = code(j);
+      if (!((first >= 65 && first <= 90) || (first >= 97 && first <= 122) || first === 95)) { found = -1; break; }
+      while (j < n && isWordChar(code(j))) j++;
+      if (code(j) !== 61) { found = -1; break; }
+      const after = valueEnd(j + 1);
+      const next = blanksEnd(after);
+      if (next === after) { found = -1; break; }
+      i = next;
+    }
+    for (const at of path) gitFrom[at] = found;
+    return found;
+  };
+  // The first character of the arguments' end and of the next `commit` word, at or after each position (n if none).
+  let nextEnd = null;
+  let nextCommit = null;
+  const prepare = () => {
+    nextEnd = new Int32Array(n + 2);
+    nextCommit = new Int32Array(n + 2);
+    const starts = new Uint8Array(n + 1);
+    for (const found of text.matchAll(COMMIT_WORD)) starts[found.index] = 1;
+    nextEnd[n] = nextEnd[n + 1] = nextCommit[n] = nextCommit[n + 1] = n;
+    for (let i = n - 1; i >= 0; i--) {
+      nextEnd[i] = isCommandEnd(code(i)) ? i : nextEnd[i + 1];
+      nextCommit[i] = starts[i] ? i : nextCommit[i + 1];
+    }
+  };
+  const found = [];
+  const attempt = (at, index) => { // a command start (at `index`) whose words begin at `at`
+    let i = blanksEnd(at);
+    if (word(i, "env") ? isBlank(code(i + 3)) : word(i, "command") && isBlank(code(i + 7))) {
+      i = blanksEnd(i + (word(i, "env") ? 3 : 7));
+    }
+    const args = gitWordFrom(i);
+    if (args < 0) return false;
+    if (!nextEnd) prepare();
+    const end = nextEnd[args];
+    if (nextCommit[args + 1] >= end) return false;
+    found.push({ index, args: text.slice(args, end) });
+    return true;
+  };
+  for (let i = 0; i < n && found.length <= MAX_COMMITS; i++) { // past MAX_COMMITS the caller refuses, so the rest is not collected
+    const c = code(i);
+    if (i === 0 || isLineBreak(code(i - 1))) { if (attempt(i, i)) continue; }
+    if (c === 59 || c === 38 || c === 124 || c === 40 || c === 41 || c === 123) attempt(i + 1, i);
+  }
+  return found;
+}
 
 // Every literal `cd <target>` or `pushd <target>` in `text`, wherever it appears (a heredoc line, a quote, a group, `eval`,
 // `sh -c`, `builtin cd`, `\cd` all count): an extra candidate directory can only add a block, never remove one. Targets the
 // hook cannot resolve (`cd` with no argument, `cd -`, `~`, `$`, a backtick, a backslash, a glob) are skipped; the payload
 // cwd is always a candidate anyway.
+// Two readings, probed as two separate runs and the directories of both kept (one command runs in one shell, so the readings never
+// mix, and the union holds every directory the shell reading alone gives): the shell's, unchanged since #365 (blanks are a space or a
+// tab; a target ends at any \s character, so a U+0085 (NEL) stays inside it as in bash, while an NBSP ends it, which bash does not),
+// and PowerShell's, where every whitespace but CR and LF separates words, NEL too, and its location
+// commands are read in any case (`cd<NBSP>../p; git commit`, `Set-Location ../p`; checked with [Parser]::ParseInput on 7.7.0).
+// The PowerShell run happens only when the text holds something the two readings treat differently: any whitespace but a space,
+// a tab, CR and LF, a NEL, or a location word only PowerShell has (`chdir`, `sl`, `Set-Location`, `Push-Location`, or `cd`/`pushd`
+// not in lower case); without one both runs find the same cds and moves.
 const CD_TARGET = /(?<![\w./-])(?:cd|pushd)[ \t]+(?:-[A-Za-z]+[ \t]+)*(?:--[ \t]+)?(?:"([^"\r\n]*)"|'([^'\r\n]*)'|([^\s;&|()<>"'`]+))/g;
+const CD_TARGET_PS = /(?<![\w./-])(?:cd|pushd|chdir|sl|Set-Location|Push-Location)(?:[^\S\r\n]|\x85)+(?:-[A-Za-z]+(?:[^\S\r\n]|\x85)+)*(?:--(?:[^\S\r\n]|\x85)+)?(?:"([^"\r\n]*)"|'([^'\r\n]*)'|([^\s\x85;&|()<>"'`]+))/gi;
+// A `-C <dir>` in a commit's flags, read the same two ways.
+const MOVE_FLAG = /(?:^|\s)-C(?:\s+|=)(?:"([^"]+)"|'([^']+)'|(\S+))/g;
+const MOVE_FLAG_PS = /(?:^|[\s\x85])-C(?:[\s\x85]+|=)(?:"([^"]+)"|'([^']+)'|([^\s\x85]+))/g;
+const readingsDiffer = (text) => /[^\S \t\r\n]|\x85/.test(text)
+  || /(?<![\w./-])(?:chdir|sl|Set-Location|Push-Location)(?![\w-])/i.test(text)
+  || [...text.matchAll(/(?<![\w./-])(?:cd|pushd)(?![\w-])/gi)].some((found) => found[0] !== found[0].toLowerCase());
 const EXACT_CANDIDATES = 512; // every combination of succeeding and failing cds, up to this many directories (as before)
 const MAX_DIRS = 8192; // directories one command may ask the guard to look up; past it the guard refuses (fail closed)
 const MAX_COMMITS = 100; // more git commits than this in one command: refused (fail closed), never probed partially
@@ -801,18 +961,11 @@ const deadlineCheck = (deadline) => () => { if (performance.now() > deadline) th
 // the time: `check` throws GuardOverrun past the guard's deadline, and so does a candidate longer than MAX_PATH.
 function probe(command, cwd, check = () => {}) {
   const text = String(command ?? "");
-  const matches = [...text.matchAll(GIT_COMMIT)];
+  const matches = findGitCommits(text);
   if (!matches.length) return { dirs: null, overflow: false };
   const OVER = { dirs: null, overflow: true };
-  const cds = [];
+  if (matches.length > MAX_COMMITS) return OVER;
   const lastCommit = matches[matches.length - 1].index;
-  for (const found of text.matchAll(CD_TARGET)) {
-    if (found.index >= lastCommit) break;
-    const target = found[1] ?? found[2] ?? found[3];
-    if (!target || target === "-" || target.startsWith("~") || /[$\\*?[]/.test(target)) continue;
-    cds.push({ at: found.index, target });
-  }
-  if (matches.length > MAX_COMMITS || cds.length > MAX_CDS) return OVER;
   let budget = RESOLVE_BUDGET;
   const resolve = (from, target) => {
     budget -= 1;
@@ -822,36 +975,50 @@ function probe(command, cwd, check = () => {}) {
     return dir;
   };
   const start = path.resolve(cwd);
-  const all = new Set([start]);
-  let exact = true; // still every combination; false once only the chains are followed
-  let heads = new Set(); // where each run of consecutive succeeding cds ending at the latest cd has reached
   const dirs = new Set();
-  let next = 0;
-  for (const match of matches) {
-    while (next < cds.length && cds[next].at < match.index) {
-      const { target } = cds[next++];
-      const moved = new Set([resolve(start, target)]);
-      for (const from of heads) moved.add(resolve(from, target));
-      heads = moved;
-      if (exact) {
-        const added = [...all].map((from) => resolve(from, target));
-        const grown = new Set([...all, ...moved, ...added]);
-        if (grown.size <= EXACT_CANDIDATES) { for (const dir of grown) all.add(dir); continue; }
-        exact = false; // keep the exact set built so far; from here on only the chains are added
-      }
-      for (const dir of heads) all.add(dir);
-      if (all.size > MAX_DIRS || budget < 0) return OVER;
+  // One reading: its cds and its -C moves, every combination within EXACT_CANDIDATES, then the chains. False past a limit.
+  const run = (cdPattern, movePattern) => {
+    const cds = [];
+    for (const found of text.matchAll(cdPattern)) {
+      if (found.index >= lastCommit) break;
+      const target = found[1] ?? found[2] ?? found[3];
+      if (!target || target === "-" || target.startsWith("~") || /[$\\*?[]/.test(target)) continue;
+      cds.push({ at: found.index, target });
     }
-    let flags = match.groups.args;
-    const at = flags.search(/commit/i);
-    if (at >= 0) flags = flags.slice(0, at);
-    const moves = [...flags.matchAll(/(?:^|\s)-C(?:\s+|=)(?:"([^"]+)"|'([^']+)'|(\S+))/g)].map((found) => found[1] ?? found[2] ?? found[3]);
-    if (moves.length > MAX_MOVES) return OVER;
-    let here = [...all];
-    for (const target of moves) here = [...new Set(here.map((dir) => resolve(dir, target)))];
-    for (const dir of here) dirs.add(dir);
-    if (dirs.size > MAX_DIRS || budget < 0) return OVER;
-  }
+    if (cds.length > MAX_CDS) return false;
+    const all = new Set([start]);
+    let exact = true; // still every combination; false once only the chains are followed
+    let heads = new Set(); // where each run of consecutive succeeding cds ending at the latest cd has reached
+    let next = 0;
+    for (const match of matches) {
+      while (next < cds.length && cds[next].at < match.index) {
+        const { target } = cds[next++];
+        const moved = new Set([resolve(start, target)]);
+        for (const from of heads) moved.add(resolve(from, target));
+        heads = moved;
+        if (exact) {
+          const added = [...all].map((from) => resolve(from, target));
+          const grown = new Set([...all, ...moved, ...added]);
+          if (grown.size <= EXACT_CANDIDATES) { for (const dir of grown) all.add(dir); continue; }
+          exact = false; // keep the exact set built so far; from here on only the chains are added
+        }
+        for (const dir of heads) all.add(dir);
+        if (all.size > MAX_DIRS || budget < 0) return false;
+      }
+      let flags = match.args;
+      const at = flags.search(/commit/i);
+      if (at >= 0) flags = flags.slice(0, at);
+      const moves = [...flags.matchAll(movePattern)].map((found) => found[1] ?? found[2] ?? found[3]);
+      if (moves.length > MAX_MOVES) return false;
+      let here = [...all];
+      for (const target of moves) here = [...new Set(here.map((dir) => resolve(dir, target)))];
+      for (const dir of here) dirs.add(dir);
+      if (dirs.size > MAX_DIRS || budget < 0) return false;
+    }
+    return true;
+  };
+  if (!run(CD_TARGET, MOVE_FLAG)) return OVER;
+  if (readingsDiffer(text) && !run(CD_TARGET_PS, MOVE_FLAG_PS)) return OVER;
   return { dirs: [...dirs], overflow: false };
 }
 
@@ -1265,6 +1432,8 @@ export function spawnDecision(payload, env = process.env, now = Date.now()) {
     }
     const modelDenial = modelCeilingDenial(input, undefined, { projectDir });
     if (modelDenial) return denyResponse(modelDenial);
+    const badTitle = titleDenial(input.title);
+    if (badTitle) return denyResponse(badTitle);
     const base = stateBase(env);
     const container = safeId(env.CLAUDE_CODE_CONTAINER_ID) || safeId(os.hostname()) || "local";
     const today = new Date(now).toISOString().slice(0, 10);
@@ -1291,6 +1460,30 @@ export function spawnDecision(payload, env = process.env, now = Date.now()) {
   } catch (error) {
     return denyResponse(`wow-core: the session-start cap could not check this call (${error?.message ?? error}), so it is refused (fail closed). Use a subagent, or retry once the cause is fixed (COMMS_CORE §3).`);
   }
+}
+
+// ---- session titles (founder 2026-11-17, PACE_CORE §2a; enforced 2026-11-18) ----
+// The founder scans the app's sidebar, which cuts an indented title at about 25 characters. One project's lanes were titled
+// "<Project> Sub41: test stac…" for days after the rule landed (its sync predated it, and nothing checked), so he saw the
+// project and a number, never the work. A create_session or set_session_title whose title fits none of the shapes below is
+// refused with the rule; one exact standing title is kept because the sweep and the takeover find that session by it.
+export const isSetSessionTitle = (name) => typeof name === "string" && /^mcp__(?:.+_)?claude-code-remote__set_session_title$/.test(name);
+export const TITLE_MAX = 40;
+const STANDING_TITLES = new Set(["Codex dispatcher"]);
+const TITLE_RULE = 'A master is "<Project> master"; a lane is "#NNN - <1-2 words>" (three digits); a helper is "<prefix> - <Role> <what>", '
+  + 'the prefix its lane\'s #NNN or, for the master\'s own helpers and services, the project name (Role: Build, Fix, Check, Review). '
+  + 'Examples: "#041 - Test stack", "#104 - Check PR 2182 run 2", "Acme - Build nightly OOM" (PACE_CORE §2a).';
+export function titleDenial(title) {
+  const t = typeof title === "string" ? title.trim() : "";
+  if (!t) return `wow-core: give the session a title, so the founder's sidebar says what it does. ${TITLE_RULE}`;
+  // The sweep and the takeover find the dispatcher by its exact title, and the tool gets the title as sent: no padding, one line.
+  if (t !== title || /[\u0000-\u001f\u007f]/.test(t)) return `wow-core: the title ${JSON.stringify(String(title).slice(0, 60))} has spaces at its ends or a line break or control character; send it trimmed, on one line. ${TITLE_RULE}`;
+  if (STANDING_TITLES.has(t)) return null;
+  if (t.length > TITLE_MAX) return `wow-core: the title "${t.slice(0, 60)}" is ${t.length} characters; keep it to ${TITLE_MAX} (the sidebar cuts an indented title at about 25). ${TITLE_RULE}`;
+  // "Sub41", "Sub 41", "Sub-orchestrator 41": the number the founder could not read as work.
+  if (/\bsub(?:-?orchestrator)?[ -]?\d/i.test(t)) return `wow-core: the title "${t}" names a lane by its sub number; write the lane as "#NNN - <what it does>". ${TITLE_RULE}`;
+  if (/^\S+ master$/.test(t) || /^#\d{3} - \S/.test(t) || /^[A-Za-z][\w.-]* - \S/.test(t)) return null;
+  return `wow-core: the title "${t}" does not follow the session-title rule. ${TITLE_RULE}`;
 }
 
 // ---- mail guard: mail and BWS_PROD_TOKEN never meet in one session (SECURITY_CORE §1a; review 2026-11-06 of #277, H2) ----
@@ -1346,11 +1539,14 @@ const PROD_TOKEN = /BWS_PROD/i;
 const unsplit = (text) => text.replace(/["'`\\]/g, "");
 // A shell command's text, unsplit: Bash, PowerShell, Monitor, Codex's nameless shell payload, a string or an argv array.
 // An MCP tool's `command` runs elsewhere, without this environment's variables, so it has none.
-function shellText(toolName, input) {
+function rawShellText(toolName, input) {
   if (typeof toolName === "string" && toolName.startsWith("mcp__")) return null;
   const command = input?.command;
-  const text = typeof command === "string" ? command
+  return typeof command === "string" ? command
     : Array.isArray(command) ? command.filter((part) => typeof part === "string").join(" ") : null;
+}
+function shellText(toolName, input) {
+  const text = rawShellText(toolName, input);
   return text === null ? null : unsplit(text);
 }
 export function usesProdToken(toolName, input) {
@@ -1382,8 +1578,21 @@ export function handsTokenOn(toolName, input) {
 // SEG ends in `[ \t]*`, not `\s*`: a newline is itself a separator, so `\s*` would let every newline of a run of them
 // rescan the rest of the run (quadratic: 200,000 newlines took 90 s on every Bash command). `-c` counts only after a
 // shell that takes it (`bash -lc env`), so `wc -c env` is not a dump.
-const SEG = String.raw`(?:^|[;&|(){}\n]|(?:^|\s)(?:sudo|exec|command|nohup|time|nice|xargs|watch|eval|then|do|else)|(?:^|[\s/])(?:sh|bash|zsh|dash)\s+-[a-z]*c)[ \t]*`;
-const SEG_END = String.raw`\s*(?=$|[;&|(){}\n])`;
+// A wrapper may take options without a value, and numbers, before its command (`sudo -E env`, `nice -n 5 env`, `timeout 5 env`);
+// it never follows an option's value (`sudo -u root env`, `timeout -s KILL 5 env`). A shell may take up to six options (a letter, then letters, digits, `_` or `-`: `--no-config`), each
+// with at most one `[A-Za-z]+` word (`bash --norc -c env`, `fish --no-config -c env`, `bash --init-file x -c env`, `bash -o pipefail -c env`, `su -l root -c env`), and the shell
+// is followed only by options and `-c` (`su - root -c env`, `su root -c env`, `bash -c -- env` and `builtin set` are not covered).
+// `then`, `do` and `else` are keywords, so they count only at a command start (after a line start or `; & | ( ) { }` and
+// blanks): `echo then set > log` prints text. (The lookahead comes first so that the lookbehind, which reads back over the blanks, runs
+// only at a keyword: tried at every position it was quadratic on a run of blanks.) A run of options or numbers is read by the one wrapper word before it and
+// ends at the first word that is neither (a start inside the run is not a wrapper word), a shell's options at six, so no run is
+// rescanned by another start.
+// `command -v env` and `command -V env` only look the name up (`command` alone takes -p, -v and -V), so a `command` option
+// word that holds a v or a V ends the chain; the other wrappers keep every option (`time -v env` runs env).
+const SEG = String.raw`(?:^|[;&|(){}\n]|(?:^|\s)(?:sudo|exec|nohup|time|nice|xargs|watch|eval|timeout|busybox)(?:[ \t]+(?:-[\w-]+|\d+[smhd]?))*|(?=(?:then|do|else)\b)(?<=(?:^|[;&|(){}\n])[ \t]*)(?:then|do|else)\b|(?:^|\s)command(?:[ \t]+(?:-(?![\w-]*[vV])[\w-]+|\d+[smhd]?))*|(?:^|[\s/])(?:k?sh|mksh|bash|zsh|dash|fish|su)(?:\s+--?[A-Za-z][\w-]*(?:\s+[A-Za-z]+)?){0,6}\s+-[A-Za-z]*c)[ \t]*`;
+// A redirect ends a command too (`set > /tmp/s`, `env 2>&1`, `declare -p > f`).
+const SEG_END = String.raw`\s*(?=$|[;&|(){}\n<>]|\d+>)`;
+const POWERSHELL_ENV_FORM = "env: (PowerShell)";
 const ENV_DUMPS = [
   ["/proc/<pid>/environ", /\/proc\/(?:[^\s;&|/]+\/){1,3}environ\b/i],
   ["os.environ", /\bos\.environ\b(?!\s*\[\s*[A-Za-z_]|\.get\(\s*[A-Za-z_])/],
@@ -1391,7 +1600,15 @@ const ENV_DUMPS = [
   ["process.env", /\bprocess\.env\b(?!\s*\??\.\s*[A-Za-z_$]|\s*\[\s*[A-Za-z_$])/],
   ["%ENV", /%ENV\b/],
   // Ruby: ENV.to_h, ENV.each and the like; a read by name (ENV["HOME"], ENV.fetch("HOME")) is not a dump.
-  ["ENV (Ruby)", /\bENV\.(?!(?:fetch|dig|values_at|slice|assoc|delete|store)\b|(?:key|has_key|include|member)\?)[a-z_]/],
+  ["ENV (Ruby)", /\bENV(?:&?\.|::)(?!(?:fetch|dig|values_at|slice|assoc|delete|store)\b|(?:key|has_key|include|member)\?)[a-z_]/],
+  // Ruby: the whole ENV handed to a printer or to Hash[] (`p ENV`, `pp(ENV)`, `puts ENV`, `p *ENV`, `puts(*ENV)`, `$stdout.puts ENV`,
+  // `STDERR.print(ENV)`, `Hash[ENV]`), not ENV["HOME"] or ENV.fetch, nor `make print ENV=1`. The printer starts a word, or follows
+  // `-e` and its cluster of up to six switch letters (`ruby -e'p ENV'` reads `-ep ENV` once the quotes are removed), or follows
+  // `$stdout.`, `$stderr.`, `STDOUT.` or `STDERR.`. The `(` is an optional group, not `\(?` beside two blank runs: `p` plus 200,000
+  // blanks took 18 s that way. Each part is bounded, so a start never scans further than a few characters before or after it.
+  ["ENV (Ruby)", /(?:(?<![\w$@%.:-])|(?<=[ \t]-[A-Za-z]{0,6}e)|(?<![\w$@%])(?:\$std(?:out|err)|STD(?:OUT|ERR))\.)(?:pp?|puts|print)[ \t]*(?:\([ \t]*)?\*{0,2}ENV\b(?!\s*(?:\.|\[|::|&\.|=))|\bHash\s*\[\s*ENV\b(?!\s*(?:\.|\[|::|&\.))/],
+  // awk: ENVIRON read as a whole (`for (k in ENVIRON)`); a read by name (ENVIRON["HOME"], quotes already removed) is not.
+  ["ENVIRON (awk)", /\bENVIRON\b(?!\s*\[\s*[A-Za-z_])/],
   ["set", new RegExp(`${SEG}set${SEG_END}`)],
   ["printenv", /\bprintenv\b/],
   ["env", new RegExp(`${SEG}(?:(?:/[\\w.-]+)*/)?env(?:\\s+-[-\\w]*)*${SEG_END}`)],
@@ -1399,7 +1616,12 @@ const ENV_DUMPS = [
   ["declare", new RegExp(`${SEG}(?:declare|typeset)(?:\\s+-[a-zA-Z]+)*${SEG_END}`)],
   // PowerShell: the env: drive listed (Get-ChildItem env:, gci env:, dir env:, ls env:) or a bare $env:, not text that
   // happens to contain `env:` (grep -n "env:" ci.yml, a YAML `env:` key).
-  ["env: (PowerShell)", /\$env:(?![A-Za-z_{])|(?<![\w$.-])(?:Get-ChildItem|Get-Item|gci|gi|dir|ls)\s+(?:-Path\s+)?env:(?![A-Za-z_])/i],
+  // The listing commands may take options first (`Get-ChildItem -Force Env:`, `-LiteralPath Env:`), and so may the commands
+  // that move into the drive (`Set-Location Env:`, `sl`, `cd`, `Push-Location`, `pushd`), after which a bare `Get-ChildItem` lists it.
+  // The blanks are any whitespace but CR and LF, plus U+0085 (NEL), which \s leaves out: PowerShell's parser separates words at every
+  // \s character but U+FEFF, and at NEL (checked with [Parser]::ParseInput). A line break ends the command, so `- run: ls -la` and an
+  // `env:` key on the next line is YAML.
+  [POWERSHELL_ENV_FORM, /\$env:(?![A-Za-z_{])|(?<![\w$.-])(?:Get-ChildItem|Get-Item|gci|gi|dir|ls|Set-Location|sl|cd|chdir|Push-Location|pushd)(?:(?:[^\S\r\n]|\x85)+-[A-Za-z]+){0,6}(?:[^\S\r\n]|\x85)+env:(?![A-Za-z_])/i],
   ["GetEnvironmentVariables", /\bGetEnvironmentVariables\b/i],
 ];
 // Forms read as a command and its later words within one segment (so `bws project list | grep run` is not one), each
@@ -1411,9 +1633,13 @@ const SEGMENT_DUMPS = [
 ];
 // The dump form a shell command matches, or null.
 export function environmentDump(toolName, input) {
-  const text = shellText(toolName, input);
-  if (text === null) return null;
-  for (const [form, pattern] of ENV_DUMPS) if (pattern.test(text)) return form;
+  const raw = rawShellText(toolName, input);
+  if (raw === null) return null;
+  const text = unsplit(raw);
+  // A backtick before a line break continues a PowerShell line (`Get-ChildItem `<LF>Env:`), so for that pattern it is a blank, not a
+  // removed quote character that leaves a line break behind (a YAML `- run: ls -la` and an `env:` key below it has no backtick).
+  const continued = raw.includes("`") ? unsplit(raw.replace(/`(?:\r\n?|\n)/g, " ")) : text;
+  for (const [form, pattern] of ENV_DUMPS) if (pattern.test(form === POWERSHELL_ENV_FORM ? continued : text)) return form;
   for (const segment of text.split(/[;&|\n]/)) {
     for (const [form, command, words] of SEGMENT_DUMPS) {
       const at = segment.search(command);
@@ -2607,7 +2833,7 @@ function fleetForReads(env = process.env) {
 // payload cwd, or this hook's checkout when the cwd is that checkout's parent folder.
 // Codex sends its shell payload without a tool_name: a payload with no name and a string command is its Bash.
 const ROUTED_TOOL = (name, input) => name === "Bash" || ((name === undefined || name === null) && typeof input?.command === "string")
-  || name === ADD_REPO_TOOL || isCreateSession(name) || isConfirmTrust(name);
+  || name === ADD_REPO_TOOL || isCreateSession(name) || isSetSessionTitle(name) || isConfirmTrust(name);
 // How far this call's pre-tool-use got: run()'s watchdog and catch read it (one call per process).
 const STAGE = { shellPolicyDecided: false };
 async function preToolUse(root, payload, cwd, workDir = cwd, stops = {}, tool = "claude") {
@@ -2639,6 +2865,10 @@ async function preToolUse(root, payload, cwd, workDir = cwd, stops = {}, tool = 
   }
   if (isCreateSession(payload?.tool_name)) {
     return `${JSON.stringify(spawnDecision(payload, process.env, Date.now()))}\n`;
+  }
+  if (isSetSessionTitle(payload?.tool_name)) {
+    const badTitle = titleDenial(payload?.tool_input?.title);
+    return badTitle ? `${JSON.stringify(denyResponse(badTitle))}\n` : "";
   }
   const command = payload?.tool_input?.command;
   const leaseAccount = leaseAccountGuard(command);
