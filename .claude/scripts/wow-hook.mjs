@@ -111,6 +111,7 @@ import {
 import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
+import { StringDecoder } from "node:string_decoder";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const SELF = path.resolve(fileURLToPath(import.meta.url));
@@ -1232,6 +1233,112 @@ export function firstPromptText(transcriptPath) {
   throw new Error("no first user prompt in the transcript head");
 }
 
+// A user entry's text: a string, or the text parts of a content array (tool results and other parts are not text).
+function userText(entry) {
+  const content = entry?.message?.content;
+  if (typeof content === "string") return content.trim() ? content : "";
+  if (Array.isArray(content)) return content.filter((part) => part?.type === "text" && part.text).map((part) => part.text).join("\n");
+  return "";
+}
+
+// The spawn depth of the session that owns this transcript. Normally the depth tag in its first real prompt. A cloud
+// session resumed after a compaction can get a rebuilt transcript (2026-11-18, a project master: 21 MB, a compaction
+// summary at line 7, the first prompt gone, the next real user turn at byte 584,834). For that case the session-start
+// hook re-states the depth on every resume and compaction as its own line (sessionDepthLine), but only when the depth
+// came from the first prompt or from an earlier such line, never from the fallback below; the transcript keeps it as a
+// SessionStart attachment after the summary. In a rebuilt transcript the depth is the highest of those hook lines and
+// of real user turns that end in the tag in the form the spawn hook appends. Only when no hook line is there (a
+// transcript rebuilt before this change) do tags anywhere in a compaction summary count too, and 0 when there are none.
+// That fallback can lose a lane's or reviewer's tag when the summary dropped it, which lets such a session start
+// children one or two levels too deep; the per-session and per-container caps still hold. A tag quoted mid-text in a
+// later turn is ignored, so it cannot lock a master out. The whole file is read in 1 MB chunks, a long line kept as
+// pieces until its end (linear, not re-scanned per chunk). A line over LINE_MAX_CHARS is skipped; one skipped before the
+// first real prompt could have been that prompt, so the read then fails closed. A transcript with neither a real
+// prompt, a summary nor a hook line throws, and so does one over TRANSCRIPT_MAX_BYTES, even with a hook line (fail closed).
+const TRANSCRIPT_MAX_BYTES = 512 * 1024 * 1024;
+const LINE_MAX_CHARS = 32 * 1024 * 1024;
+const TURN_END_TAG = /\n\n\[wow-spawn-depth: (\d+)\]\s*$/;
+const HOOK_LINE_PREFIX = "wow-core: this session's spawn depth, kept for a rebuilt transcript";
+// The whole text of the hook's own resume output, nothing else: another SessionStart hook's output (an inbox relaying a
+// message body) could end in the same words and lower the depth (a project review of ebd2fa8, 2026-11-18).
+const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const HOOK_LINE_TAG = new RegExp(`^\\s*${escapeRegExp(RESUME_LINE)} ${escapeRegExp(HOOK_LINE_PREFIX)} \\[wow-spawn-depth: (\\d+)\\]\\s*$`);
+export const sessionDepthLine = (depth) => `${HOOK_LINE_PREFIX} [wow-spawn-depth: ${depth}]`;
+function hookLineDepth(entry) {
+  const a = entry?.attachment;
+  if (entry?.type !== "attachment" || a?.type !== "hook_additional_context" || a.hookEvent !== "SessionStart") return null;
+  const texts = Array.isArray(a.content) ? a.content : [a.content];
+  const tags = texts.map((t) => (typeof t === "string" ? t.match(HOOK_LINE_TAG) : null)).filter(Boolean).map((m) => Number(m[1]));
+  return tags.length ? Math.max(...tags) : null;
+}
+// { depth, source }: source is "prompt" (the first real prompt), "hook" (a hook line) or "fallback" (summary tags).
+export function readSpawnDepth(transcriptPath) {
+  const fd = openSync(transcriptPath, "r");
+  let rebuilt = false;
+  let hook = null; // highest hook line
+  let turns = 0; // highest end-of-turn tag in a real user turn after the summary
+  let summaries = 0; // highest tag anywhere in a summary (fallback only)
+  let skippedEarly = false; // a line was skipped before the first real prompt or summary
+  let capped = false;
+  try {
+    const buffer = Buffer.alloc(1024 * 1024);
+    const decoder = new StringDecoder("utf8"); // a character split across two chunks stays whole
+    let pieces = []; // the unfinished line, in pieces
+    let pieceChars = 0;
+    let skipping = false; // inside a line longer than LINE_MAX_CHARS
+    let offset = 0;
+    for (;;) {
+      const want = Math.min(buffer.length, TRANSCRIPT_MAX_BYTES - offset);
+      const n = want > 0 ? readSync(fd, buffer, 0, want, offset) : 0;
+      if (want <= 0) capped = readSync(fd, Buffer.alloc(1), 0, 1, offset) > 0;
+      offset += n;
+      const text = n ? decoder.write(buffer.subarray(0, n)) : decoder.end();
+      const cut = n ? text.lastIndexOf("\n") : text.length; // at the end, the rest is a whole line
+      if (cut < 0) {
+        if (!skipping) {
+          pieces.push(text);
+          pieceChars += text.length;
+          if (pieceChars > LINE_MAX_CHARS) {
+            pieces = []; pieceChars = 0; skipping = true;
+            if (!rebuilt) skippedEarly = true;
+          }
+        }
+        continue;
+      }
+      const lines = (pieces.join("") + text.slice(0, cut)).split("\n");
+      const rest = n ? text.slice(cut + 1) : "";
+      pieces = rest ? [rest] : []; pieceChars = rest.length;
+      if (skipping) { lines.shift(); skipping = false; } // the tail of the skipped line
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        let entry;
+        try { entry = JSON.parse(line); } catch { continue; }
+        const fromHook = hookLineDepth(entry);
+        if (fromHook !== null) { hook = Math.max(hook ?? 0, fromHook); continue; }
+        if (entry?.type !== "user" || !entry.message || entry.isMeta) continue;
+        if (entry.isCompactSummary) {
+          if (skippedEarly && !rebuilt) throw new Error("a line too long to read comes before the first prompt");
+          rebuilt = true; summaries = Math.max(summaries, depthOf(userText(entry))); continue;
+        }
+        const prompt = userText(entry);
+        if (!prompt) continue;
+        if (!rebuilt) {
+          if (skippedEarly) throw new Error("a line too long to read comes before the first prompt");
+          return { depth: depthOf(prompt), source: "prompt" };
+        }
+        const tag = prompt.match(TURN_END_TAG);
+        if (tag) turns = Math.max(turns, Number(tag[1]));
+      }
+      if (!n) break;
+    }
+  } finally { closeSync(fd); }
+  if (capped) throw new Error(`the transcript is over ${TRANSCRIPT_MAX_BYTES} bytes`);
+  if (hook !== null) return { depth: Math.max(hook, turns), source: "hook" };
+  if (!rebuilt) throw new Error(skippedEarly ? "a line too long to read comes before the first prompt" : "no first user prompt in the transcript");
+  return { depth: Math.max(turns, summaries), source: "fallback" };
+}
+export const spawnDepth = (transcriptPath) => readSpawnDepth(transcriptPath).depth;
+
 export function depthOf(promptText) {
   const tags = [...String(promptText ?? "").matchAll(DEPTH_TAG)].map((m) => Number(m[1]));
   return tags.length ? Math.max(...tags) : 0;
@@ -1403,7 +1510,7 @@ export function spawnDecision(payload, env = process.env, now = Date.now()) {
     const sid = safeId(payload?.session_id);
     const transcript = payload?.transcript_path;
     if (!sid || typeof transcript !== "string" || !transcript) throw new Error("no session id or transcript path in the hook payload");
-    const depth = depthOf(firstPromptText(transcript));
+    const depth = spawnDepth(transcript);
     const input = payload?.tool_input && typeof payload.tool_input === "object" ? payload.tool_input : {};
     // A depth-0 session whose host project directory is wow-core (the takeover or the wow-core
     // master) never starts a roster master: the founder does, in its own project, so it is not this
@@ -2670,7 +2777,17 @@ export function sessionStartOutput(tool, text) {
 async function sessionStart(root, payload, raw, tool, lane, cwd) {
   if (tool === "claude") writeMarker(root, payload.session_id, cwd);
   const source = typeof payload.source === "string" ? payload.source : "";
-  if (source === "resume" || source === "compact") return sessionStartOutput(tool, RESUME_LINE);
+  if (source === "resume" || source === "compact") {
+    // Re-state the spawn depth while the first prompt is still readable, so a rebuilt transcript keeps it (spawnDepth).
+    let depthLine = "";
+    if (tool === "claude" && typeof payload.transcript_path === "string" && payload.transcript_path) {
+      try {
+        const { depth, source: from } = readSpawnDepth(payload.transcript_path);
+        if (from !== "fallback") depthLine = ` ${sessionDepthLine(depth)}`; // never make a guess permanent
+      } catch { /* no depth to keep */ }
+    }
+    return sessionStartOutput(tool, `${RESUME_LINE}${depthLine}`);
+  }
   const input = raw.trim() ? raw : "{}";
   const routing = firstExisting(root, ["docs/MODEL_ROUTING.md", "core/MODEL_ROUTING.md", "docs/fleet/MODEL_ROUTING.md"])
     ?? "the fleet routing table (wow-core core/MODEL_ROUTING.md)";
