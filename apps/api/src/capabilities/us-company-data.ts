@@ -105,6 +105,14 @@ async function extractCompanyName(text: string): Promise<string> {
  * occurs as a complete, verbatim span in their input. Matching ignores case
  * and treats each run of whitespace as equivalent, but it does not allow a
  * name to match inside a larger letter-or-digit word.
+ *
+ * Returns null when the span is followed by another capitalised word, a
+ * digit or "&": that shape means the model probably cut a longer name short
+ * ("Apple" from "Apple Hospitality REIT"), and a title-map hit on the
+ * fragment would be an "exact" match on the wrong registrant. Those inputs
+ * keep the search path, whose confidence gate refuses a partial match.
+ * All-lowercase input cannot be checked this way; that residual case is the
+ * same risk the model extraction already carried before this path existed.
  */
 function findVerbatimSpan(input: string, extracted: string): string | null {
   const words = extracted.trim().split(/\s+/u).filter(Boolean);
@@ -115,7 +123,12 @@ function findVerbatimSpan(input: string, extracted: string): string | null {
     `(?:^|[^\\p{L}\\p{N}])(${escaped.join("\\s+")})(?=$|[^\\p{L}\\p{N}])`,
     "iu",
   );
-  return pattern.exec(input)?.[1] ?? null;
+  const match = pattern.exec(input);
+  if (!match) return null;
+  const span = match[1];
+  const spanEnd = match.index + match[0].length;
+  if (/^\s+[\p{Lu}\p{N}&]/u.test(input.slice(spanEnd))) return null;
+  return span;
 }
 
 async function searchEdgar(name: string): Promise<string> {

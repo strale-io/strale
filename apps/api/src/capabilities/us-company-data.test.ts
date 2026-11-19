@@ -504,6 +504,39 @@ describe("us-company-data — resolution order (the Apple/AAPL bug)", () => {
     ).toBe(true);
   });
 
+  it("does not title-resolve a fragment the model cut from a longer name (Apple from Apple Hospitality REIT)", async () => {
+    // Review finding on the title_in_text path: "Apple" is verbatim in the
+    // input, but the caller meant Apple Hospitality REIT. If the fragment
+    // reached the title map it would come back as Apple Inc, "exact".
+    const REIT_CIK = "0001418121";
+    resolveByTitle
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ cik: "0000320193", title: "Apple Inc.", ticker: "AAPL" });
+    messagesCreate.mockResolvedValueOnce({
+      content: [{ type: "text", text: "Apple" }],
+    });
+    const fetchSpy = vi.fn(async (url: string) => {
+      if (url.includes("efts.sec.gov"))
+        return new Response(
+          JSON.stringify({ hits: { hits: [{ _source: { ciks: [REIT_CIK] } }] } }),
+          { status: 200 },
+        );
+      return new Response(
+        JSON.stringify({ name: "Apple Hospitality REIT, Inc.", cik: REIT_CIK }),
+        { status: 200 },
+      );
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await expect(exec()({ company: "Info on Apple Hospitality REIT" })).rejects.toThrow(
+      /No confident SEC EDGAR match/,
+    );
+    expect(resolveByTitle).toHaveBeenCalledTimes(1);
+    expect(
+      fetchSpy.mock.calls.some(([url]) => String(url).includes("efts.sec.gov")),
+    ).toBe(true);
+  });
+
   it('still refuses "Stripe" (private company, no SEC filings of its own) even after the ticker/title map fix', async () => {
     // Neither the ticker nor the title map has an entry for a private company.
     resolveByTicker.mockResolvedValueOnce(null);
