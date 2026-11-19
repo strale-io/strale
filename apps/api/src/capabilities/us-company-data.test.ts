@@ -356,6 +356,154 @@ describe("us-company-data — resolution order (the Apple/AAPL bug)", () => {
     expect(messagesCreate).not.toHaveBeenCalled();
   });
 
+  it('resolves "Look up Oracle Corp for me" through a verbatim extracted title', async () => {
+    const ORACLE_CIK = "0001341439";
+    resolveByTitle
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        cik: ORACLE_CIK,
+        title: "ORACLE CORP",
+        ticker: "ORCL",
+      });
+    messagesCreate.mockResolvedValueOnce({
+      content: [{ type: "text", text: "Oracle Corp" }],
+    });
+    const fetchSpy = stubCompanyFetch({
+      [ORACLE_CIK]: {
+        name: "ORACLE CORP",
+        cik: ORACLE_CIK,
+        entityType: "operating",
+      },
+    });
+
+    const result = await exec()({ company: "Look up Oracle Corp for me" });
+
+    expect(result.output.cik).toBe(ORACLE_CIK);
+    expect(result.output.resolution_method).toBe("title_in_text");
+    expect(result.output.match_confidence).toBe("exact");
+    expect(resolveByTitle).toHaveBeenLastCalledWith("Oracle Corp");
+    expect(
+      fetchSpy.mock.calls.some(([url]) => String(url).includes("efts.sec.gov")),
+    ).toBe(false);
+  });
+
+  it("preserves the caller's casing when a case-insensitive verbatim title resolves", async () => {
+    const BOA_CIK = "0000070858";
+    resolveByTitle
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        cik: BOA_CIK,
+        title: "BANK OF AMERICA CORP",
+        ticker: "BAC",
+      });
+    messagesCreate.mockResolvedValueOnce({
+      content: [{ type: "text", text: "Bank of America Corp" }],
+    });
+    stubCompanyFetch({
+      [BOA_CIK]: {
+        name: "BANK OF AMERICA CORP",
+        cik: BOA_CIK,
+        entityType: "operating",
+      },
+    });
+
+    const result = await exec()({
+      company: "please check bank of america corp",
+    });
+
+    expect(result.output.resolution_method).toBe("title_in_text");
+    expect(result.output.searched_name).toBe("bank of america corp");
+    expect(resolveByTitle).toHaveBeenLastCalledWith("bank of america corp");
+  });
+
+  it("does not title-resolve a model rephrasing that is absent from the caller's text", async () => {
+    const IBM_CIK = "0000051143";
+    resolveByTitle.mockResolvedValueOnce(null);
+    messagesCreate.mockResolvedValueOnce({
+      content: [{ type: "text", text: "International Business Machines" }],
+    });
+    const fetchSpy = vi.fn(async (url: string) => {
+      if (url.includes("efts.sec.gov")) {
+        return new Response(
+          JSON.stringify({
+            hits: { hits: [{ _source: { ciks: [IBM_CIK] } }] },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          name: "International Business Machines",
+          cik: IBM_CIK,
+        }),
+        { status: 200 },
+      );
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const result = await exec()({ company: "tell me about IBM" });
+
+    expect(result.output.resolution_method).toBe("search");
+    expect(resolveByTitle).toHaveBeenCalledTimes(1);
+    expect(
+      fetchSpy.mock.calls.some(([url]) => String(url).includes("efts.sec.gov")),
+    ).toBe(true);
+  });
+
+  it('does not match "Oracle" inside "Oracles"', async () => {
+    const CIK = "0000000001";
+    resolveByTitle.mockResolvedValueOnce(null);
+    messagesCreate.mockResolvedValueOnce({
+      content: [{ type: "text", text: "Oracle" }],
+    });
+    const fetchSpy = vi.fn(async (url: string) => {
+      if (url.includes("efts.sec.gov"))
+        return new Response(
+          JSON.stringify({ hits: { hits: [{ _source: { ciks: [CIK] } }] } }),
+          { status: 200 },
+        );
+      return new Response(JSON.stringify({ name: "Oracle", cik: CIK }), {
+        status: 200,
+      });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const result = await exec()({ company: "Oracles of Delphi Inc filings" });
+
+    expect(result.output.resolution_method).toBe("search");
+    expect(resolveByTitle).toHaveBeenCalledTimes(1);
+    expect(
+      fetchSpy.mock.calls.some(([url]) => String(url).includes("efts.sec.gov")),
+    ).toBe(true);
+  });
+
+  it("falls through to search when the extracted verbatim title is missing or ambiguous", async () => {
+    const CIK = "0000000002";
+    resolveByTitle.mockResolvedValue(null);
+    messagesCreate.mockResolvedValueOnce({
+      content: [{ type: "text", text: "Acme Corp" }],
+    });
+    const fetchSpy = vi.fn(async (url: string) => {
+      if (url.includes("efts.sec.gov"))
+        return new Response(
+          JSON.stringify({ hits: { hits: [{ _source: { ciks: [CIK] } }] } }),
+          { status: 200 },
+        );
+      return new Response(JSON.stringify({ name: "Acme Corp", cik: CIK }), {
+        status: 200,
+      });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const result = await exec()({ company: "find Acme Corp filings" });
+
+    expect(resolveByTitle).toHaveBeenLastCalledWith("Acme Corp");
+    expect(result.output.resolution_method).toBe("search");
+    expect(
+      fetchSpy.mock.calls.some(([url]) => String(url).includes("efts.sec.gov")),
+    ).toBe(true);
+  });
+
   it('still refuses "Stripe" (private company, no SEC filings of its own) even after the ticker/title map fix', async () => {
     // Neither the ticker nor the title map has an entry for a private company.
     resolveByTicker.mockResolvedValueOnce(null);

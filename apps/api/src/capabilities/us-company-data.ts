@@ -100,6 +100,24 @@ async function extractCompanyName(text: string): Promise<string> {
   return name;
 }
 
+/**
+ * Return the caller's original spelling of an extracted company name when it
+ * occurs as a complete, verbatim span in their input. Matching ignores case
+ * and treats each run of whitespace as equivalent, but it does not allow a
+ * name to match inside a larger letter-or-digit word.
+ */
+function findVerbatimSpan(input: string, extracted: string): string | null {
+  const words = extracted.trim().split(/\s+/u).filter(Boolean);
+  if (words.length === 0) return null;
+
+  const escaped = words.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const pattern = new RegExp(
+    `(?:^|[^\\p{L}\\p{N}])(${escaped.join("\\s+")})(?=$|[^\\p{L}\\p{N}])`,
+    "iu",
+  );
+  return pattern.exec(input)?.[1] ?? null;
+}
+
 async function searchEdgar(name: string): Promise<string> {
   const url = `https://efts.sec.gov/LATEST/search-index?q=%22${encodeURIComponent(name)}%22&forms=10-K,10-Q,8-K&_source=ciks,display_names,biz_locations,inc_states,sics`;
   const response = await fetchSec(url, "SEC EDGAR search");
@@ -170,8 +188,11 @@ registerCapability("us-company-data", async (input: CapabilityInput) => {
   let preResolvedMatch: { match_confidence: MatchConfidence; is_exact_match: boolean } | null = null;
   // Which path produced the identity — surfaced in the output so a KYB
   // consumer can audit HOW "exact" was established (DEC-20260428-B:
-  // per-fact traceability). "cik" | "ticker" | "title" | "search".
-  let resolutionMethod: "cik" | "ticker" | "title" | "search" = cik ? "cik" : "search";
+  // per-fact traceability). "title_in_text" is a title map hit on a company
+  // name that appears verbatim in the caller's free text.
+  let resolutionMethod: "cik" | "ticker" | "title" | "title_in_text" | "search" = cik
+    ? "cik"
+    : "search";
 
   // Explicit `ticker` field = unambiguous caller intent; any casing accepted.
   const explicitTicker =
@@ -224,9 +245,19 @@ registerCapability("us-company-data", async (input: CapabilityInput) => {
   // reached when the input isn't a CIK and didn't resolve via the exact
   // ticker/title map — i.e. exactly the cases the map can't answer.
   if (!cik) {
-    searchedName = await extractCompanyName(trimmed);
-    cik = await searchEdgar(searchedName);
-    resolutionMethod = "search";
+    const extracted = await extractCompanyName(trimmed);
+    const span = findVerbatimSpan(trimmed, extracted);
+    const titleHit = span ? await resolveByTitle(span) : null;
+    if (span && titleHit) {
+      cik = titleHit.cik;
+      searchedName = span;
+      resolutionMethod = "title_in_text";
+      preResolvedMatch = classifyNameMatch(span, stripSecTitleAnnotation(titleHit.title));
+    } else {
+      searchedName = extracted;
+      cik = await searchEdgar(extracted);
+      resolutionMethod = "search";
+    }
   }
 
   const company = await fetchCompany(cik);
