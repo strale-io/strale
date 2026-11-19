@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "profile": "comms",
-  "wow_core_commit": "48c8decd438908251fe958b6c5f46014b6963f2d",
+  "wow_core_commit": "784552e02d4634e0d447b45c08b744957bc48527",
   "files": [
     ".claude/scripts/bus.mjs",
     ".claude/scripts/cloud-env.sh",
