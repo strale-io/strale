@@ -15,4 +15,4 @@ Note: the closure ran through the customer's own key, which the 11-16 note had r
 
 Removed from the queue: item 2 of `2026-11-19-master-takeover-hotmail-ra.md` and item 6 of `2026-11-17-master-takeover-1fg.md`.
 
-Next authorised action: daily production run once the read-only DB URL is reachable from a cloud session (STRALE_DB_READONLY_URL in Bitwarden) or from the PC session | Owner: Strale master | Blocker: Petter (Bitwarden entry) or the PC session
+Next authorised action: make the daily run work from a cloud session by adding the checks it needs to the read-only ops-read endpoint (cloud sessions cannot reach Postgres, and the DB credential is PC-only by design, wow-core#214) | Owner: Strale master | Blocker: none
