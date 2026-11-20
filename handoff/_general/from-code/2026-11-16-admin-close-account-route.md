@@ -24,4 +24,4 @@ An independent same-provider review ran in a separate context: round 1 GO with n
 
 Verify on production that the route answers 401 without auth. Then give Petter the exact command for the authorised closure. The customer's pasted key is never used.
 
-Next authorised action: after merge and deploy, check that the route answers 401 without auth, then hand Petter the closure command | Owner: Strale master | Blocker: merge-gate
+Next authorised action: after merge and deploy, check that the route answers 401 without auth, then hand Petter the closure command | Owner: Strale master | Blocker: merge-gate **Closed 2026-11-20:** done on 2026-11-16 at 23:47 Swedish time, and Petter told the customer at 23:51; evidence in `handoff/_general/from-code/2026-11-20-account-closure-verified.md`.

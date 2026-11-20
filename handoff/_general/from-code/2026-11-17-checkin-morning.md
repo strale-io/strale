@@ -59,7 +59,7 @@ Inbox since 2026-11-16 07:00Z (8 messages) and Junk Email newest 15.
 ## Decisions (C/E)
 
 - Decision queue: nothing matured. DQ-40 closed on 11-16 (Swiss permission accepted). Open founder items unchanged: DQ-48, DQ-41, DQ-33, DQ-27, DQ-14.
-- The customer account closure Petter approved on 11-16: the admin closure route is live (unauthenticated call answers 401, checked 07:35Z). Whether the closure itself has been run is not recorded anywhere this run can read; it is a production write and not this run's to make. Owner: Strale master. The confirmation to the customer is still Petter's.
+- The customer account closure Petter approved on 11-16: the admin closure route is live (unauthenticated call answers 401, checked 07:35Z). Whether the closure itself has been run is not recorded anywhere this run can read; it is a production write and not this run's to make. Owner: Strale master. The confirmation to the customer is still Petter's. **Closed 2026-11-20:** done on 2026-11-16 at 23:47 Swedish time, and Petter told the customer at 23:51; evidence in `handoff/_general/from-code/2026-11-20-account-closure-verified.md`.
 - **Weekly due-list rows not run:** `weekly-review`, `weekly-free-callers` and `weekly-listings` (all last run 2026-11-10) fell due today. Each needs the private campaign workspace and a listings pass across nine directories; a thin run recorded as done would be worse than a day's delay. Left overdue for the next interactive session; `RECURRING.yaml` not touched for them.
 - GOALS.md and LESSONS.md unchanged. The SEC title miss is a recall defect in a registry matcher that refused rather than guessed, so it is not an F-family incident; the lesson (a public list has one row per security, and carries the publisher's own labels) is in the code comment and the tests.
 - Dashboard regenerated (gitignored): revenue observed €110.05, 32 buyers, identity 100%, spend estimate €3.32.
@@ -71,4 +71,4 @@ Inbox since 2026-11-16 07:00Z (8 messages) and Junk Email newest 15.
 3. Run the three overdue weekly rows.
 4. Weather lane: trailing ZIP code and "St"/"Saint".
 5. weekly-drift: settle the five unlisted robots findings so the workflow can go green.
-6. Account closure: run it (Strale master), then Petter's confirmation to the customer.
+6. Account closure: run it (Strale master), then Petter's confirmation to the customer. **Closed 2026-11-20:** done on 2026-11-16 at 23:47 Swedish time, and Petter told the customer at 23:51; evidence in `handoff/_general/from-code/2026-11-20-account-closure-verified.md`.

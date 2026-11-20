@@ -12,7 +12,7 @@ Intent: record three founder decisions of 2026-11-16 (Petter, in session) and th
 - With deletion ruled out, the incident-dating check proposed in that handoff is only for understanding the cause. It does not gate anything. It is dropped from the queue unless an integrity check needs the cause.
 - Close A-7 on this basis.
 
-**3. Close the customer account that exposed its key; no refund.** Petter: "close the account. he didnt ask fo a reund so no need for that now".
+**3. Close the customer account that exposed its key; no refund.** Petter: "close the account. he didnt ask fo a reund so no need for that now". **Closed 2026-11-20:** done on 2026-11-16 at 23:47 Swedish time, and Petter told the customer at 23:51; evidence in `handoff/_general/from-code/2026-11-20-account-closure-verified.md`.
 - **Not executed.**
   - The only closure path is `DELETE /v1/auth/me` (`apps/api/src/routes/auth.ts`), authenticated by the customer's own key. Using the pasted key is forbidden (wow-core#348).
   - No admin closure route exists.
@@ -20,4 +20,4 @@ Intent: record three founder decisions of 2026-11-16 (Petter, in session) and th
 - Recommended: add `POST /v1/admin/accounts/:userId/close`, which reuses `applyClosurePlan` from `apps/api/src/lib/account-closure.ts`, with tests and independent review. Then one call from whoever holds `ADMIN_SECRET`.
 - Telling the customer the account is closed is writing to a customer, which stays Petter's.
 
-Next authorised action: build the admin-only account-closure route (tier 2, independent review) so the exposed key can be revoked with one ADMIN_SECRET call | Owner: Strale master | Blocker: none for the build; the call needs the ADMIN_SECRET holder
+Next authorised action: build the admin-only account-closure route (tier 2, independent review) so the exposed key can be revoked with one ADMIN_SECRET call | Owner: Strale master | Blocker: none for the build; the call needs the ADMIN_SECRET holder **Closed 2026-11-20:** done on 2026-11-16 at 23:47 Swedish time, and Petter told the customer at 23:51; evidence in `handoff/_general/from-code/2026-11-20-account-closure-verified.md`.

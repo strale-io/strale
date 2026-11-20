@@ -30,7 +30,7 @@ Non-builder, for the next interactive or morning session:
 3. Verify #1091 in production: `us-company-data` for "ORACLE CORP", "Bank of America Corp", "Tucows Inc".
 4. Watch whether the largest payer repeats the bulk `pricing-page-extract` / `us-company-data` jobs.
 5. The three overdue weekly rows (`weekly-review`, `weekly-free-callers`, `weekly-listings`).
-6. Account closure Petter approved on 11-16: run it, then his confirmation to the customer.
+6. Account closure Petter approved on 11-16: run it, then his confirmation to the customer. **Closed 2026-11-20:** done on 2026-11-16 at 23:47 Swedish time, and Petter told the customer at 23:51; evidence in `handoff/_general/from-code/2026-11-20-account-closure-verified.md`.
 7. Weekly wow-core sync, due about 2026-11-23 (`wow-hook.mjs` drift).
 
 Next authorised action: verify #1096 and #1091 in production, then design the us-company-data exact lookup | Owner: Strale master or morning session | Blocker: none

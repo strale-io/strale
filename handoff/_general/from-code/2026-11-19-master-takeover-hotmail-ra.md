@@ -19,7 +19,7 @@ Builder work:
 1. In Codex: `us-company-data-verbatim-title`. A title-map hit on the model-extracted name counts only when that name is a verbatim span of the caller's text, so "exact" stays measured against the caller's words. Review the Codex result when the dispatcher reports it.
 
 Non-builder:
-2. Account closure Petter approved on 11-16. The admin route is live. Running it needs the customer's address (in the mailbox, which only the inbox routine reads) and `ADMIN_SECRET` (in Railway). Neither is in a cloud session; whoever holds both runs it. Petter's confirmation to the customer follows.
+2. Account closure Petter approved on 11-16. The admin route is live. Running it needs the customer's address (in the mailbox, which only the inbox routine reads) and `ADMIN_SECRET` (in Railway). Neither is in a cloud session; whoever holds both runs it. Petter's confirmation to the customer follows. **Closed 2026-11-20:** done on 2026-11-16 at 23:47 Swedish time, and Petter told the customer at 23:51; evidence in `handoff/_general/from-code/2026-11-20-account-closure-verified.md`.
 3. Exercise #1096 and #1091 with one paid call each, from a session that holds a key.
 4. The three overdue weekly rows (`weekly-review`, `weekly-free-callers`, `weekly-listings`).
 5. Daily run overdue since 2026-11-17 (no run on 11-18 or, so far, 11-19). It needs the production read-only database URL, which lives only in the PC's local env files, so it cannot run from a cloud session.

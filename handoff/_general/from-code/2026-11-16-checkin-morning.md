@@ -56,7 +56,7 @@ Inbox since 2026-11-15 07:00Z (6 messages) and Junk Email newest 15.
 
 ## Next session
 
-1. Petter's two open authorization requests from 11-15 (account closure + reply; Swiss permission → UID/Zefix vendor-terms records, close DQ-40, portfolio 1.12).
+1. Petter's two open authorization requests from 11-15 (account closure + reply; Swiss permission → UID/Zefix vendor-terms records, close DQ-40, portfolio 1.12). **Closed 2026-11-20:** done on 2026-11-16 at 23:47 Swedish time, and Petter told the customer at 23:51; evidence in `handoff/_general/from-code/2026-11-20-account-closure-verified.md`.
 2. Credit €1.15 to the benchmark account and reply (production write + inbox routine), or ask Petter.
 3. Diff `origin/chore/checkin-2026-11-06` tip against PR #952's head; delete both halves if nothing unique.
 4. Optional: ReceitaWS 429 wording ("retry shortly") and attribution, alongside the promise-audit 56/58 attribution work.
