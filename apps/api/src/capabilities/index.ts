@@ -109,7 +109,7 @@ function storableError(slug: string, err: unknown): unknown {
     target.message = cleaned.value;
     written = target.message === cleaned.value;
   } catch {
-    // Frozen or read-only: rethrown as it was.
+    // degraded-ok: a frozen or read-only error is rethrown unchanged, and written stays false so capability-error-unstorable-chars-kept is logged below.
   }
   if (written) {
     logWarn("capability-error-unstorable-chars-removed", "removed characters the database cannot store from a tool error", { slug, removed: cleaned.removed });
