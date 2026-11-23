@@ -26,6 +26,7 @@ import {
   BudgetExhaustedError,
 } from "../capabilities/guarded-executor.js";
 import { sanitizeFailureReason } from "./sanitize.js";
+import { sliceStorable } from "./storable-json.js";
 import { stepFailure, type StepFailure } from "./solution-step-failure.js";
 import {
   outcomeFromError,
@@ -646,7 +647,7 @@ export async function executeSolution(
           outcome:
             phase === "executor" ? outcomeFromError(err) : outcomeFromPlatformFault(err),
         });
-        stepErrors.push(`${step.capabilitySlug}: ${msg.slice(0, 200)}`);
+        stepErrors.push(`${step.capabilitySlug}: ${sliceStorable(msg, 200)}`);
         stepFailures.push(stepFailure(step.capabilitySlug, err));
         stepResults[step.capabilitySlug] = { error: sanitizeFailureReason(msg) };
         // F-B-016: on error, still mark the slot with an error marker so

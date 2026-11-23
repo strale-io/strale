@@ -49,4 +49,21 @@ describe("getExecutor removes characters the database cannot store", () => {
     await expect(getExecutor("test-clean-error")!({})).rejects.toBe(thrown);
     expect(thrown.message).toBe("plain failure");
   });
+
+  it("cleans a thrown plain object's message", async () => {
+    const thrown = { message: "nope\u0000", code: "refused" };
+    registerCapability("test-unstorable-object-error", async () => {
+      throw thrown;
+    });
+    await expect(getExecutor("test-unstorable-object-error")!({})).rejects.toBe(thrown);
+    expect(thrown).toEqual({ message: "nope", code: "refused" });
+  });
+
+  it("rethrows a frozen error unchanged instead of failing", async () => {
+    const thrown = Object.freeze(new Error("frozen\u0000"));
+    registerCapability("test-frozen-error", async () => {
+      throw thrown;
+    });
+    await expect(getExecutor("test-frozen-error")!({})).rejects.toBe(thrown);
+  });
 });

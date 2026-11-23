@@ -65,3 +65,17 @@ export function toStorableJson<T>(value: T): StorableResult<T> {
   const result = walk(value, 0) as T;
   return { value: result, removed };
 }
+
+/**
+ * `text.slice(0, max)`, backed off by one when the cut would land between the
+ * two halves of a surrogate pair (an emoji, say). A plain slice there leaves a
+ * lone high surrogate at the end, which jsonb then refuses.
+ */
+export function sliceStorable(text: string, max: number): string {
+  let end = Math.max(0, Math.min(max, text.length));
+  if (end > 0 && end < text.length) {
+    const last = text.charCodeAt(end - 1);
+    if (last >= 0xd800 && last <= 0xdbff) end--;
+  }
+  return text.slice(0, end);
+}

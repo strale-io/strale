@@ -3,6 +3,8 @@
  * Strips provider names, hostnames, raw error codes, and internal jargon.
  */
 
+import { sliceStorable } from "./storable-json.js";
+
 const NETWORK_ERROR_PATTERN =
   /\b(getaddrinfo|ENOTFOUND|ECONNRESET|ETIMEDOUT|ECONNREFUSED|EPIPE|EAI_AGAIN)\b/i;
 
@@ -255,7 +257,7 @@ export function sanitizeFailureReason(raw: string | null): string {
     const hardCut = 497;
     const lastSpace = msg.lastIndexOf(" ", hardCut);
     const cut = lastSpace >= hardCut - 32 ? lastSpace : hardCut;
-    msg = msg.slice(0, cut).trimEnd() + "...";
+    msg = sliceStorable(msg, cut).trimEnd() + "...";
   }
 
   return msg || "Unknown error";

@@ -96,15 +96,27 @@ function storableError(slug: string, err: unknown): unknown {
     if (cleaned.removed > 0) logWarn("capability-error-unstorable-chars-removed", "removed characters the database cannot store from a tool error", { slug, removed: cleaned.removed });
     return cleaned.value;
   }
-  if (!(err instanceof Error)) return err;
-  const cleaned = toStorableJson(err.message);
+  // Errors, and plain thrown objects whose message callers read (dispatch
+  // reads `.message` off non-Error throws too).
+  if (typeof err !== "object" || err === null) return err;
+  const message = (err as { message?: unknown }).message;
+  if (typeof message !== "string") return err;
+  const cleaned = toStorableJson(message);
   if (cleaned.removed === 0) return err;
+  const target = err as { message: unknown };
+  let written = false;
   try {
-    err.message = cleaned.value;
+    target.message = cleaned.value;
+    written = target.message === cleaned.value;
   } catch {
-    return err;
+    // Frozen or read-only: rethrown as it was.
   }
-  logWarn("capability-error-unstorable-chars-removed", "removed characters the database cannot store from a tool error", { slug, removed: cleaned.removed });
+  if (written) {
+    logWarn("capability-error-unstorable-chars-removed", "removed characters the database cannot store from a tool error", { slug, removed: cleaned.removed });
+  } else {
+    // The write that records this failure may now fail; say so.
+    logWarn("capability-error-unstorable-chars-kept", "a tool error carries characters the database cannot store and could not be cleaned", { slug, removed: cleaned.removed });
+  }
   return err;
 }
 
