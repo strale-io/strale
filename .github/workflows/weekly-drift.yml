@@ -217,6 +217,8 @@ jobs:
       # reports a broken live contract, a request the executor no longer
       # makes, a moved status, or a recording older than 90 days. A finding
       # means re-capture with apps/api/scripts/record-upstream.ts --slug <slug>.
+      # A source that is down on both tries (timeout, 5xx or 429, retried once
+      # after 20 s) is listed as unavailable and does not fail the step.
       - id: upstream-recordings
         run: |
           set +e

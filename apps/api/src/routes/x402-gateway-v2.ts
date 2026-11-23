@@ -727,7 +727,8 @@ export function schemaBadRequest(
 // usually rejects the duplicate, but we'd still consume external API quota
 // for the executor and produce a second transactions row.
 //
-// Dedup strategy: hash(X-Payment header) → unique partial index on
+// Dedup strategy: hashPaymentHeader (the verified authorization's payer and
+// nonce, so every spelling of one header gets one key) → unique partial index on
 // transactions.x402_payment_hash. Pre-execute lookup. If found and the
 // row is `completed`, return its output as the cached response. If found
 // and `failed`, return its error.
@@ -1280,7 +1281,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     }
     verified = verification.verified;
 
-    // Cert-audit C9: replay dedup. If this exact payment header was already
+    // Cert-audit C9: replay dedup. If this payment authorization was already
     // processed and recorded, return the cached row instead of re-running.
     // Only safe AFTER verify so an unverified replay can't probe for the
     // existence of cached rows.
@@ -1670,7 +1671,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     verified = verification.verified;
 
     // Cert-audit C9: replay dedup. Same logic as the solutions handler —
-    // if this exact payment header already produced a recorded transaction,
+    // if this payment authorization already produced a recorded transaction,
     // return the cached output and don't re-execute or re-settle.
     let schemaInputs: Record<string, unknown>;
     try {

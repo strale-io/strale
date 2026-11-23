@@ -20,4 +20,10 @@ Session session_01Ms71Zm2azuCd9zTyGYEtHZ, started about 08:00 Swedish time.
 6. Inbox routine: two overdue follow-ups, DataCircle's credit request, the RIK draft.
 7. Overdue weekly rows: `weekly-review`, `weekly-free-callers`, `weekly-listings`.
 
-Next authorised action: verify the x402 payment-dedup claim | Owner: Strale master | Blocker: none
+## Done in this session
+
+- **Item 1, x402 payment key:** confirmed. One signed payment could be spelled several ways and got a new dedup key each time. `hashPaymentHeader` now keys on the signed object the facilitator verifies (EIP-3009 payer and nonce, or the Permit2 owner and nonce on v2; ambiguous payloads keep the old header-text key). Tests: `apps/api/src/lib/x402-payment-identity.test.ts`. Reviewed twice by separate read-only agents: the first sent it back, the second said GO; both rounds' fixes are in this change. Follow-ups the reviews raised, not in this change: payloads of an unexpected shape should be refused after verify rather than keyed on their text, `extractPayerAddress` should read the verified object, and the per-payer limits deserve a measured look. Details stay out of the public repo.
+- **Item 2, weekly-drift:** the four red runs were one source down for a moment each week (a timeout, then a 503), not drift. The upstream-recordings check now retries a timeout, 5xx or 429 once after 20 s and lists a source that is down twice as unavailable without failing the run. Real changes (a different answer, 2xx to 4xx, oversize, expired recording, "fetch failed") still fail. Live run today: 32/32 without drift. Tests: `apps/api/test/record-upstream-retry.test.ts`.
+- Both are in PR #1104 with the comms sync.
+
+Next authorised action: queue item 3, the platform guard for characters the database cannot store | Owner: Strale master | Blocker: none

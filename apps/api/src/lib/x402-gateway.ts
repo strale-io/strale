@@ -685,5 +685,74 @@ export function encodePaymentResponseHeader(settlementId: string): string {
  * "the same payment" means.
  */
 export function hashPaymentHeader(header: string): string {
-  return createHash("sha256").update(header).digest("hex").slice(0, 32);
+  const identity = paymentAuthorizationIdentity(header);
+  const material = identity ? `x402-${identity.kind}:${identity.from}:${identity.nonce}` : header;
+  return createHash("sha256").update(material).digest("hex").slice(0, 32);
 }
+
+export interface PaymentAuthorizationIdentity {
+  /** Which signed object the facilitator verifies for this payload. */
+  kind: "authorization" | "permit2";
+  from: string;
+  nonce: string;
+}
+
+/**
+ * The signed authorization a payment header carries, as the chain sees it.
+ *
+ * The header is base64 of JSON, and neither layer has one spelling: padding,
+ * the URL-safe alphabet, whitespace, key order and JSON spacing all decode to
+ * the same signed authorization. Hashing the header text therefore gave one
+ * payment as many dedup keys as it has spellings.
+ *
+ * The identity must come from the object the facilitator actually checks, or
+ * a header could carry a valid signature of its own next to someone else's
+ * unchecked (payer, nonce) and be handed that payer's key. The exact-scheme
+ * facilitator picks its check by shape: a payload with a
+ * `permit2Authorization` key is verified as Permit2 and its `authorization`
+ * is never read; otherwise `authorization` (EIP-3009) is verified. So:
+ *   - only `authorization`: EIP-3009, spent once per (payer, nonce) on the
+ *     token contract;
+ *   - only `permit2Authorization`, x402 v2: Permit2, spent once per
+ *     (owner, nonce) in the Permit2 contract; the nonce is a uint256 and is
+ *     normalised to decimal;
+ *   - anything else (both keys, an extra key, or Permit2 on v1, where no
+ *     facilitator verifies Permit2): ambiguous, so null.
+ * Null means the caller falls back to the header text, which nobody can
+ * produce without the original header.
+ */
+export function paymentAuthorizationIdentity(header: string): PaymentAuthorizationIdentity | null {
+  try {
+    const parsed = JSON.parse(Buffer.from(header.trim(), "base64").toString("utf-8")) as unknown;
+    if (typeof parsed !== "object" || parsed === null) return null;
+    const inner = (parsed as { payload?: unknown }).payload;
+    if (typeof inner !== "object" || inner === null) return null;
+    // Only the two shapes the x402 clients build, exactly: anything else
+    // (both objects, or a key some future facilitator might verify instead)
+    // keeps the header-text key rather than trusting an unverified field.
+    const keys = Object.keys(inner).sort().join(",");
+    const hasAuthorization = keys === "authorization,signature";
+    const hasPermit2 = keys === "permit2Authorization,signature";
+    if (hasAuthorization) {
+      const auth = (inner as { authorization?: unknown }).authorization as { from?: unknown; nonce?: unknown } | null;
+      const from = auth?.from;
+      const nonce = auth?.nonce;
+      if (typeof from !== "string" || typeof nonce !== "string") return null;
+      if (!EVM_ADDRESS.test(from) || !/^0x[0-9a-fA-F]{64}$/.test(nonce)) return null;
+      return { kind: "authorization", from: from.toLowerCase(), nonce: nonce.toLowerCase() };
+    }
+    if (hasPermit2 && (parsed as { x402Version?: unknown }).x402Version === 2) {
+      const permit = (inner as { permit2Authorization?: unknown }).permit2Authorization as { from?: unknown; nonce?: unknown } | null;
+      const from = permit?.from;
+      const nonce = permit?.nonce;
+      if (typeof from !== "string" || typeof nonce !== "string") return null;
+      if (!EVM_ADDRESS.test(from) || !/^(?:[0-9]{1,78}|0x[0-9a-fA-F]{1,64})$/.test(nonce)) return null;
+      return { kind: "permit2", from: from.toLowerCase(), nonce: BigInt(nonce).toString(10) };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+const EVM_ADDRESS = /^0x[0-9a-fA-F]{40}$/;
