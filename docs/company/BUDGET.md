@@ -4,6 +4,20 @@
 that invoices). Set by Petter 2026-08-15. Compute rides the Claude plan and is
 optimized, not billed here.
 
+## Week of 2026-11-16 → 2026-11-22 (read 2026-11-23)
+
+| line | committed/spent | source of truth | note |
+|---|---|---|---|
+| All external spend, estimated | ~€2.66 | `externalSpend()` via the CEO dashboard, trailing 7 days to 2026-11-23 06:40Z | declared test costs and known fee schedules, not invoices |
+| Vendor overage / new commitments | €0 | vendor tower 2026-11-23 (Serper 48,846/50,000, OpenRegister 450/500, resets 2026-12-07) | no new recurring cost |
+| **Total vs envelope** | **≈ €2.66 / €50** | | comfortable |
+
+Against €190.35 of revenue in the same week that is under 2 cents of external
+spend per euro earned. The estimate does not yet include the upstream cost of
+the week's bulk page-reading and extraction calls beyond what the cost
+instrument records; the per-tool margin table reports most tools' cost share
+as unknown.
+
 ## Week of 2026-11-09 → 2026-11-15 (read 2026-11-16)
 
 | line | committed/spent | source of truth | note |

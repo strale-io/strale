@@ -263,7 +263,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "603e23e78cc18b73f9590ce9c4920b40c3f899463524d41e80d13feff7f4a1f3",
+      "sha256": "63d373b9112d025b166f932146097e865832c2e7a96ef1935f2dcc066ffc4e20",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -512,6 +512,7 @@
         "docs/company/DECISION-QUEUE.md",
         "docs/company/DESIGN-SYSTEM.md",
         "docs/company/GOALS.md",
+        "docs/company/IDEAS.md",
         "docs/company/LESSONS.md",
         "docs/company/RECURRING.yaml",
         "docs/company/claims.schema.json",

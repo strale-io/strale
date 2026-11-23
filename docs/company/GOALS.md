@@ -135,6 +135,16 @@ conversion.
 
 ## What we currently know (update as evidence lands)
 
+- **Read 2026-11-23 — completed week 2026-11-16: the highest week on record, and
+  the first with a real second buyer.** €190.35 from 8 payers (commercial pack;
+  the dashboard's trailing seven days agree at €190.64). The largest payer was
+  €118.78 (62.4%); one registered account was €63.12, almost all of it on two
+  days of bulk work across a dozen tools, after €5.04 the week before; a third
+  account was €8.12 on all seven days. Against M1 this is one week at about 83%
+  of the revenue bar with the top share just above the 60% limit, so M1 is not
+  met and one week is not a trend. Payer count fell from 17 to 8: the long tail
+  of one-call buyers thinned while the top three grew. Detail and second
+  sources: [operating record](../../handoff/_general/from-code/2026-11-23-checkin-morning.md).
 - **Reviewed 2026-11-10 — completed weeks 2026-10-26 and 2026-11-02.**
   The full commercial synthesis and fresh read-only aggregates are retained
   outside this public repository under the founder's financial-data boundary.
