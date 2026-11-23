@@ -12,7 +12,9 @@ const PDF_FIX = "Send this URL to 'pdf-extract' instead, or pass the URL of an H
  * Media types this tool cannot turn into text. A missing or unlisted type is
  * read as before: callers also use this tool on JSON and plain-text endpoints.
  */
-const BINARY_TYPE_RE = /^(?:image|audio|video|font)\/|^application\/(?:zip|gzip|x-tar|x-7z-compressed|x-rar-compressed|msword|vnd\.)/i;
+const BINARY_TYPE_RE = /^(?:image|audio|video|font)\/|^application\/(?:zip|gzip|x-tar|x-7z-compressed|x-rar-compressed|msword|vnd\.(?:ms-|openxmlformats-officedocument\.|oasis\.opendocument\.))/i;
+/** `image/svg+xml`, `application/vnd.api+json` and their kin are text. */
+const TEXT_SUFFIX_RE = /\+(?:json|xml)$/i;
 
 /**
  * More NUL characters than this in a decoded body means it was not text.
@@ -53,7 +55,7 @@ registerCapability("url-to-text", async (input: CapabilityInput) => {
     await discardBody(response, "url-to-text: PDF content type");
     throw inputRefusal(PDF_REFUSAL, "url", PDF_FIX);
   }
-  if (BINARY_TYPE_RE.test(contentType)) {
+  if (BINARY_TYPE_RE.test(contentType) && !TEXT_SUFFIX_RE.test(contentType)) {
     await discardBody(response, "url-to-text: binary content type");
     throw inputRefusal(
       `'url' must be a web page or text document; this URL returns ${contentType.slice(0, 60)}.`,
@@ -101,10 +103,25 @@ registerCapability("url-to-text", async (input: CapabilityInput) => {
   text = text.trim().slice(0, 50000);
 
   return {
-    output: { text, title, meta_description: metaDescription, language, url: fullUrl },
+    output: {
+      text: storable(text),
+      title: storable(title),
+      meta_description: metaDescription === null ? null : storable(metaDescription),
+      language,
+      url: fullUrl,
+    },
     provenance: { source: "http-get", fetched_at: new Date().toISOString() },
   };
 });
+
+/**
+ * Drop what Postgres cannot store in text or jsonb: U+0000 and lone
+ * surrogates. Applied to the finished fields, because entity decoding runs
+ * after the body check and `&#0;` or `&#55357;` would put one back.
+ */
+function storable(s: string): string {
+  return s.replace(/\u0000|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "");
+}
 
 function decodeEntities(s: string): string {
   return s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")

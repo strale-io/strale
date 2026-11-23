@@ -26,6 +26,7 @@ vi.mock("../lib/url-validator.js", async (importOriginal) => ({
 import { getDirectExecutor } from "./index.js";
 import { CapabilityRefusalError, isRefusalMessage } from "../lib/capability-refusal.js";
 import { isUserInputError } from "../lib/circuit-breaker.js";
+import { classifyTransactionFailure } from "../lib/transaction-failure-taxonomy.js";
 import "./url-to-text.js";
 
 const run = (url = "https://example.test/doc") => getDirectExecutor("url-to-text")!({ url });
@@ -95,6 +96,7 @@ describe("url-to-text: a body that is not text is refused, not stored", () => {
       const error = await refusal(run());
       expect(isRefusalMessage(error.message)).toBe(true);
       expect(isUserInputError(error.message)).toBe(true);
+      expect(classifyTransactionFailure(error.message)).toBe("caller_input");
     }
   });
 
@@ -106,6 +108,32 @@ describe("url-to-text: a body that is not text is refused, not stored", () => {
     expect(JSON.stringify(output)).not.toContain("\\u0000");
     expect(output.text).toContain("Hello world");
     expect(output.title).toBe("Title");
+  });
+
+  it("removes a NUL or lone surrogate written as an HTML entity, which is decoded after the body check", async () => {
+    safeFetchMock.mockResolvedValueOnce(
+      respond('<html><title>a&#0;b</title><meta name="description" content="c&#0;d"><body><p>x&#0;y &#55357; z</p></body></html>', "text/html"),
+    );
+    const { output } = (await run()) as { output: { text: string; title: string; meta_description: string } };
+    expect(JSON.stringify(output)).not.toMatch(/\u0000|\ud83d/i);
+    expect(output.title).toBe("ab");
+    expect(output.meta_description).toBe("cd");
+    expect(output.text).toContain("xy");
+  });
+
+  it("keeps a real emoji written as a surrogate pair", async () => {
+    safeFetchMock.mockResolvedValueOnce(respond("<html><body><p>ok \u{1F600}</p></body></html>", "text/html"));
+    expect(((await run()) as { output: { text: string } }).output.text).toContain("\u{1F600}");
+  });
+
+  it.each([
+    ["application/vnd.api+json"],
+    ["application/vnd.github+json"],
+    ["application/vnd.atom+xml"],
+    ["image/svg+xml"],
+  ])("still reads %s, which is text", async (contentType) => {
+    safeFetchMock.mockResolvedValueOnce(respond('{"data":"readable"}', contentType));
+    expect(((await run()) as { output: { text: string } }).output.text).toContain("readable");
   });
 
   it("still reads plain text and JSON served as octet-stream or without a type", async () => {
