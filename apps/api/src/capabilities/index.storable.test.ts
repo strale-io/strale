@@ -66,4 +66,12 @@ describe("getExecutor removes characters the database cannot store", () => {
     });
     await expect(getExecutor("test-frozen-error")!({})).rejects.toBe(thrown);
   });
+
+  it("rethrows an error whose message getter throws, unchanged", async () => {
+    const thrown = new Proxy({}, { get() { throw new Error("getter"); } });
+    registerCapability("test-throwing-getter-error", async () => {
+      throw thrown;
+    });
+    await expect(getExecutor("test-throwing-getter-error")!({})).rejects.toBe(thrown);
+  });
 });

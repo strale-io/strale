@@ -12,3 +12,11 @@ describe("sanitizeFailureReason shortening", () => {
     expect(toStorableJson(out).removed).toBe(0);
   });
 });
+
+describe("stepFailure shortening", () => {
+  it("does not split an emoji at the 200-character cut", async () => {
+    const { stepFailure } = await import("./solution-step-failure.js");
+    const failure = stepFailure("some-tool", new Error("x".repeat(199) + "\u{1F600}"));
+    expect(toStorableJson(failure).removed).toBe(0);
+  });
+});

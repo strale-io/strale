@@ -99,7 +99,13 @@ function storableError(slug: string, err: unknown): unknown {
   // Errors, and plain thrown objects whose message callers read (dispatch
   // reads `.message` off non-Error throws too).
   if (typeof err !== "object" || err === null) return err;
-  const message = (err as { message?: unknown }).message;
+  let message: unknown;
+  try {
+    message = (err as { message?: unknown }).message;
+  } catch {
+    // degraded-ok: a message getter that throws (a Proxy, say) leaves the original error to be rethrown unchanged, as before this cleaning existed.
+    return err;
+  }
   if (typeof message !== "string") return err;
   const cleaned = toStorableJson(message);
   if (cleaned.removed === 0) return err;

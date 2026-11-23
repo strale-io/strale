@@ -2,6 +2,7 @@ import { getDb } from "../db/index.js";
 import { x402OrphanSettlements } from "../db/schema.js";
 import { logError } from "./log.js";
 import { inputForPersistence } from "./never-persist-inputs.js";
+import { sliceStorable } from "./storable-json.js";
 
 /** Preserve a paid result when its terminal record cannot be written. */
 export async function captureX402RecordingFailure<T extends {
@@ -32,7 +33,7 @@ export async function captureX402RecordingFailure<T extends {
         // `args` carries the caller's inputs; a never-persisted field
         // (lib/never-persist-inputs.ts) is masked here like everywhere else.
         rawArgs: { ...args, inputs: inputForPersistence(args.slug, args.inputs) } as unknown as Record<string, unknown>,
-        failureReason: err instanceof Error ? err.message.slice(0, 500) : String(err).slice(0, 500),
+        failureReason: sliceStorable(err instanceof Error ? err.message : String(err), 500),
       });
       logError("x402-orphan-settlement-recorded", new Error(
         `Settlement ${args.settlementId} captured in x402_orphan_settlements for manual reconciliation`,
