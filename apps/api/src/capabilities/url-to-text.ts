@@ -6,7 +6,6 @@ import { inputRefusal } from "../lib/capability-refusal.js";
 
 const PDF_REFUSAL =
   "'url' must be a web page or text document, not a PDF file. Use 'pdf-extract' to read a PDF.";
-const PDF_FIX = "Send this URL to 'pdf-extract' instead, or pass the URL of an HTML page.";
 
 /**
  * Media types this tool cannot turn into text. A missing or unlisted type is
@@ -22,7 +21,6 @@ const TEXT_SUFFIX_RE = /\+(?:json|xml)$/i;
  * it for plain-text downloads too; the body decides.
  */
 const MAX_STRAY_NULS = 16;
-const BINARY_FIX = "Pass the URL of an HTML page or a plain-text document.";
 
 // Lightweight text extraction — HTTP GET only, no Browserless
 registerCapability("url-to-text", async (input: CapabilityInput) => {
@@ -53,19 +51,19 @@ registerCapability("url-to-text", async (input: CapabilityInput) => {
   const contentType = (response.headers.get("content-type") ?? "").split(";")[0].trim();
   if (/^application\/(?:x-)?pdf$/i.test(contentType)) {
     await discardBody(response, "url-to-text: PDF content type");
-    throw inputRefusal(PDF_REFUSAL, "url", PDF_FIX);
+    throw inputRefusal(PDF_REFUSAL, "url", "Send 'url' as the address of a web page or text document, or send this address to the pdf-extract tool instead.");
   }
   if (BINARY_TYPE_RE.test(contentType) && !TEXT_SUFFIX_RE.test(contentType)) {
     await discardBody(response, "url-to-text: binary content type");
     throw inputRefusal(
       `'url' must be a web page or text document; this URL returns ${contentType.slice(0, 60)}.`,
       "url",
-      BINARY_FIX,
+      "Send 'url' as the address of a web page or plain-text document.",
     );
   }
   const raw = await readPageHtml(response);
   // Servers also send PDFs as text/plain, octet-stream or with no type at all.
-  if (raw.startsWith("%PDF-")) throw inputRefusal(PDF_REFUSAL, "url", PDF_FIX);
+  if (raw.startsWith("%PDF-")) throw inputRefusal(PDF_REFUSAL, "url", "Send 'url' as the address of a web page or text document, or send this address to the pdf-extract tool instead.");
   // U+0000 is valid in a JS string and not storable in a Postgres text or
   // jsonb value: one NUL in the output fails the write for the whole call.
   const withoutNuls = raw.replaceAll("\u0000", "");
@@ -73,7 +71,7 @@ registerCapability("url-to-text", async (input: CapabilityInput) => {
     throw inputRefusal(
       "'url' must be a web page or text document; this URL returns binary data.",
       "url",
-      BINARY_FIX,
+      "Send 'url' as the address of a web page or plain-text document.",
     );
   }
   const html = withoutNuls;
