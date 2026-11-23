@@ -251,8 +251,8 @@ export function hookCheckoutRoot(self = SELF) {
   const root = path.basename(up) === ".claude" ? path.dirname(up) : up;
   return existsSync(path.join(root, ".git")) ? root : null;
 }
-// Compared after realpath: the hook's own path is the real one (node resolves the main module), while a payload cwd or
-// CLAUDE_PROJECT_DIR may go through a symlink or, on Windows, an 8.3 short name (RUNNER~1).
+// Compared after realpath on both sides: node resolves the hook's own path through symbolic links but keeps a Windows 8.3
+// short name (RUNNER~1), and a payload cwd or CLAUDE_PROJECT_DIR may carry either.
 const realDir = (value) => { try { return normDir(realpathSync.native(value)); } catch { return normDir(value); } };
 const sameDir = (a, b) => Boolean(a && b) && realDir(a) === realDir(b);
 // The primary checkouts directly under `parent` that carry a consumer's synced wow-core hook (.claude/scripts/wow-hook.mjs
@@ -917,8 +917,11 @@ export function findGitCommits(command) {
 
 // Every literal `cd <target>` or `pushd <target>` in `text`, wherever it appears (a heredoc line, a quote, a group, `eval`,
 // `sh -c`, `builtin cd`, `\cd` all count): an extra candidate directory can only add a block, never remove one. Targets the
-// hook cannot resolve (`cd` with no argument, `cd -`, `~`, `$`, a backtick, a backslash, a glob) are skipped; the payload
-// cwd is always a candidate anyway.
+// hook cannot resolve (`cd` with no argument, `cd -`, `~`, `$`, a backtick, a glob) are skipped; the payload cwd is always a
+// candidate anyway. A backslash is read as written, as bash does inside quotes and PowerShell everywhere: a Windows path
+// (`cd "C:\repo" && git commit`, Git Bash or PowerShell) is followed. Until 2026-11 such a target was skipped, so on Windows
+// the commit was checked against the cwd only (the Windows CI run of 18 Nov 2026); an unquoted bash `\x` escape is not undone,
+// and the literal reading runs as an extra pass, so it only adds candidates (see the end of probe).
 // Two readings, probed as two separate runs and the directories of both kept (one command runs in one shell, so the readings never
 // mix, and the union holds every directory the shell reading alone gives): the shell's, unchanged since #365 (blanks are a space or a
 // tab; a target ends at any \s character, so a U+0085 (NEL) stays inside it as in bash, while an NBSP ends it, which bash does not),
@@ -935,6 +938,8 @@ const MOVE_FLAG_PS = /(?:^|[\s\x85])-C(?:[\s\x85]+|=)(?:"([^"]+)"|'([^']+)'|([^\
 const readingsDiffer = (text) => /[^\S \t\r\n]|\x85/.test(text)
   || /(?<![\w./-])(?:chdir|sl|Set-Location|Push-Location)(?![\w-])/i.test(text)
   || [...text.matchAll(/(?<![\w./-])(?:cd|pushd)(?![\w-])/gi)].some((found) => found[0] !== found[0].toLowerCase());
+const SKIP = /[$*?[]/; // cd targets the hook cannot resolve: a variable or a glob
+const SKIP_WITH_BACKSLASH = /[$\\*?[]/; // the same, plus any backslash (the reading before 2026-11, kept as its own run)
 const EXACT_CANDIDATES = 512; // every combination of succeeding and failing cds, up to this many directories (as before)
 const MAX_DIRS = 8192; // directories one command may ask the guard to look up; past it the guard refuses (fail closed)
 const MAX_COMMITS = 100; // more git commits than this in one command: refused (fail closed), never probed partially
@@ -978,12 +983,12 @@ function probe(command, cwd, check = () => {}) {
   const start = path.resolve(cwd);
   const dirs = new Set();
   // One reading: its cds and its -C moves, every combination within EXACT_CANDIDATES, then the chains. False past a limit.
-  const run = (cdPattern, movePattern) => {
+  const run = (cdPattern, movePattern, unresolvable) => {
     const cds = [];
     for (const found of text.matchAll(cdPattern)) {
       if (found.index >= lastCommit) break;
       const target = found[1] ?? found[2] ?? found[3];
-      if (!target || target === "-" || target.startsWith("~") || /[$\\*?[]/.test(target)) continue;
+      if (!target || target === "-" || target.startsWith("~") || unresolvable.test(target)) continue;
       cds.push({ at: found.index, target });
     }
     if (cds.length > MAX_CDS) return false;
@@ -1018,8 +1023,16 @@ function probe(command, cwd, check = () => {}) {
     }
     return true;
   };
-  if (!run(CD_TARGET, MOVE_FLAG)) return OVER;
-  if (readingsDiffer(text) && !run(CD_TARGET_PS, MOVE_FLAG_PS)) return OVER;
+  // Each reading runs once skipping backslash targets (the pre-2026-11 set, unchanged) and, when the text holds a backslash,
+  // once more following them: a followed target counts toward EXACT_CANDIDATES and could otherwise push a directory the
+  // first run finds out of the exact set (review of the Windows fix, 2026-11-21). The union is a superset of the old set.
+  const backslash = text.includes("\\");
+  if (!run(CD_TARGET, MOVE_FLAG, SKIP_WITH_BACKSLASH)) return OVER;
+  if (backslash && !run(CD_TARGET, MOVE_FLAG, SKIP)) return OVER;
+  if (readingsDiffer(text)) {
+    if (!run(CD_TARGET_PS, MOVE_FLAG_PS, SKIP_WITH_BACKSLASH)) return OVER;
+    if (backslash && !run(CD_TARGET_PS, MOVE_FLAG_PS, SKIP)) return OVER;
+  }
   return { dirs: [...dirs], overflow: false };
 }
 
@@ -2951,9 +2964,131 @@ function fleetForReads(env = process.env) {
 // Codex sends its shell payload without a tool_name: a payload with no name and a string command is its Bash.
 const ROUTED_TOOL = (name, input) => name === "Bash" || ((name === undefined || name === null) && typeof input?.command === "string")
   || name === ADD_REPO_TOOL || isCreateSession(name) || isSetSessionTitle(name) || isConfirmTrust(name);
+
+// A heredoc's body is text, not commands: a master writes PR bodies, commit messages and `To orchestrator:` comments
+// that way, and their lines often name `pnpm verify` (review of #422). Same reading as withoutHeredocBodies in
+// hooks/guard-bash-policy.mjs; copied, because that policy is loaded per install and this rule must not depend on it.
+function suiteWithoutHeredocBodies(command) {
+  let delimiter = null;
+  return command.split(/(\r?\n)/).map((part) => {
+    if (/^\r?\n$/.test(part)) return delimiter ? "" : part;
+    if (delimiter) { if (part.trim() === delimiter) delimiter = null; return ""; }
+    // `<<<` is a here-string, not a heredoc: it opens no body (delta review of #422).
+    const match = /(?<!<)<<(?!<)-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1/.exec(part);
+    if (match) delimiter = match[2];
+    return part;
+  }).join("");
+}
+
+// Split only at shell operators outside quotes, then return dequoted words. This is deliberately a small recognizer,
+// not a shell parser: it identifies commands the tripwire names without treating words inside `echo "..."` as commands.
+function suiteSegments(command) {
+  const source = suiteWithoutHeredocBodies(String(command ?? ""));
+  const segments = [];
+  let words = [], word = [], quote = null, escaped = false;
+  const pushWord = () => { if (word.length) words.push(word.join("")); word = []; };
+  const pushSegment = () => { pushWord(); if (words.length) segments.push(words); words = []; };
+  for (let i = 0; i < source.length; i++) {
+    const ch = source[i];
+    if (escaped) { word.push(ch); escaped = false; continue; }
+    if (ch === "\\" && quote !== "'") { escaped = true; continue; }
+    if (quote) { if (ch === quote) quote = null; else word.push(ch); continue; }
+    if (ch === "'" || ch === '"') { quote = ch; continue; }
+    if (ch === "\n" || ch === ";" || ch === "|" || (ch === "&" && source[i + 1] === "&")) {
+      pushSegment();
+      if ((ch === "|" && source[i + 1] === "|") || (ch === "&" && source[i + 1] === "&")) i++;
+      continue;
+    }
+    if (/\s/.test(ch)) pushWord(); else word.push(ch);
+  }
+  pushSegment();
+  return segments;
+}
+
+const TEST_FILE = /\.(?:test\.(?:ts|tsx|js|mjs)|spec\.(?:ts|js))$/i;
+// Cheap questions to a runner, not runs (review of #422).
+const SUITE_QUESTION = /^(?:--help|--version|--listTests)$/;
+const SUITE_ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=(.*)$/s;
+function suiteForm(rawWords) {
+  const words = [...rawWords];
+  let i = 0, override = null;
+  const takeAssignments = () => {
+    while (i < words.length && SUITE_ASSIGNMENT.test(words[i])) {
+      const match = words[i].match(SUITE_ASSIGNMENT);
+      if (words[i].startsWith("WOW_MASTER_SUITE_REASON=")) override = match[1];
+      i++;
+    }
+  };
+  takeAssignments();
+  while (["env", "time", "nice"].includes(words[i])) { i++; takeAssignments(); }
+  if (words[i] === "timeout") { i++; if (i < words.length) i++; takeAssignments(); }
+  const command = words[i];
+  if (!command) return null;
+  const rest = words.slice(i + 1);
+  let form = null;
+  if (rest.some((arg) => /(?:^|[/\\])ci-local\.sh$/i.test(arg))) form = "ci-local.sh";
+  if (rest.some((arg) => /(?:^|[/\\])(?:\.claude[/\\])?templates[/\\]test-stack[/\\]verify\.mjs$/i.test(arg))) form = "test-stack verify.mjs";
+  if (/(?:^|[/\\])ci-local\.sh$/i.test(command)) form = "ci-local.sh";
+  if (/(?:^|[/\\])(?:\.claude[/\\])?templates[/\\]test-stack[/\\]verify\.mjs$/i.test(command)) form = "test-stack verify.mjs";
+
+  const direct = (() => {
+    if (["vitest", "jest"].includes(command)) return { name: command, args: rest };
+    if (command === "playwright" && rest[0] === "test") return { name: "playwright test", args: rest.slice(1) };
+    if (["npx", "bunx"].includes(command)) return rest[0] === "playwright" && rest[1] === "test"
+      ? { name: "playwright test", args: rest.slice(2) } : ["vitest", "jest"].includes(rest[0]) ? { name: rest[0], args: rest.slice(1) } : null;
+    if (["pnpm", "yarn"].includes(command) && ["exec", "dlx"].includes(rest[0])) return rest[1] === "playwright" && rest[2] === "test"
+      ? { name: "playwright test", args: rest.slice(3) } : ["vitest", "jest"].includes(rest[1]) ? { name: rest[1], args: rest.slice(2) } : null;
+    if (["yarn", "bun"].includes(command)) return rest[0] === "playwright" && rest[1] === "test"
+      ? { name: "playwright test", args: rest.slice(2) } : ["vitest", "jest"].includes(rest[0]) ? { name: rest[0], args: rest.slice(1) } : null;
+    return null;
+  })();
+  if (direct && !(["vitest", "jest"].includes(direct.name) && direct.args.some((arg) => TEST_FILE.test(arg)))) form = direct.name;
+
+  if (["pnpm", "npm", "yarn", "bun"].includes(command)) {
+    let p = 0;
+    const valued = new Set(["--filter", "-F", "-C", "--dir", "--prefix", "--workspace"]);
+    while (p < rest.length && rest[p].startsWith("-")) { const flag = rest[p++]; if (valued.has(flag)) p++; }
+    if (rest[p] === "run") p++;
+    const script = rest[p];
+    const scriptArgs = rest.slice(p + 1);
+    const named = script && (script === "verify" || script === "check" || script === "ci:local" || script === "test" || /^test[:-]/.test(script));
+    // A test script given test file paths runs those files only, with or without `--` (pnpm passes both on).
+    const isTest = script === "test" || /^test[:-]/.test(script ?? "");
+    const oneFile = isTest && scriptArgs.some((arg) => TEST_FILE.test(arg));
+    if (named && !oneFile) form = `${command} ${script}`;
+  }
+  if (form && rest.some((arg) => SUITE_QUESTION.test(arg))) return null;
+  return form ? { form, override } : null;
+}
+
+export function masterSuiteDenial({ command, depth, env = {} }) {
+  if (env.CLAUDE_CODE_REMOTE !== "true" || depth !== 0) return null;
+  for (const segment of suiteSegments(command)) {
+    const match = suiteForm(segment);
+    if (!match) continue;
+    if (match.override !== null && match.override.length >= 12) continue;
+    const short = match.override !== null ? " The WOW_MASTER_SUITE_REASON value is too short; it must be at least 12 characters." : "";
+    return `wow-core: ${match.form} is a whole-suite command, and a master runs no suites in its own container (PACE_CORE §2a, "Check runners"). Give the run to the lane that owns the PR, or start a check-runner session for it (CHECK_RUNNER_BRIEF.md); it posts the pnpm verify receipt on the PR, and the label guard reads that posted receipt.${short} To override this tripwire, put WOW_MASTER_SUITE_REASON=<at least 12 characters> in the segment's leading assignments.`;
+  }
+  return null;
+}
+
+function masterSuiteGuard(payload, env, tool) {
+  if (tool !== "claude" || payload?.tool_name !== "Bash" || env?.CLAUDE_CODE_REMOTE !== "true") return null;
+  try {
+    // Match first and read the depth only on a hit: a compacted transcript is scanned whole (up to 512 MB), and this
+    // runs before the shell policy, inside the watchdog's deadline for push and merge commands (review of #422).
+    const command = payload?.tool_input?.command;
+    if (!masterSuiteDenial({ command, depth: 0, env })) return null;
+    return masterSuiteDenial({ command, depth: readSpawnDepth(payload?.transcript_path).depth, env });
+  } catch {
+    // Fail open: this is a habit tripwire, and an odd or unreadable transcript must never block a lane.
+    return null;
+  }
+}
 // How far this call's pre-tool-use got: run()'s watchdog and catch read it (one call per process).
 const STAGE = { shellPolicyDecided: false };
-async function preToolUse(root, payload, cwd, workDir = cwd, stops = {}, tool = "claude") {
+async function preToolUse(root, payload, cwd, workDir = cwd, stops = {}, tool = "claude", env = process.env) {
   // The settings route every tool here ("*") for the old-account fence; everything else below is per tool.
   const fence = await fenceCheck({ toolName: payload?.tool_name, transcriptPath: payload?.transcript_path, cwd: workDir });
   // A refused mail or token call ran nothing: the mail guard does not count its tool_use (recordRefusedCall).
@@ -2992,6 +3127,8 @@ async function preToolUse(root, payload, cwd, workDir = cwd, stops = {}, tool = 
   if (leaseAccount) return `${JSON.stringify(denyResponse(leaseAccount))}\n`;
   const authorityWrite = await leaseAuthorityGuard({ command, cwd: workDir });
   if (authorityWrite) return `${JSON.stringify(denyResponse(authorityWrite))}\n`;
+  const suiteReason = masterSuiteGuard(payload, env, tool);
+  if (suiteReason) return `${JSON.stringify(denyResponse(suiteReason))}\n`;
   if (root) touchMarker(root, payload.session_id);
   // The shell policy carries the merge and send stops. It is taken from this hook's own install first (the checkout that
   // holds this script), then from the cwd's repository: a repository the shell has moved into can neither swap in its own
@@ -3071,7 +3208,7 @@ export async function dispatch(mode, raw, tool, { viaParent = false, env = proce
   // turns all start in the parent still follows the checkout's settings (ownership limits that write to this checkout's file).
   const seeding = !viaParent && sameDir(found, own) && sameDir(env.CLAUDE_PROJECT_DIR, own);
   if (tool === "claude" && (mode === "pre-tool-use" || mode === "session-start") && (seeding || viaParent)) ensureParentHooks({ root: own, env, create: seeding });
-  if (mode === "pre-tool-use") return preToolUse(root, payload, cwd, workDir, { own, repoRoot, parentTurn: viaParent || fromParent }, tool);
+  if (mode === "pre-tool-use") return preToolUse(root, payload, cwd, workDir, { own, repoRoot, parentTurn: viaParent || fromParent }, tool, env);
   if (!root) return "";
   switch (mode) {
     case "post-tool-use":
