@@ -97,6 +97,13 @@ limitations:
       route.
     category: coverage
     severity: info
+  - title: PDFs and binary files are refused
+    text: >-
+      A URL that returns a PDF, under any content type, or another binary file is refused with a
+      caller_input error naming the input field. The call is not charged.
+    category: coverage
+    severity: info
+    workaround: Use pdf-extract to read a PDF
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

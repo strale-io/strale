@@ -70,11 +70,42 @@ export function getExecutor(slug: string): CapabilityExecutor | undefined {
   return async (input) => {
     if (!access || (access.acquisition_method !== "computed" &&
       !(access.acquisition_method === "vendor_api" && ["serper", "dilisense", "esortcode", "browserless", "openregister"].includes(access.upstream_vendor ?? "")))) noteUnknownCost(`unmetered_upstream:${slug}`);
-    const result = storable(slug, await withAcquisitionMethod(access?.acquisition_method, () => llmSlugs.has(slug) ? withExpectedLlmUsage(() => base(input)) : base(input)));
+    let raw: CapabilityResult;
+    try {
+      raw = await withAcquisitionMethod(access?.acquisition_method, () => llmSlugs.has(slug) ? withExpectedLlmUsage(() => base(input)) : base(input));
+    } catch (err) {
+      throw storableError(slug, err);
+    }
+    const result = storable(slug, raw);
     if (!access) return result;
     if (!result || typeof result.provenance !== "object" || result.provenance === null) return result;
     return { ...result, provenance: stampDataAccess(result.provenance, access) };
   };
+}
+
+/**
+ * A failed call records its error message (the transaction row, the audit
+ * trail, a solution's step list), so a message carrying U+0000 or an unpaired
+ * surrogate fails that write the same way an output does. The error is cleaned
+ * in place and rethrown, so its class and any fields callers read from it
+ * (refusal details, error codes) are unchanged.
+ */
+function storableError(slug: string, err: unknown): unknown {
+  if (typeof err === "string") {
+    const cleaned = toStorableJson(err);
+    if (cleaned.removed > 0) logWarn("capability-error-unstorable-chars-removed", "removed characters the database cannot store from a tool error", { slug, removed: cleaned.removed });
+    return cleaned.value;
+  }
+  if (!(err instanceof Error)) return err;
+  const cleaned = toStorableJson(err.message);
+  if (cleaned.removed === 0) return err;
+  try {
+    err.message = cleaned.value;
+  } catch {
+    return err;
+  }
+  logWarn("capability-error-unstorable-chars-removed", "removed characters the database cannot store from a tool error", { slug, removed: cleaned.removed });
+  return err;
 }
 
 /**
