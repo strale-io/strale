@@ -6,6 +6,8 @@ import { noteUnknownCost, withExpectedLlmUsage } from "../lib/call-cost.js";
 
 import { getChain, executeWithFallback } from "../lib/data-provider.js";
 import { getDataAccess, stampDataAccess, withAcquisitionMethod } from "../lib/data-access.js";
+import { toStorableJson } from "../lib/storable-json.js";
+import { logWarn } from "../lib/log.js";
 
 export interface CapabilityInput {
   [key: string]: unknown;
@@ -68,11 +70,30 @@ export function getExecutor(slug: string): CapabilityExecutor | undefined {
   return async (input) => {
     if (!access || (access.acquisition_method !== "computed" &&
       !(access.acquisition_method === "vendor_api" && ["serper", "dilisense", "esortcode", "browserless", "openregister"].includes(access.upstream_vendor ?? "")))) noteUnknownCost(`unmetered_upstream:${slug}`);
-    const result = await withAcquisitionMethod(access?.acquisition_method, () => llmSlugs.has(slug) ? withExpectedLlmUsage(() => base(input)) : base(input));
+    const result = storable(slug, await withAcquisitionMethod(access?.acquisition_method, () => llmSlugs.has(slug) ? withExpectedLlmUsage(() => base(input)) : base(input)));
     if (!access) return result;
     if (!result || typeof result.provenance !== "object" || result.provenance === null) return result;
     return { ...result, provenance: stampDataAccess(result.provenance, access) };
   };
+}
+
+/**
+ * Every tool's result passes here on its way to being recorded, so this is
+ * where characters the database cannot store (U+0000, unpaired surrogates)
+ * are removed. Without it one such character in any output fails the write
+ * that records the finished call (url-to-text on PDFs, 2026-11-19). Each
+ * removal is logged with the slug so the tool can be fixed at its source.
+ */
+function storable(slug: string, result: CapabilityResult): CapabilityResult {
+  if (!result || typeof result !== "object") return result;
+  const output = toStorableJson(result.output);
+  const provenance = toStorableJson(result.provenance);
+  const removed = output.removed + provenance.removed;
+  if (removed === 0) return result;
+  logWarn("capability-output-unstorable-chars-removed", "removed characters the database cannot store from a tool result", { slug, removed });
+  // Recorded with the result, so the audit trail never presents altered text
+  // as exactly what the source returned.
+  return { ...result, output: output.value, provenance: { ...provenance.value, unstorable_chars_removed: removed } };
 }
 
 /**

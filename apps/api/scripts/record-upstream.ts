@@ -50,7 +50,7 @@ import {
 } from "../src/test-helpers/upstream-replay.js";
 import { judgeKnownAnswer, loadExecutor, loadManifest } from "../src/test-helpers/known-answer-contract.js";
 import { findProhibitedTarget } from "../src/lib/tos-blocklist.js";
-import { retryTimeoutOnce, type CheckAttempt } from "./record-upstream-retry.js";
+import { isTransientRun, retryTransientOnce, type CheckAttempt } from "./record-upstream-retry.js";
 
 const FREE_COST_CLASSES = new Set(["free_unlimited", "free_quota"]);
 
@@ -216,13 +216,13 @@ function judgeLiveRun(recording: UpstreamRecording, run: LiveRun, days: number):
   const drift = run.failures.map((failure) => `live contract: ${failure}`);
   for (const key of run.oversize) drift.push(`response now over ${MAX_RECORDED_BODY_BYTES} bytes: ${key}`);
   const live = new Map(run.exchanges.map((exchange) => [requestKey(exchange.request), exchange.response.status]));
-  let statusChanged = false;
+  const changedToStatuses: number[] = [];
   for (const { request, response } of recording.exchanges) {
     const key = requestKey(request);
     const status = live.get(key);
     if (status === undefined) drift.push(`no longer requested: ${key}`);
     else if (status !== response.status) {
-      statusChanged = true;
+      changedToStatuses.push(status);
       drift.push(`status ${response.status} -> ${status}: ${key}`);
     }
   }
@@ -231,23 +231,36 @@ function judgeLiveRun(recording: UpstreamRecording, run: LiveRun, days: number):
   return {
     drift: drift.map((line) => `${line} (recorded ${days} days ago)`),
     executorError: run.failures.length === 1 ? run.executorError : undefined,
-    hasNonTimeoutFailure: run.failures.length !== 1
-      || run.oversize.length > 0
-      || statusChanged
-      || recordingExpired,
+    transient: isTransientRun({
+      failureCount: run.failures.length,
+      executorError: run.executorError,
+      oversizeCount: run.oversize.length,
+      liveStatuses: run.exchanges.map((exchange) => exchange.response.status),
+      changedToStatuses,
+      recordingExpired,
+    }),
   };
 }
 
-async function checkOne(slug: string): Promise<{ problems: string[]; passedOnTimeoutRetry: boolean }> {
+interface CheckOutcome { problems: string[]; passedOnRetry: boolean; unavailable: boolean }
+
+async function checkOne(slug: string): Promise<CheckOutcome> {
   const path = recordingPath(slug);
-  if (!existsSync(path)) return { problems: ["no recording"], passedOnTimeoutRetry: false };
+  if (!existsSync(path)) return { problems: ["no recording"], passedOnRetry: false, unavailable: false };
   const recording = JSON.parse(readFileSync(path, "utf8")) as UpstreamRecording;
   const refused = await notFree(slug);
-  if (refused) return { problems: [refused], passedOnTimeoutRetry: false };
+  if (refused) return { problems: [refused], passedOnRetry: false, unavailable: false };
   const days = Math.round((Date.now() - Date.parse(recording.recorded_at)) / 86_400_000);
-  const result = await retryTimeoutOnce(async () => judgeLiveRun(recording, await runLive(slug), days));
-  return { problems: result.drift, passedOnTimeoutRetry: result.retried && result.drift.length === 0 };
+  const result = await retryTransientOnce(async () => judgeLiveRun(recording, await runLive(slug), days));
+  return {
+    problems: result.drift,
+    passedOnRetry: result.retried && result.drift.length === 0,
+    unavailable: result.unavailable,
+  };
 }
+
+/** Child exit code for "the upstream was unavailable twice": reported, not counted as drift. */
+const EXIT_UPSTREAM_UNAVAILABLE = 4;
 
 async function main(): Promise<number> {
   const check = process.argv.includes("--check");
@@ -258,10 +271,14 @@ async function main(): Promise<number> {
     process.exitCode = 3;
     const checked = check ? await checkOne(child) : undefined;
     const problems = checked?.problems ?? await captureOne(child);
+    if (checked?.unavailable) {
+      for (const p of problems) console.log(`  ${child}: upstream unavailable, not drift: ${p}`);
+      return EXIT_UPSTREAM_UNAVAILABLE;
+    }
     for (const p of problems) console.log(`  ${child}: ${p}`);
     if (!problems.length) {
-      const outcome = checked?.passedOnTimeoutRetry
-        ? "no drift (passed on retry after a timeout)"
+      const outcome = checked?.passedOnRetry
+        ? "no drift (passed on retry after the upstream was briefly unavailable)"
         : check ? "no drift" : `recorded ${recordingPath(child)}`;
       console.log(`  ${child}: ${outcome}`);
     }
@@ -275,14 +292,17 @@ async function main(): Promise<number> {
     return 2;
   }
   let failed = 0;
+  let unavailable = 0;
   for (const slug of slugs) {
     const run = spawnSync(process.execPath, [...process.execArgv, fileURLToPath(import.meta.url), "--child", slug, ...(check ? ["--check"] : [])], {
       stdio: "inherit",
       timeout: 120_000,
     });
-    if (run.status !== 0) failed++;
+    if (check && run.status === EXIT_UPSTREAM_UNAVAILABLE) unavailable++;
+    else if (run.status !== 0) failed++;
   }
-  console.log(`${slugs.length - failed}/${slugs.length} ${check ? "without drift" : "recorded"}`);
+  const unavailableNote = unavailable ? ` (${unavailable} upstream unavailable twice, not counted as drift)` : "";
+  console.log(`${slugs.length - failed}/${slugs.length} ${check ? "without drift" : "recorded"}${unavailableNote}`);
   if (!check && failed < slugs.length) console.log("Next: npx vitest run src/capabilities/upstream-replay-contract.test.ts");
   return failed ? 1 : 0;
 }

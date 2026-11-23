@@ -24,10 +24,10 @@ from his own global-context notes, founder 2026-11-11.
 - **Speed.** Build and move as fast as possible. Each project finds its bottlenecks and either
   removes them or tells him what to do about them, before he asks (founder 2026-11-11).
 - **Claude Code is the architect and orchestrator:** plans, writes briefs, reviews, verifies.
-  **Codex does the clearly specified, checkable work**, building above all, to save Claude usage,
-  and Claude verifies it (`MODEL_ROUTING.md` "Codex builders").
-- **Each project has a master that runs lanes in parallel**, and lanes delegate their building to
-  Codex too, through the fleet's Codex dispatcher.
+  **Outside models are easy to use** (founder 2026-11-22): each session picks the model that fits the job,
+  Codex or Claude for building, and Claude verifies it (`MODEL_ROUTING.md` "Codex builders").
+- **Each project has a master that runs lanes in parallel.** Any session may ask the fleet's model desk (the
+  session titled "Codex dispatcher") for a Codex build, a review or an answer (`MODEL_ROUTING.md` "Codex dispatch").
 - **Work runs in the cloud**, so it continues while his laptop is closed. Work only his PC can do goes
   to the PC desk as a PC job (wow-core `docs/fleet-roster.md` "PC desk").
 - **Sessions talk to each other** (`COMMS_CORE.md`) to stay in step and answer each other's
@@ -41,8 +41,9 @@ from his own global-context notes, founder 2026-11-11.
 
 ## His budget
 
-- **Three Claude Code accounts, all Ultra, and one Codex Pro account** (one ChatGPT sign-in), held in
-  the cloud only by the fleet's Codex dispatcher (founder 2026-11-11).
+- **Three Claude Code accounts, all Ultra, one Codex Pro account** (one ChatGPT sign-in) **and Google AI Ultra**
+  (founder 2026-11-22). In the cloud only the fleet's model desk holds the outside-model logins (Codex, and
+  Google's models once added; founder 2026-11-11, 2026-11-22).
 - **He paces the accounts; no session does.** He sometimes has resets to use, so no session slows,
   holds back or rations work on its own judgment of the allowance (founder 2026-11-11; pace rules
   in `PACE_CORE.md`). His plan today: each Claude account lasts about 2 to 2.5 days, so together they
@@ -97,7 +98,8 @@ from his own global-context notes, founder 2026-11-11.
 - Ask only what is really his (`PACE_CORE.md` §5 "ASK LAST", in wow-core): his **five hard stops** and
   what they imply (founder 2026-11-06; list in wow-core `AGENTS.md` "Execution and close"): never send, post
   or invite; never pay, accept terms or create accounts; never delete production data or publish without
-  his yes; Codex gets no keys, mail or customer data; merges only through `merge-gate`. So: spending,
+  his yes; no key in any prompt; customer data, production data and mail only where the provider's terms fit (every provider, Claude
+  included); merges only through `merge-gate`. So: spending,
   accounts and payments, legal acceptance, external communication, deleting production data, publishing,
   irreversible provider changes, and real product or strategy choices. Reversible production changes
   (environment and Railway variables, redeploy and rollback, DNS records, domain settings) are the
@@ -105,10 +107,9 @@ from his own global-context notes, founder 2026-11-11.
   made needs no ask either (`SECURITY_CORE.md` §1a).
 - **Never ask him to review or choose a technical option.** He cannot judge it better than a model, and
   stopping work to ask him is not worth the time (founder 2026-11-11). Decide it. Escalate the important
-  technical questions to a more capable model (`MODEL_ROUTING.md`). A request to Codex carries no
-  secrets, sign-in material, customer data or production data. The one route for a second opinion
-  between Claude and Codex, on the PC or in the cloud, is `MODEL_ROUTING.md` "A second opinion"; it is
-  additive. Use an independent review in a separate context where the tier needs one, and tell him what was decided.
+  technical questions to a more capable model (`MODEL_ROUTING.md`). A request to any model keeps hard stop 4
+  (`SECURITY_CORE.md` §1a "Data and models"). The one route for a second opinion between Claude and Codex, on
+  the PC or in the cloud, is `MODEL_ROUTING.md` "A second opinion"; it is additive. Use an independent review in a separate context where the tier needs one, and tell him what was decided.
 - **When he must act** (product, strategy, spending, legal, external): describe the situation in
   plain language, list the options with pros and cons, give one clear recommendation he can answer
   with one word, then exact steps: which app, window, tab or session, and the text to paste
