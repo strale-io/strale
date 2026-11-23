@@ -870,7 +870,7 @@ async function runSingleTest(
             verdict: classification.verdict,
             test_name: suite.testName,
             test_type: suite.testType,
-            error_snippet: (failureReason ?? "").substring(0, 200),
+            error_snippet: sliceStorable(failureReason ?? "", 200),
           },
         }),
       { label: "health-event-log", context: { slug: suite.capabilitySlug, event: "classification" } },
