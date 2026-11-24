@@ -62,7 +62,7 @@ Inbox all folders since 11-23 06:00Z (9 messages) and Junk newest 10.
 
 ## Next session
 
-1. Merge this run's PR and #1105 once a session holds merge permission; after deploy, confirm `/health` carries both and that an `address-geocode` refusal of the new kind, if any, is recorded unbilled.
+1. #1106 is in the merge queue (auto-merge). #1105 still needs a session whose permissions allow merging another session's PR (direct merge refused here; not retried through auto-merge, which would sidestep the refusal). After deploy, confirm `/health` carries both and that an `address-geocode` refusal of the new kind, if any, is recorded unbilled.
 2. Address tools' manifest limitation: pacing (above).
 3. Watch `fa6a0cd5`: a third bulk day makes it a recurring customer.
 4. The three overdue weekly rows, from a session with the private workspace.
