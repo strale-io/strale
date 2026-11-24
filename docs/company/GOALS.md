@@ -135,6 +135,15 @@ conversion.
 
 ## What we currently know (update as evidence lands)
 
+- **Read 2026-11-24 — the second buyer repeated a bulk day.** The account that
+  spent €63 last week, almost all on two days, spent €20.20 on Monday 2026-11-23
+  over about 400 calls, against about €1 on its ordinary days. Two bulk episodes
+  in six days is the start of a pattern, not yet a habit. The week in progress
+  stood at €28.65 from 5 payers after a day and a quarter; no conclusion is drawn
+  from a partial week. The same Monday, the largest buyer's 294 concurrent
+  address lookups were all refused by the free geocoding source after 21
+  succeeded (unbilled); the cause was our own throttle. Detail:
+  [operating record](../../handoff/_general/from-code/2026-11-24-checkin-morning.md).
 - **Read 2026-11-23 — completed week 2026-11-16: the highest week on record, and
   the first with a real second buyer.** €190.35 from 8 payers (commercial pack;
   the dashboard's trailing seven days agree at €190.64). The largest payer was

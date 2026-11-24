@@ -113,6 +113,12 @@ export const REFUSAL_MESSAGE_PATTERNS = [
   // (stop_reason "refusal", newer models). Nothing is unhealthy and retrying
   // the same input gets the same answer; the input has to change.
   "The AI model declined this request",
+  // capabilities/address-validate.ts nominatimThrottle: our own one-per-second
+  // queue for OpenStreetMap Nominatim is full. The source is healthy; the
+  // caller is sending faster than the source's usage policy allows. Counting
+  // it as a failure would let a buyer's concurrent batch open the breaker or
+  // delist both address tools (2026-11-23: 294 calls in 16 minutes).
+  "Address lookups are limited to about one per second",
 ] as const;
 
 /**

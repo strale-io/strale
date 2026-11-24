@@ -1,16 +1,50 @@
-import { inputRefusal } from "../lib/capability-refusal.js";
+import { CapabilityRefusalError, inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
-// Shared Nominatim rate limiter (1 req/sec per their usage policy)
-let lastNominatimCall = 0;
-async function nominatimThrottle(): Promise<void> {
-  const now = Date.now();
-  const elapsed = now - lastNominatimCall;
-  if (elapsed < 1100) {
-    await new Promise((resolve) => setTimeout(resolve, 1100 - elapsed));
-  }
-  lastNominatimCall = Date.now();
+// Shared Nominatim rate limiter (1 req/sec per their usage policy).
+//
+// Each caller reserves its send slot synchronously, before awaiting, so
+// concurrent calls are spaced one interval apart. The earlier version read
+// the last call time, slept, then wrote it: N concurrent calls all read the
+// same time, slept the same amount and fired together. On 2026-11-23 a
+// paying buyer's concurrent batch did that, and Nominatim refused every call
+// for 16 minutes (294 failed, unsettled, HTTP 629).
+//
+// A caller whose slot is further away than `maxWaitMs` is refused at once
+// rather than queued past the sync-request ceiling (4 s wait + 10 s fetch
+// stays under 15 s); it reserves nothing. The refusal is retryable and is
+// recognised by REFUSAL_MESSAGE_PATTERNS, so it is unbilled and does not
+// count against the breaker or the quality floor.
+//
+// The clock is monotonic and read on every call (a wall-clock step back
+// would otherwise refuse every caller until the clock caught up).
+export function createNominatimThrottle(
+  intervalMs = 1100,
+  maxWaitMs = 4000,
+  now: () => number = () => performance.now(),
+): () => Promise<void> {
+  let nextSlot = -Infinity;
+  return async () => {
+    const t = now();
+    const slot = Math.max(t, nextSlot);
+    const wait = slot - t;
+    if (wait > maxWaitMs) {
+      const seconds = Math.ceil(wait / 1000);
+      throw new CapabilityRefusalError(
+        `Address lookups are limited to about one per second and the queue is full; retry in ${seconds} seconds.`,
+        {
+          fix: "Send address lookups one at a time, about one per second.",
+          retryable: true,
+          retry_after_seconds: seconds,
+        },
+      );
+    }
+    nextSlot = slot + intervalMs;
+    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+  };
 }
+
+const nominatimThrottle = createNominatimThrottle();
 
 export { nominatimThrottle };
 
