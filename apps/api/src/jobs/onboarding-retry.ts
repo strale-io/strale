@@ -58,6 +58,7 @@ import { onCapabilityCreated } from "../lib/capability-onboarding.js";
 import { registerJobSync } from "../lib/job-coordinator.js";
 import { withDeadline } from "../lib/with-deadline.js";
 import { log, logError, logWarn } from "../lib/log.js";
+import { sliceStorable } from "../lib/storable-json.js";
 
 const INTERVAL_MS = 60 * 60 * 1000; // hourly
 const STARTUP_DELAY_MS = 8 * 60 * 1000;
@@ -182,7 +183,7 @@ export async function runOnboardingRetryOnce(): Promise<SweepOutcome> {
         capabilitySlug: slug,
         tier: 2,
         actionTaken: "retry_failed",
-        details: { attempt: attempts, error: message.slice(0, 500) },
+        details: { attempt: attempts, error: sliceStorable(message, 500) },
       });
 
       if (attempts >= MAX_ATTEMPTS) {
@@ -193,7 +194,7 @@ export async function runOnboardingRetryOnce(): Promise<SweepOutcome> {
           actionTaken: ESCALATION_ACTION,
           details: {
             attempts,
-            last_error: message.slice(0, 500),
+            last_error: sliceStorable(message, 500),
             consequence:
               "capability has no generated test suites and will not be scheduled for testing",
           },

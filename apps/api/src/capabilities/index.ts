@@ -70,11 +70,60 @@ export function getExecutor(slug: string): CapabilityExecutor | undefined {
   return async (input) => {
     if (!access || (access.acquisition_method !== "computed" &&
       !(access.acquisition_method === "vendor_api" && ["serper", "dilisense", "esortcode", "browserless", "openregister"].includes(access.upstream_vendor ?? "")))) noteUnknownCost(`unmetered_upstream:${slug}`);
-    const result = storable(slug, await withAcquisitionMethod(access?.acquisition_method, () => llmSlugs.has(slug) ? withExpectedLlmUsage(() => base(input)) : base(input)));
+    let raw: CapabilityResult;
+    try {
+      raw = await withAcquisitionMethod(access?.acquisition_method, () => llmSlugs.has(slug) ? withExpectedLlmUsage(() => base(input)) : base(input));
+    } catch (err) {
+      throw storableError(slug, err);
+    }
+    const result = storable(slug, raw);
     if (!access) return result;
     if (!result || typeof result.provenance !== "object" || result.provenance === null) return result;
     return { ...result, provenance: stampDataAccess(result.provenance, access) };
   };
+}
+
+/**
+ * A failed call records its error message (the transaction row, the audit
+ * trail, a solution's step list), so a message carrying U+0000 or an unpaired
+ * surrogate fails that write the same way an output does. The error is cleaned
+ * in place and rethrown, so its class and any fields callers read from it
+ * (refusal details, error codes) are unchanged.
+ */
+function storableError(slug: string, err: unknown): unknown {
+  if (typeof err === "string") {
+    const cleaned = toStorableJson(err);
+    if (cleaned.removed > 0) logWarn("capability-error-unstorable-chars-removed", "removed characters the database cannot store from a tool error", { slug, removed: cleaned.removed });
+    return cleaned.value;
+  }
+  // Errors, and plain thrown objects whose message callers read (dispatch
+  // reads `.message` off non-Error throws too).
+  if (typeof err !== "object" || err === null) return err;
+  let message: unknown;
+  try {
+    message = (err as { message?: unknown }).message;
+  } catch {
+    // degraded-ok: a message getter that throws (a Proxy, say) leaves the original error to be rethrown unchanged, as before this cleaning existed.
+    return err;
+  }
+  if (typeof message !== "string") return err;
+  const cleaned = toStorableJson(message);
+  if (cleaned.removed === 0) return err;
+  const target = err as { message: unknown };
+  let written = false;
+  try {
+    target.message = cleaned.value;
+    written = target.message === cleaned.value;
+  } catch {
+    // degraded-ok: a frozen or read-only error is rethrown unchanged, and written stays false so capability-error-unstorable-chars-kept is logged below.
+  }
+  if (written) {
+    logWarn("capability-error-unstorable-chars-removed", "removed characters the database cannot store from a tool error", { slug, removed: cleaned.removed });
+  } else {
+    // The write that records this failure may now fail; say so.
+    logWarn("capability-error-unstorable-chars-kept", "a tool error carries characters the database cannot store and could not be cleaned", { slug, removed: cleaned.removed });
+  }
+  return err;
 }
 
 /**

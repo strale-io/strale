@@ -19,6 +19,7 @@ import { refusalDetails } from "./capability-refusal.js";
 import { sanitizeFailureReason } from "./sanitize.js";
 import { sourceBlockDetails } from "./site-access.js";
 import { UpstreamUnavailableError } from "./upstream-result.js";
+import { sliceStorable } from "./storable-json.js";
 
 export interface StepFailure {
   capability_slug: string;
@@ -37,7 +38,7 @@ const NO_RETRY_NEXT_STEP = "A retry with the same input gets the same answer for
  */
 export function stepFailure(capabilitySlug: string, err: unknown, opts: { final?: boolean } = {}): StepFailure {
   const message = err instanceof Error ? err.message : String(err);
-  const error = sanitizeFailureReason(message.slice(0, 200));
+  const error = sanitizeFailureReason(sliceStorable(message, 200));
   const refusal = refusalDetails(err);
   // Read from the object, not the truncated message: a long hostname can cut
   // the marker a source block is recognised by (follow-up 51).

@@ -54,6 +54,7 @@ import { capabilityInvocations, healthMonitorEvents } from "../db/schema.js";
 import type { ExecutionOutcome } from "./execution-outcome.js";
 import type { InvocationContext } from "../capabilities/guarded-executor.js";
 import { logError } from "./log.js";
+import { sliceStorable } from "./storable-json.js";
 
 /**
  * Which ENTRY POINT produced the invocation — not which payment rail settled
@@ -271,7 +272,7 @@ async function writeFailureMarker(slug: string, cause: unknown, handle?: Databas
       tier: 2,
       actionTaken: "fact_dropped",
       details: {
-        reason: cause instanceof Error ? cause.message.slice(0, 200) : String(cause).slice(0, 200),
+        reason: sliceStorable(cause instanceof Error ? cause.message : String(cause), 200),
         consequence:
           "quality-floor evidence for this capability is incomplete for this window",
       },

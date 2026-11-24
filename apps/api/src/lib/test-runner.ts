@@ -46,6 +46,7 @@ import { logHealthEvent } from "./health-monitor.js";
 import { checkNewFailures, checkInfrastructureHealth } from "./meta-monitoring.js";
 // reliability-profile, freshness-decay deleted with the SQS engine (DEC-20260503-B).
 import { withRetry } from "./retry.js";
+import { sliceStorable } from "./storable-json.js";
 import { fireAndForget } from "./fire-and-forget.js";
 import { log, logError, logWarn } from "./log.js";
 import { createHash } from "node:crypto";
@@ -71,7 +72,7 @@ function computeOutputHash(output: unknown): string | null {
 function classifierReason(executionError: string | null, failureReason: string | null): string | null {
   if (!executionError) return failureReason;
   let msg = executionError.replace(/\s+/g, " ").trim();
-  if (msg.length > 500) msg = msg.slice(0, 497) + "...";
+  if (msg.length > 500) msg = sliceStorable(msg, 497) + "...";
   return `Execution error: ${msg}`;
 }
 
@@ -869,7 +870,7 @@ async function runSingleTest(
             verdict: classification.verdict,
             test_name: suite.testName,
             test_type: suite.testType,
-            error_snippet: (failureReason ?? "").substring(0, 200),
+            error_snippet: sliceStorable(failureReason ?? "", 200),
           },
         }),
       { label: "health-event-log", context: { slug: suite.capabilitySlug, event: "classification" } },

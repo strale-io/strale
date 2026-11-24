@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toStorableJson } from "./storable-json.js";
+import { sliceStorable, toStorableJson } from "./storable-json.js";
 
 describe("toStorableJson", () => {
   it("removes U+0000 from nested strings and keys and counts what it removed", () => {
@@ -53,5 +53,20 @@ describe("toStorableJson", () => {
     expect(Object.getPrototypeOf(value)).toBe(Object.prototype);
     expect(Object.keys(value)).toEqual(["__proto__"]);
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+  });
+});
+
+describe("sliceStorable", () => {
+  it("never ends on half of a surrogate pair", () => {
+    const text = "ab\u{1F600}cd"; // the emoji is two UTF-16 units, at 2 and 3
+    expect(sliceStorable(text, 3)).toBe("ab");
+    expect(toStorableJson(sliceStorable(text, 3)).removed).toBe(0);
+    expect(sliceStorable(text, 4)).toBe("ab\u{1F600}");
+  });
+
+  it("is a plain slice otherwise", () => {
+    expect(sliceStorable("hello", 3)).toBe("hel");
+    expect(sliceStorable("hello", 10)).toBe("hello");
+    expect(sliceStorable("hello", 0)).toBe("");
   });
 });
