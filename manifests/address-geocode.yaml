@@ -71,7 +71,7 @@ output_field_reliability:
   found: guaranteed
 limitations:
   - title: Rate limited to 1 request per second
-    text: Shares Nominatim rate limit with address-validate — max 1 req/sec total
+    text: About one lookup per second, shared by address-validate and address-geocode. Concurrent calls are queued and sent about 1.1 seconds apart; a call that would wait more than 4 seconds is refused at once with a retry time and is not charged. Send bulk lookups one at a time.
     category: dependency
     severity: info
   - title: Geocoding is approximate for vague queries
